@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plano {
+  ESSENCIAL
+  PROFISSIONAL
+  ENTERPRISE
+}
+
+enum PapelUsuario {
+  PORTEIRO
+  APOIO
+  SINDICO
+  ADMIN
+}
+
+enum StatusPacote {
+  ARMAZENADO
+  ENTREGUE
+  EXTRAVIADO
+}
+
+enum StatusVinculo {
+  PENDENTE
+  ATIVO
+  REMOVIDO
+}
+
+enum CanalNotificacao {
+  PUSH
+  WHATSAPP
+  SMS
+}
+
+enum TipoNotificacao {
+  ENTRADA
+  RETIRADA
+  CONVITE
+}
+
+enum StatusNotificacao {
+  FILA
+  ENVIADA
+  ENTREGUE
+  FALHA
+}
+
+enum Plataforma {
+  IOS
+  ANDROID
+}
+
+enum CanalConvite {
+  SMS
+  POSTER
+  PORTARIA
+}
+
+model Condominio {
+  id       String   @id @default(uuid()) @db.Uuid
+  nome     String
+  slug     String   @unique
+  timezone String   @default("America/Sao_Paulo")
+  plano    Plano    @default(ESSENCIAL)
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  unidades     Unidade[]
+  usuarios     Usuario[]
+  pacotes      Pacote[]
+  convites     Convite[]
+  notificacoes Notificacao[]
+
+  @@map("condominios")
+}
+
+model Unidade {
+  id            String  @id @default(uuid()) @db.Uuid
+  condominioId  String  @map("condominio_id") @db.Uuid
+  bloco         String?
+  identificacao String
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  vinculos   Vinculo[]
+  pacotes    Pacote[]
+  convites   Convite[]
+
+  @@unique([condominioId, bloco, identificacao])
+  @@index([condominioId])
+  @@map("unidades")
+}
+
+model Morador {
+  id       String   @id @default(uuid()) @db.Uuid
+  nome     String
+  telefone String   @unique
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  vinculos Vinculo[]
+  devices  Device[]
+
+  @@map("moradores")
+}
+
+model Vinculo {
+  id                   String        @id @default(uuid()) @db.Uuid
+  moradorId            String        @map("morador_id") @db.Uuid
+  unidadeId            String        @map("unidade_id") @db.Uuid
+  status               StatusVinculo @default(PENDENTE)
+  contatoPreferencial  Boolean       @default(false) @map("contato_preferencial")
+  aprovadoPorId        String?       @map("aprovado_por_id") @db.Uuid
+  criadoEm             DateTime      @default(now()) @map("criado_em")
+
+  morador     Morador  @relation(fields: [moradorId], references: [id])
+  unidade     Unidade  @relation(fields: [unidadeId], references: [id])
+  aprovadoPor Usuario? @relation(fields: [aprovadoPorId], references: [id])
+
+  @@unique([moradorId, unidadeId])
+  @@index([unidadeId])
+  @@map("vinculos")
+}
+
+model Usuario {
+  id           String       @id @default(uuid()) @db.Uuid
+  condominioId String       @map("condominio_id") @db.Uuid
+  nome         String
+  telefone     String       @unique
+  papel        PapelUsuario
+  ativo        Boolean      @default(true)
+  criadoEm     DateTime     @default(now()) @map("criado_em")
+
+  condominio         Condominio @relation(fields: [condominioId], references: [id])
+  pacotesRecebidos   Pacote[]   @relation("recebidoPor")
+  retiradasEntregues Retirada[] @relation("entreguePor")
+  vinculosAprovados  Vinculo[]
+
+  @@index([condominioId])
+  @@map("usuarios")
+}
+
+model Pacote {
+  id                 String       @id @default(uuid()) @db.Uuid
+  condominioId       String       @map("condominio_id") @db.Uuid
+  unidadeId          String       @map("unidade_id") @db.Uuid
+  transportadora     String?
+  codigoRastreio     String?      @map("codigo_rastreio")
+  notaFiscal         String?      @map("nota_fiscal")
+  fotoEntradaKey     String?      @map("foto_entrada_key")
+  localArmazenamento String?      @map("local_armazenamento")
+  status             StatusPacote @default(ARMAZENADO)
+  recebidoPorId      String       @map("recebido_por_id") @db.Uuid
+  recebidoEm         DateTime     @default(now()) @map("recebido_em")
+
+  condominio   Condominio    @relation(fields: [condominioId], references: [id])
+  unidade      Unidade       @relation(fields: [unidadeId], references: [id])
+  recebidoPor  Usuario       @relation("recebidoPor", fields: [recebidoPorId], references: [id])
+  retirada     Retirada?
+  notificacoes Notificacao[]
+
+  @@index([condominioId, status])
+  @@index([unidadeId, status])
+  @@map("pacotes")
+}
+
+model Retirada {
+  id            String   @id @default(uuid()) @db.Uuid
+  condominioId  String   @map("condominio_id") @db.Uuid
+  pacoteId      String   @unique @map("pacote_id") @db.Uuid
+  entreguePorId String   @map("entregue_por_id") @db.Uuid
+  fotoSaidaKey  String?  @map("foto_saida_key")
+  retiradoEm    DateTime @default(now()) @map("retirado_em")
+
+  pacote      Pacote  @relation(fields: [pacoteId], references: [id])
+  entreguePor Usuario @relation("entreguePor", fields: [entreguePorId], references: [id])
+
+  @@index([condominioId])
+  @@map("retiradas")
+}
+
+model Notificacao {
+  id            String            @id @default(uuid()) @db.Uuid
+  condominioId  String            @map("condominio_id") @db.Uuid
+  pacoteId      String?           @map("pacote_id") @db.Uuid
+  canal         CanalNotificacao
+  tipo          TipoNotificacao
+  status        StatusNotificacao @default(FILA)
+  providerMsgId String?           @map("provider_msg_id")
+  criadoEm      DateTime          @default(now()) @map("criado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  pacote     Pacote?    @relation(fields: [pacoteId], references: [id])
+
+  @@index([condominioId, status])
+  @@map("notificacoes")
+}
+
+model Convite {
+  id           String       @id @default(uuid()) @db.Uuid
+  condominioId String       @map("condominio_id") @db.Uuid
+  unidadeId    String?      @map("unidade_id") @db.Uuid
+  codigo       String       @unique
+  canal        CanalConvite
+  expiraEm     DateTime     @map("expira_em")
+  usadoEm      DateTime?    @map("usado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  unidade    Unidade?   @relation(fields: [unidadeId], references: [id])
+
+  @@map("convites")
+}
+
+model Device {
+  id        String     @id @default(uuid()) @db.Uuid
+  moradorId String     @map("morador_id") @db.Uuid
+  pushToken String     @unique @map("push_token")
+  plataforma Plataforma
+  ultimoUso DateTime   @default(now()) @map("ultimo_uso")
+
+  morador Morador @relation(fields: [moradorId], references: [id])
+
+  @@map("devices")
+}
+
+model OtpChallenge {
+  id         String   @id @default(uuid()) @db.Uuid
+  telefone   String   @unique
+  codigoHash String   @map("codigo_hash")
+  expiraEm   DateTime @map("expira_em")
+  tentativas Int      @default(0)
+  criadoEm   DateTime @default(now()) @map("criado_em")
+
+  @@map("otp_challenges")
+}
