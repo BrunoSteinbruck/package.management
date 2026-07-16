@@ -1,4 +1,6 @@
 import {
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -10,6 +12,11 @@ import { PrismaService } from "../prisma/prisma.service";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_TENTATIVAS = 5;
+// Rate limit de ENVIO: protege contra SMS pumping (abuso vira conta de SMS).
+// Em memória por processo — TODO(produção multi-instância): mover para Redis.
+const JANELA_ENVIO_MS = 60 * 60 * 1000;
+const MAX_ENVIOS_POR_TELEFONE = 3;
+const MAX_ENVIOS_POR_IP = 10;
 
 function hash(codigo: string) {
   return createHash("sha256").update(codigo).digest("hex");
@@ -17,12 +24,35 @@ function hash(codigo: string) {
 
 @Injectable()
 export class AuthService {
+  private enviosPorChave = new Map<string, number[]>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
   ) {}
 
-  async requestOtp(telefone: string) {
+  private registrarEnvio(chave: string, maximo: number): boolean {
+    const agora = Date.now();
+    const recentes = (this.enviosPorChave.get(chave) ?? []).filter(
+      (t) => agora - t < JANELA_ENVIO_MS,
+    );
+    if (recentes.length >= maximo) return false;
+    recentes.push(agora);
+    this.enviosPorChave.set(chave, recentes);
+    return true;
+  }
+
+  async requestOtp(telefone: string, ip?: string) {
+    const dentroDoLimite =
+      this.registrarEnvio(`tel:${telefone}`, MAX_ENVIOS_POR_TELEFONE) &&
+      (!ip || this.registrarEnvio(`ip:${ip}`, MAX_ENVIOS_POR_IP));
+    if (!dentroDoLimite) {
+      throw new HttpException(
+        "Muitos códigos solicitados. Tente novamente em até 1 hora.",
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const codigo = randomInt(100000, 999999).toString();
     await this.prisma.otpChallenge.upsert({
       where: { telefone },
@@ -94,5 +124,18 @@ export class AuthService {
     throw new NotFoundException(
       "Telefone não cadastrado. Peça um convite ao seu condomínio.",
     );
+  }
+
+  /**
+   * Renovação silenciosa: token válido → token novo com validade cheia.
+   * O app chama ao abrir; assim o OTP só acontece em device novo ou
+   * app abandonado por mais de 30 dias.
+   */
+  async refresh(user: JwtPayload) {
+    const { exp, iat, ...payload } = user as JwtPayload & {
+      exp?: number;
+      iat?: number;
+    };
+    return { token: await this.jwt.signAsync(payload), perfil: payload };
   }
 }

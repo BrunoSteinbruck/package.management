@@ -40,23 +40,21 @@ export class CadastroService {
   async vinculosPendentes(user: JwtPayload) {
     const condominioId = this.tenantDe(user);
     this.exigirGestor(user);
-    // Vinculo/Morador são globais; o filtro de tenant vem da unidade.
-    return this.prisma.vinculo.findMany({
-      where: { status: "PENDENTE", unidade: { condominioId } },
-      include: { morador: true, unidade: true },
-      orderBy: { criadoEm: "asc" },
-    });
+    // Vinculo/Morador são globais; o include de unidade exige o tenant ativo.
+    return this.prisma.withTenant(condominioId, (tx) =>
+      tx.vinculo.findMany({
+        where: { status: "PENDENTE", condominioId },
+        include: { morador: true, unidade: true },
+        orderBy: { criadoEm: "asc" },
+      }),
+    );
   }
 
   async aprovarVinculo(user: JwtPayload, vinculoId: string) {
     const condominioId = this.tenantDe(user);
     this.exigirGestor(user);
     const { count } = await this.prisma.vinculo.updateMany({
-      where: {
-        id: vinculoId,
-        status: "PENDENTE",
-        unidade: { condominioId },
-      },
+      where: { id: vinculoId, status: "PENDENTE", condominioId },
       data: { status: "ATIVO", aprovadoPorId: user.sub },
     });
     if (count === 0) {

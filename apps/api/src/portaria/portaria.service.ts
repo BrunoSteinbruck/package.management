@@ -3,16 +3,22 @@ import {
   ForbiddenException,
   Injectable,
 } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import type {
   JwtPayload,
   RegistrarPacoteDto,
   RegistrarRetiradaDto,
+  ResolverQrDto,
 } from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import type { QrPayload } from "../morador/morador.service";
 
 @Injectable()
 export class PortariaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+  ) {}
 
   private tenantDe(user: JwtPayload): string {
     if (user.tipo !== "usuario" || !user.condominioId) {
@@ -108,6 +114,26 @@ export class PortariaService {
     unidadeId: string,
   ) {
     return tx.pacote.count({ where: { unidadeId, status: "ARMAZENADO" } });
+  }
+
+  async resolverQr(user: JwtPayload, dto: ResolverQrDto) {
+    const condominioId = this.tenantDe(user);
+    let payload: QrPayload;
+    try {
+      payload = await this.jwt.verifyAsync<QrPayload>(dto.qrToken);
+    } catch {
+      throw new BadRequestException("QR inválido ou expirado — peça para atualizar a tela");
+    }
+    if (payload.tipo !== "qr-retirada" || payload.condominioId !== condominioId) {
+      throw new BadRequestException("QR não pertence a este condomínio");
+    }
+    return this.prisma.withTenant(condominioId, async (tx) => {
+      const unidade = await tx.unidade.findUnique({
+        where: { id: payload.unidadeId },
+      });
+      if (!unidade) throw new BadRequestException("Unidade não encontrada");
+      return unidade;
+    });
   }
 
   pendencias(user: JwtPayload) {

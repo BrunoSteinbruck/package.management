@@ -79,6 +79,7 @@ async function main() {
         create: {
           moradorId: morador.id,
           unidadeId: todasUnidades[i].id,
+          condominioId: condominio.id,
           status: "ATIVO",
         },
       });

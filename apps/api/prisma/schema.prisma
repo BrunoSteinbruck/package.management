@@ -111,6 +111,9 @@ model Vinculo {
   id                   String        @id @default(uuid()) @db.Uuid
   moradorId            String        @map("morador_id") @db.Uuid
   unidadeId            String        @map("unidade_id") @db.Uuid
+  // Denormalizado da unidade (imutável): permite descobrir o tenant a partir
+  // do vínculo global antes de abrir a transação com RLS.
+  condominioId         String        @map("condominio_id") @db.Uuid
   status               StatusVinculo @default(PENDENTE)
   contatoPreferencial  Boolean       @default(false) @map("contato_preferencial")
   aprovadoPorId        String?       @map("aprovado_por_id") @db.Uuid
@@ -122,6 +125,7 @@ model Vinculo {
 
   @@unique([moradorId, unidadeId])
   @@index([unidadeId])
+  @@index([condominioId])
   @@map("vinculos")
 }
 

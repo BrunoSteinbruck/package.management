@@ -43,6 +43,22 @@ export const CriarUnidadesSchema = z.object({
 });
 export type CriarUnidadesDto = z.infer<typeof CriarUnidadesSchema>;
 
+export const RegistrarDeviceSchema = z.object({
+  pushToken: z.string().min(10).max(400),
+  plataforma: z.enum(["IOS", "ANDROID"]),
+});
+export type RegistrarDeviceDto = z.infer<typeof RegistrarDeviceSchema>;
+
+export const EmitirQrSchema = z.object({
+  unidadeId: z.string().uuid(),
+});
+export type EmitirQrDto = z.infer<typeof EmitirQrSchema>;
+
+export const ResolverQrSchema = z.object({
+  qrToken: z.string().min(10),
+});
+export type ResolverQrDto = z.infer<typeof ResolverQrSchema>;
+
 export const PAPEIS_USUARIO = ["PORTEIRO", "APOIO", "SINDICO", "ADMIN"] as const;
 export type PapelUsuario = (typeof PAPEIS_USUARIO)[number];
 

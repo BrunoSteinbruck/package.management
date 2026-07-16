@@ -13,6 +13,8 @@ import {
   RegistrarPacoteSchema,
   RegistrarRetiradaDto,
   RegistrarRetiradaSchema,
+  ResolverQrDto,
+  ResolverQrSchema,
 } from "@pacotes/shared";
 import { AuthGuard, CurrentUser } from "../auth/auth.guard";
 import { ZodPipe } from "../common/zod.pipe";
@@ -45,6 +47,14 @@ export class PortariaController {
     @Body(new ZodPipe(RegistrarRetiradaSchema)) dto: RegistrarRetiradaDto,
   ) {
     return this.portaria.registrarRetirada(user, dto);
+  }
+
+  @Post("qr-resolve")
+  resolverQr(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(ResolverQrSchema)) dto: ResolverQrDto,
+  ) {
+    return this.portaria.resolverQr(user, dto);
   }
 
   @Get("pendencias")
