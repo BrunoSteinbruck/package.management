@@ -136,6 +136,23 @@ export class PortariaService {
     });
   }
 
+  /** Números da home da portaria: estoque atual, retiradas de hoje, paradas 3+ dias. */
+  resumo(user: JwtPayload) {
+    const condominioId = this.tenantDe(user);
+    const inicioDoDia = new Date();
+    inicioDoDia.setHours(0, 0, 0, 0);
+    const tresDiasAtras = new Date(Date.now() - 3 * 86_400_000);
+    return this.prisma.withTenant(condominioId, async (tx) => ({
+      naPortaria: await tx.pacote.count({ where: { status: "ARMAZENADO" } }),
+      retiradasHoje: await tx.retirada.count({
+        where: { retiradoEm: { gte: inicioDoDia } },
+      }),
+      paradas3Dias: await tx.pacote.count({
+        where: { status: "ARMAZENADO", recebidoEm: { lte: tresDiasAtras } },
+      }),
+    }));
+  }
+
   pendencias(user: JwtPayload) {
     const condominioId = this.tenantDe(user);
     return this.prisma.withTenant(condominioId, async (tx) => {

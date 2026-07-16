@@ -6,10 +6,15 @@ fallback para quem ainda não aderiu).
 
 ## Estrutura (monorepo pnpm)
 
-- `apps/api` — API NestJS + Prisma/PostgreSQL (multi-tenant com RLS)
-- `apps/operador` — app Expo da portaria (entrada/retirada) — Etapa 2
-- `apps/morador` — app Expo do morador (push, histórico, QR) — Etapa 3
-- `apps/web` — painel Next.js do síndico — Etapa 4
+- `apps/api` — API NestJS + Prisma/PostgreSQL (multi-tenant com RLS), worker
+  de push (Expo Push) e OCR de etiquetas (stub em dev; Google Vision via
+  `GOOGLE_VISION_API_KEY`)
+- `apps/operador` — app Expo da portaria: entrada com câmera/scanner + OCR,
+  retirada parcial com foto, scan do QR do morador, fila offline
+- `apps/morador` — app Expo do morador: push, pendentes/histórico, QR de
+  retirada
+- `apps/web` — painel Next.js do síndico: pendências, adoção, aprovação de
+  vínculos, import de moradores (`pnpm --filter @pacotes/web dev`, porta 3002)
 - `packages/shared` — tipos e schemas zod compartilhados
 
 ## Rodando local

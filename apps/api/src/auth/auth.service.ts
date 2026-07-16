@@ -97,6 +97,7 @@ export class AuthService {
 
     const usuario = await this.prisma.usuario.findFirst({
       where: { telefone, ativo: true },
+      include: { condominio: true },
     });
     if (usuario) {
       const payload: JwtPayload = {
@@ -104,6 +105,7 @@ export class AuthService {
         tipo: "usuario",
         nome: usuario.nome,
         condominioId: usuario.condominioId,
+        condominioNome: usuario.condominio.nome,
         papel: usuario.papel,
       };
       return { token: await this.jwt.signAsync(payload), perfil: payload };

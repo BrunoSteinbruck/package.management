@@ -8,13 +8,16 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { JwtPayload } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { salvarSessao } from "../api/session";
-import { Botao, Rotulo } from "../components/ui";
+import { Botao, BotaoCta, Rotulo } from "../components/ui";
 import { theme } from "../theme";
 
 export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
+  const insets = useSafeAreaInsets();
   const [fase, setFase] = useState<"telefone" | "codigo">("telefone");
   const [telefone, setTelefone] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -49,7 +52,7 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
       if (res.perfil.tipo !== "usuario") {
         Alert.alert(
           "Acesso restrito",
-          "Este app é para a equipe da portaria. Moradores usam o app do morador.",
+          "Este app é para a equipe da portaria. Moradores usam o app Guarita.",
         );
         return;
       }
@@ -63,94 +66,121 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.tela}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <LinearGradient
+      colors={theme.gradiente.marca}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.4, y: 1 }}
+      style={{ flex: 1 }}
     >
-      <Text style={styles.titulo}>Portaria</Text>
-      <Text style={styles.subtitulo}>
-        {fase === "telefone"
-          ? "Entre com o telefone cadastrado pelo condomínio."
-          : `Código enviado por SMS para ${telefone}.`}
-      </Text>
+      <View style={[styles.header, { paddingTop: insets.top + 40 }]}>
+        <Text style={styles.logo}>guarita</Text>
+        <Text style={styles.headline}>Acesso da portaria</Text>
+        <Text style={styles.sub}>Entre com o telefone cadastrado pelo condomínio.</Text>
+      </View>
 
-      {fase === "telefone" ? (
-        <View>
-          <Rotulo>Celular (DDD + número)</Rotulo>
-          <TextInput
-            style={styles.campo}
-            keyboardType="phone-pad"
-            autoFocus
-            value={telefone}
-            onChangeText={setTelefone}
-            placeholder="41 99999 0001"
-            placeholderTextColor={theme.colors.textMuted}
-          />
-          <Botao
-            titulo="Receber código"
-            onPress={pedirCodigo}
-            carregando={carregando}
-            desabilitado={telefone.replace(/\D/g, "").length < 10}
-            estilo={{ marginTop: theme.spacing.md }}
-          />
-        </View>
-      ) : (
-        <View>
-          <Rotulo>Código de 6 dígitos</Rotulo>
-          <TextInput
-            style={[styles.campo, styles.campoCodigo]}
-            keyboardType="number-pad"
-            autoFocus
-            maxLength={6}
-            value={codigo}
-            onChangeText={setCodigo}
-          />
-          <Botao
-            titulo="Entrar"
-            onPress={verificar}
-            carregando={carregando}
-            desabilitado={codigo.trim().length !== 6}
-            estilo={{ marginTop: theme.spacing.md }}
-          />
-          <Botao
-            titulo="Trocar telefone"
-            variante="secundario"
-            onPress={() => setFase("telefone")}
-            estilo={{ marginTop: theme.spacing.sm }}
-          />
-        </View>
-      )}
-    </KeyboardAvoidingView>
+      <KeyboardAvoidingView
+        style={styles.sheet}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {fase === "telefone" ? (
+          <View>
+            <Rotulo>Seu celular</Rotulo>
+            <View style={styles.campoTelefone}>
+              <Text style={styles.prefixo}>+55</Text>
+              <View style={styles.divisorVertical} />
+              <TextInput
+                style={styles.inputTelefone}
+                keyboardType="phone-pad"
+                autoFocus
+                value={telefone}
+                onChangeText={setTelefone}
+                placeholder="41 99999 0001"
+                placeholderTextColor={theme.colors.textFaint}
+              />
+            </View>
+            <BotaoCta
+              titulo="Receber código por SMS"
+              altura={64}
+              onPress={pedirCodigo}
+              carregando={carregando}
+              desabilitado={telefone.replace(/\D/g, "").length < 10}
+              estilo={{ marginTop: 18 }}
+            />
+          </View>
+        ) : (
+          <View>
+            <Rotulo>Código de 6 dígitos enviado para {telefone}</Rotulo>
+            <TextInput
+              style={styles.campoCodigo}
+              keyboardType="number-pad"
+              autoFocus
+              maxLength={6}
+              value={codigo}
+              onChangeText={setCodigo}
+            />
+            <BotaoCta
+              titulo="Entrar"
+              altura={64}
+              onPress={verificar}
+              carregando={carregando}
+              desabilitado={codigo.trim().length !== 6}
+              estilo={{ marginTop: 18 }}
+            />
+            <Botao
+              titulo="Trocar telefone"
+              variante="outline"
+              onPress={() => setFase("telefone")}
+              estilo={{ marginTop: 10 }}
+            />
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  tela: {
+  header: { paddingHorizontal: 24, paddingBottom: 30 },
+  logo: {
+    color: theme.colors.acentoClaro,
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+  },
+  headline: { color: "#FFF", fontSize: 31, fontWeight: "700", marginTop: 16, lineHeight: 38 },
+  sub: { color: "rgba(255,255,255,0.85)", fontSize: 15.5, marginTop: 8, lineHeight: 22 },
+  sheet: {
     flex: 1,
     backgroundColor: theme.colors.bg,
-    padding: theme.spacing.lg,
-    justifyContent: "center",
+    borderTopLeftRadius: theme.radius.sheet,
+    borderTopRightRadius: theme.radius.sheet,
+    padding: 24,
+    paddingTop: 28,
   },
-  titulo: {
-    fontSize: theme.font.xl,
-    fontWeight: "600",
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-  },
-  subtitulo: {
-    fontSize: theme.font.md,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
-  },
-  campo: {
+  campoTelefone: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    minHeight: theme.touch.min,
-    paddingHorizontal: theme.spacing.md,
-    fontSize: theme.font.lg,
+    borderRadius: theme.radius.input,
+    minHeight: 60,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  prefixo: { fontSize: 18, fontWeight: "600", color: theme.colors.textSecondary },
+  divisorVertical: { width: 1, height: 28, backgroundColor: theme.colors.divisor },
+  inputTelefone: { flex: 1, fontSize: 19, fontWeight: "600", color: theme.colors.text },
+  campoCodigo: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    minHeight: 60,
+    textAlign: "center",
+    letterSpacing: 10,
+    fontSize: 26,
+    fontWeight: "700",
     color: theme.colors.text,
   },
-  campoCodigo: { textAlign: "center", letterSpacing: 8, fontSize: 24 },
 });

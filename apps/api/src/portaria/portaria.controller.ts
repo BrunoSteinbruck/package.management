@@ -1,12 +1,17 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Param,
   ParseUUIDPipe,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { OcrService } from "../ocr/ocr.service";
 import {
   JwtPayload,
   RegistrarPacoteDto,
@@ -23,7 +28,27 @@ import { PortariaService } from "./portaria.service";
 @Controller("portaria")
 @UseGuards(AuthGuard)
 export class PortariaController {
-  constructor(private readonly portaria: PortariaService) {}
+  constructor(
+    private readonly portaria: PortariaService,
+    private readonly ocr: OcrService,
+  ) {}
+
+  @Post("ocr")
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
+  analisarEtiqueta(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException("Arquivo ausente (campo 'file')");
+    return this.ocr.analisarEtiqueta(
+      user,
+      file.buffer,
+      file.mimetype,
+      file.originalname ?? "foto.jpg",
+    );
+  }
 
   @Post("pacotes")
   registrarEntrada(
@@ -55,6 +80,11 @@ export class PortariaController {
     @Body(new ZodPipe(ResolverQrSchema)) dto: ResolverQrDto,
   ) {
     return this.portaria.resolverQr(user, dto);
+  }
+
+  @Get("resumo")
+  resumo(@CurrentUser() user: JwtPayload) {
+    return this.portaria.resumo(user);
   }
 
   @Get("pendencias")

@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch } from "../api/client";
-import { Card } from "../components/ui";
+import { HeaderTela } from "../components/ui";
 import { theme } from "../theme";
 import type { RootStackParamList } from "../navigation";
 
@@ -11,11 +13,13 @@ const RENOVAR_MS = 60_000;
 
 type Props = NativeStackScreenProps<RootStackParamList, "Qr">;
 
-export function QrScreen({ route }: Props) {
-  const { unidadeId, rotulo, pendentes } = route.params;
+export function QrScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
+  const { unidadeId, pendentes } = route.params;
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progresso = useRef(new Animated.Value(1)).current;
 
   const renovar = useCallback(async () => {
     try {
@@ -25,10 +29,16 @@ export function QrScreen({ route }: Props) {
       });
       setQrToken(res.qrToken);
       setErro(null);
+      progresso.setValue(1);
+      Animated.timing(progresso, {
+        toValue: 0,
+        duration: RENOVAR_MS,
+        useNativeDriver: false,
+      }).start();
     } catch (e) {
       setErro(String((e as Error).message));
     }
-  }, [unidadeId]);
+  }, [unidadeId, progresso]);
 
   useEffect(() => {
     renovar();
@@ -39,59 +49,94 @@ export function QrScreen({ route }: Props) {
   }, [renovar]);
 
   return (
-    <View style={styles.tela}>
-      <Text style={styles.titulo}>Mostre na portaria</Text>
-      <Text style={styles.subtitulo}>
-        O porteiro escaneia e vê suas {pendentes} encomenda(s) de {rotulo}.
-      </Text>
+    <LinearGradient
+      colors={theme.gradiente.marca}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.4, y: 1 }}
+      style={{ flex: 1, paddingTop: insets.top }}
+    >
+      <HeaderTela
+        titulo="Retirar na portaria"
+        aoVoltar={() => navigation.goBack()}
+        escuro
+      />
 
-      <Card estilo={styles.cartaoQr}>
-        {qrToken ? (
-          <QRCode value={qrToken} size={230} />
-        ) : (
-          <Text style={{ color: theme.colors.textSecondary }}>
-            {erro ?? "Gerando código..."}
+      <View style={styles.centro}>
+        <View style={styles.cartao}>
+          {qrToken ? (
+            <QRCode value={qrToken} size={216} />
+          ) : (
+            <View style={{ width: 216, height: 216, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: theme.colors.textSecondary }}>
+                {erro ?? "Gerando código..."}
+              </Text>
+            </View>
+          )}
+          <View style={styles.trilhaProgresso}>
+            <Animated.View
+              style={[
+                styles.barraProgresso,
+                {
+                  width: progresso.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ["0%", "100%"],
+                  }),
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.renovacao}>O código renova a cada 60 s</Text>
+        </View>
+
+        <View style={styles.piloPendentes}>
+          <Text style={styles.piloPendentesTexto}>
+            {pendentes} encomenda{pendentes !== 1 ? "s" : ""} para retirar
           </Text>
-        )}
-      </Card>
+        </View>
 
-      <Text style={styles.aviso}>
-        O código renova sozinho a cada 60 segundos.
-      </Text>
-    </View>
+        <Text style={styles.hint}>
+          Mostre este código ao porteiro.{"\n"}Ele confere e registra a entrega com foto.
+        </Text>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  tela: {
-    flex: 1,
-    backgroundColor: theme.colors.bg,
+  centro: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 20 },
+  cartao: {
+    backgroundColor: "#FFF",
+    borderRadius: theme.radius.sheet,
+    padding: 28,
     alignItems: "center",
-    padding: theme.spacing.lg,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 50,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 16,
   },
-  titulo: {
-    fontSize: theme.font.lg,
-    fontWeight: "600",
-    color: theme.colors.text,
-    marginTop: theme.spacing.lg,
+  trilhaProgresso: {
+    width: 216,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.divisor,
+    marginTop: 20,
+    overflow: "hidden",
   },
-  subtitulo: {
-    fontSize: theme.font.md,
-    color: theme.colors.textSecondary,
+  barraProgresso: { height: 6, borderRadius: 3, backgroundColor: theme.colors.acao },
+  renovacao: { fontSize: 13, color: theme.colors.textSecondary, fontWeight: "500", marginTop: 10 },
+  piloPendentes: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  piloPendentesTexto: { color: "#FFF", fontSize: 14.5, fontWeight: "600" },
+  hint: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 13.5,
     textAlign: "center",
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.lg,
-  },
-  cartaoQr: {
-    padding: theme.spacing.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 280,
-    minWidth: 280,
-  },
-  aviso: {
-    fontSize: theme.font.sm,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.md,
+    lineHeight: 20,
+    fontWeight: "500",
   },
 });

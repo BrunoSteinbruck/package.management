@@ -1,5 +1,9 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import type { CriarUnidadesDto, JwtPayload } from "@pacotes/shared";
+import type {
+  CriarUnidadesDto,
+  ImportarMoradoresDto,
+  JwtPayload,
+} from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -35,6 +39,81 @@ export class CadastroService {
         skipDuplicates: true,
       }),
     );
+  }
+
+  /**
+   * Import em massa (planilha do sistema atual do condomínio):
+   * upsert do morador pelo telefone + vínculo ATIVO com a unidade.
+   * Linhas cuja unidade não existe voltam em `semUnidade` para correção.
+   */
+  async importarMoradores(user: JwtPayload, dto: ImportarMoradoresDto) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    return this.prisma.withTenant(condominioId, async (tx) => {
+      const unidades = await tx.unidade.findMany();
+      const porChave = new Map(
+        unidades.map((u) => [`${(u.bloco ?? "").toUpperCase()}|${u.identificacao.toUpperCase()}`, u]),
+      );
+      let vinculados = 0;
+      const semUnidade: string[] = [];
+      for (const linha of dto.linhas) {
+        const unidade = porChave.get(
+          `${(linha.bloco ?? "").toUpperCase()}|${linha.identificacao.toUpperCase()}`,
+        );
+        if (!unidade) {
+          semUnidade.push(`${linha.nome} (${linha.bloco ?? "-"}/${linha.identificacao})`);
+          continue;
+        }
+        const telefone = linha.telefone.replace(/\D/g, "");
+        const morador = await tx.morador.upsert({
+          where: { telefone },
+          update: { nome: linha.nome },
+          create: { nome: linha.nome, telefone },
+        });
+        await tx.vinculo.upsert({
+          where: {
+            moradorId_unidadeId: { moradorId: morador.id, unidadeId: unidade.id },
+          },
+          update: { status: "ATIVO" },
+          create: {
+            moradorId: morador.id,
+            unidadeId: unidade.id,
+            condominioId,
+            status: "ATIVO",
+          },
+        });
+        vinculados++;
+      }
+      return { vinculados, semUnidade };
+    });
+  }
+
+  /** % de unidades com pelo menos um morador com o app instalado (device). */
+  async adocao(user: JwtPayload) {
+    const condominioId = this.tenantDe(user);
+    const totalUnidades = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.unidade.count(),
+    );
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { condominioId, status: "ATIVO" },
+      select: { unidadeId: true, moradorId: true },
+    });
+    const moradoresComApp = new Set(
+      (
+        await this.prisma.device.findMany({
+          where: { moradorId: { in: [...new Set(vinculos.map((v) => v.moradorId))] } },
+          select: { moradorId: true },
+        })
+      ).map((d) => d.moradorId),
+    );
+    const unidadesComApp = new Set(
+      vinculos.filter((v) => moradoresComApp.has(v.moradorId)).map((v) => v.unidadeId),
+    ).size;
+    return {
+      totalUnidades,
+      unidadesComApp,
+      percentual: totalUnidades > 0 ? Math.round((unidadesComApp / totalUnidades) * 100) : 0,
+    };
   }
 
   async vinculosPendentes(user: JwtPayload) {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { JwtPayload } from "@pacotes/shared";
@@ -38,33 +39,23 @@ export default function App() {
 
   if (!perfil) {
     return (
-      <>
-        <StatusBar style="auto" />
+      <SafeAreaProvider>
+        <StatusBar style="light" />
         <LoginScreen aoEntrar={setPerfil} />
-      </>
+      </SafeAreaProvider>
     );
   }
 
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: theme.colors.bg },
-          headerTintColor: theme.colors.text,
-          headerShadowVisible: false,
-        }}
-      >
-        <Stack.Screen name="Home" options={{ headerShown: false }}>
+      <StatusBar style="dark" />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Home">
           {(props) => (
             <HomeScreen {...props} perfil={perfil} aoSair={() => setPerfil(null)} />
           )}
         </Stack.Screen>
-        <Stack.Screen
-          name="Qr"
-          component={QrScreen}
-          options={{ title: "Retirada" }}
-        />
+        <Stack.Screen name="Qr" component={QrScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

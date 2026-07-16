@@ -10,6 +10,8 @@ import {
 import {
   CriarUnidadesDto,
   CriarUnidadesSchema,
+  ImportarMoradoresDto,
+  ImportarMoradoresSchema,
   JwtPayload,
 } from "@pacotes/shared";
 import { AuthGuard, CurrentUser } from "../auth/auth.guard";
@@ -32,6 +34,19 @@ export class CadastroController {
     @Body(new ZodPipe(CriarUnidadesSchema)) dto: CriarUnidadesDto,
   ) {
     return this.cadastro.criarUnidades(user, dto);
+  }
+
+  @Post("moradores/importar")
+  importarMoradores(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(ImportarMoradoresSchema)) dto: ImportarMoradoresDto,
+  ) {
+    return this.cadastro.importarMoradores(user, dto);
+  }
+
+  @Get("adocao")
+  adocao(@CurrentUser() user: JwtPayload) {
+    return this.cadastro.adocao(user);
   }
 
   @Get("vinculos/pendentes")

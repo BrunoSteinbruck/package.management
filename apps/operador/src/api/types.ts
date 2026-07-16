@@ -26,6 +26,22 @@ export interface ResultadoRetirada {
   pendentesRestantes: number;
 }
 
+export interface RespostaOcr {
+  fotoKey: string;
+  extraido: {
+    rastreio?: string;
+    transportadora?: string;
+    bloco?: string;
+    identificacao?: string;
+  };
+  sugestoes: Array<{
+    id: string;
+    bloco: string | null;
+    identificacao: string;
+    score: number;
+  }>;
+}
+
 export function rotuloUnidade(u: Unidade | undefined): string {
   if (!u) return "—";
   return u.bloco ? `${u.identificacao} · Bloco ${u.bloco}` : u.identificacao;

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+
+
+<style>
+  body { margin:0; background:#E9EDE9; font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif; }
+  a { color:#175C38; } a:hover { color:#0F4728; }
+  @media print { * { animation: none !important; } }
+  @keyframes scanline { 0%{ transform:translateY(0);} 50%{ transform:translateY(180px);} 100%{ transform:translateY(0);} }
+  @keyframes qrbar { from{ width:100%; } to{ width:0%; } }
+  @keyframes pulse { 0%,100%{ opacity:1;} 50%{ opacity:.35;} }
+</style>
+</helmet>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#175C38"/><rect x="35" y="30" width="30" height="40" rx="6" fill="#fff"/><rect x="41" y="38" width="18" height="18" rx="3" fill="#00A85A"/></svg></template>
+<x-import component-from-global-scope="deck-stage" from="./deck-stage.js" width="1920" height="1080" hint-size="100%,100%">
+<section data-label="Capa" style="width:1920px;height:1080px;background:linear-gradient(160deg,#175C38,#0F4728);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="font-size:120px;font-weight:700;letter-spacing:-3px;color:#fff;text-transform:lowercase">{{ nomeApp }}</div>
+    <div style="font-size:34px;font-weight:400;color:rgba(255,255,255,.82);max-width:900px;text-align:center;text-wrap:pretty">Design v1: app do operador, app do morador e painel do síndico</div>
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:12px 28px"><span style="width:11px;height:11px;border-radius:50%;background:#7CE3A8"></span><span style="font-size:24px;font-weight:600;color:#fff">{{ condominio }}</span></div>
+  </section>
+<section data-label="Home da portaria" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do operador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Home da portaria</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Duas ações gigantes e o status do dia: registrar um pacote em menos de 10 segundos.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:linear-gradient(160deg,#175C38,#0F4728)">
+            <div style="padding:14px 20px 24px;display:flex;flex-direction:column;gap:18px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:20px;font-weight:700;letter-spacing:-.5px;color:#fff;text-transform:lowercase">{{ nomeApp }}</div>
+                <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:6px 14px">
+                  <span style="width:9px;height:9px;border-radius:50%;background:#7CE3A8"></span>
+                  <span style="font-size:13px;font-weight:600;color:#fff">Online</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:25px;font-weight:700;color:#fff;letter-spacing:-.3px">{{ condominio }}</div>
+                  <div style="font-size:15px;font-weight:600;color:rgba(255,255,255,.75)">Carlos Mendes · Portaria</div>
+                </div>
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">CM</div>
+              </div>
+            </div>
+            <div style="flex:1;background:#F3F5F2;border-radius:28px 28px 0 0;padding:24px 20px;display:flex;flex-direction:column;gap:16px">
+              <div style="height:190px;border-radius:26px;background:linear-gradient(135deg,#00A85A,#00803E);box-shadow:0 10px 24px rgba(0,140,70,.32);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px" style-active="transform:scale(.98)">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3v13H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+                <div style="font-size:30px;font-weight:700;color:#fff;letter-spacing:-.3px">Nova entrada</div>
+                <div style="font-size:15px;font-weight:600;color:rgba(255,255,255,.85)">Abre a câmera direto</div>
+              </div>
+              <div style="height:120px;border-radius:26px;background:#175C38;display:flex;align-items:center;justify-content:center;gap:14px" style-active="transform:scale(.98)">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z"></path><path d="M15 15h3v3h-3zM18 18h3v3h-3z"></path></svg>
+                <div style="font-size:27px;font-weight:700;color:#fff">Retirada</div>
+              </div>
+              <div style="display:flex;gap:12px">
+                <div style="flex:1;background:#fff;border:1px solid #E3EAE4;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:34px;font-weight:700;color:#17251C">38</div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63">na portaria agora</div>
+                </div>
+                <div style="flex:1;background:#fff;border:1px solid #E3EAE4;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:34px;font-weight:700;color:#17251C">112</div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63">retiradas hoje</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:4px">
+                <span style="width:7px;height:7px;border-radius:50%;background:#D97706"></span>
+                <span style="font-size:13.5px;font-weight:500;color:#5E6E63">12 encomendas paradas há 3+ dias</span>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Entrada: câmera" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do operador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Entrada: câmera</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Leitor de código ativo direto ao abrir; a foto da etiqueta segue para a confirmação.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#12160F">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"></path></svg></div>
+              <div style="font-size:17px;font-weight:600;color:#fff">Nova entrada</div>
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L5 13h5l-1 9 8-11h-5z"></path></svg></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;position:relative">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#1B2418 0 14px,#161D13 14px 28px);opacity:.9;display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,monospace;font-size:12px;color:#5E6E63;position:absolute;bottom:14px;left:0;right:0;text-align:center">visão da câmera · pacote no balcão</span></div>
+              <div style="position:relative;width:310px;height:225px">
+                <div style="position:absolute;top:0;left:0;width:44px;height:44px;border-top:4px solid #3FD98A;border-left:4px solid #3FD98A;border-radius:14px 0 0 0"></div>
+                <div style="position:absolute;top:0;right:0;width:44px;height:44px;border-top:4px solid #3FD98A;border-right:4px solid #3FD98A;border-radius:0 14px 0 0"></div>
+                <div style="position:absolute;bottom:0;left:0;width:44px;height:44px;border-bottom:4px solid #3FD98A;border-left:4px solid #3FD98A;border-radius:0 0 0 14px"></div>
+                <div style="position:absolute;bottom:0;right:0;width:44px;height:44px;border-bottom:4px solid #3FD98A;border-right:4px solid #3FD98A;border-radius:0 0 14px 0"></div>
+                <div style="position:absolute;left:12px;right:12px;top:20px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,#3FD98A,transparent);animation:scanline 2.6s ease-in-out infinite"></div>
+              </div>
+              <div style="position:relative;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.45);border-radius:999px;padding:8px 16px">
+                <span style="width:8px;height:8px;border-radius:50%;background:#3FD98A;animation:pulse 1.6s infinite"></span>
+                <span style="font-size:14px;font-weight:500;color:#fff">Leitor de código ativo</span>
+              </div>
+              <div style="position:relative;font-size:16.5px;font-weight:500;color:rgba(255,255,255,.9);text-align:center;max-width:280px">Aponte para a etiqueta</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 32px 26px">
+              <div style="font-size: 15px; font-weight: 800; color: #fff; background: rgba(255,255,255,.12); border-radius: 999px; padding: 12px 18px; width: 50px; height: 44px">Digitar código</div>
+              <div style="width:78px;height:78px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.35);box-shadow:0 6px 18px rgba(0,0,0,.4)"></div>
+              <div style="font-size: 15px; font-weight: 800; color: #fff; background: rgba(255,255,255,.12); border-radius: 999px; padding: 12px 18px; width: 54px; height: 46px">Sem etiqueta</div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Entrada: confirmação" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do operador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Entrada: confirmação</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">OCR pré-preenche transportadora e código de barras; a unidade é a única confirmação obrigatória.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div style="width:42px;height:42px;border-radius:50%;background:#fff;border:1px solid #E3EAE4;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17251C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+              <div style="flex:1;font-size:19px;font-weight:700;color:#17251C">Confirmar entrada</div>
+              <div style="font-size:13px;font-weight:600;color:#5E6E63">2 de 2</div>
+            </div>
+            <div style="flex:1;padding:6px 16px;display:flex;flex-direction:column;gap:14px;overflow:auto">
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;padding:14px;display:flex;gap:14px">
+                <div style="width:92px;height:92px;flex-shrink:0;background:repeating-linear-gradient(45deg,#E9EDE8 0 10px,#F2F5F1 10px 20px);border:1px dashed #C7D2C9;border-radius:14px;display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,monospace;font-size:10px;color:#7A8A7E;text-align:center">foto da<br>etiqueta</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
+                  <div style="display:flex;flex-direction:column;gap:2px">
+                    <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#5E6E63">Transportadora</div>
+                    <div style="font-size:19px;font-weight:700;color:#17251C">Amazon</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:2px">
+                    <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#5E6E63">Código de barras</div>
+                    <div style="font-size:15px;font-weight:500;color:#17251C;font-family:ui-monospace,monospace">BR7492810334BR</div>
+                  </div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FB0A4" stroke-width="2" stroke-linecap="round" style="align-self:center"><path d="M9 5l7 7-7 7"></path></svg>
+              </div>
+              <div style="background:#F0FBF4;border:2.5px solid #00A85A;border-radius:24px;padding:18px 20px;display:flex;align-items:center;gap:14px">
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#0F7A44">Unidade</div>
+                  <div style="font-size:46px;font-weight:700;color:#17251C;letter-spacing:-1px;line-height:1">B · 302</div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63">Sugerida pela etiqueta · toque para trocar</div>
+                </div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A44" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"></path></svg>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="font-size:14px;font-weight:700;color:#17251C">Prateleira</div>
+                <div style="display:flex;gap:9px;flex-wrap:wrap">
+                  <div style="padding:13px 20px;border-radius:999px;border:1.5px solid #C7D2C9;background:#fff;font-size:17px;font-weight:600;color:#17251C">A1</div>
+                  <div style="padding:13px 20px;border-radius:999px;border:1.5px solid #C7D2C9;background:#fff;font-size:17px;font-weight:600;color:#17251C">A2</div>
+                  <div style="padding:13px 20px;border-radius:999px;border:1.5px solid #C7D2C9;background:#fff;font-size:17px;font-weight:600;color:#17251C">B1</div>
+                  <div style="padding:13px 20px;border-radius:999px;background:#175C38;font-size:17px;font-weight:600;color:#fff;display:flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7CE3A8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 7"></path></svg>B2</div>
+                  <div style="padding:13px 20px;border-radius:999px;border:1.5px solid #C7D2C9;background:#fff;font-size:17px;font-weight:600;color:#17251C">C1</div>
+                </div>
+                <div style="font-size:12.5px;font-weight:600;color:#7A8A7E">B2 foi a última usada</div>
+              </div>
+            </div>
+            <div style="padding:14px 16px 18px;display:flex;flex-direction:column;gap:8px">
+              <div style="height:72px;border-radius:22px;background:linear-gradient(135deg,#00A85A,#00803E);box-shadow:0 8px 20px rgba(0,140,70,.3);display:flex;align-items:center;justify-content:center;gap:12px" style-active="transform:scale(.98)">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 7"></path></svg>
+                <span style="font-size:23px;font-weight:700;color:#fff">Confirmar e notificar</span>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:#5E6E63;text-align:center">O morador recebe o aviso na hora</div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Retirada" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do operador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Retirada</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Busca por unidade ou QR do morador; retirada parcial é o caso normal.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div style="width:42px;height:42px;border-radius:50%;background:#fff;border:1px solid #E3EAE4;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17251C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+              <div style="flex:1;font-size:19px;font-weight:700;color:#17251C">Retirada</div>
+            </div>
+            <div style="padding:0 16px;display:flex;gap:10px">
+              <div style="flex:1;display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #175C38;border-radius:999px;padding:14px 18px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6E63" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+                <span style="font-size:18px;font-weight:700;color:#17251C">302<span style="animation:pulse 1.2s infinite;font-weight:400;color:#00A85A">|</span></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;background:#175C38;border-radius:999px;padding:14px 18px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z"></path><path d="M15 15h3v3h-3zM18 18h3v3h-3z"></path></svg>
+                <span style="font-size:15px;font-weight:600;color:#fff">Bipar QR</span>
+              </div>
+            </div>
+            <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:auto">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <div style="font-size:28px;font-weight:700;color:#17251C">B · 302</div>
+                <div style="font-size:14.5px;font-weight:500;color:#5E6E63">3 encomendas na portaria</div>
+              </div>
+              <div style="background:#fff;border:2px solid #00A85A;border-radius:20px;padding:14px;display:flex;align-items:center;gap:12px">
+                <div style="width:30px;height:30px;border-radius:9px;background:#00A85A;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 7"></path></svg></div>
+                <div style="width:52px;height:52px;flex-shrink:0;background:repeating-linear-gradient(45deg,#E9EDE8 0 8px,#F2F5F1 8px 16px);border:1px dashed #C7D2C9;border-radius:10px"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:17.5px;font-weight:700;color:#17251C">Amazon</div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63">Prateleira B2 · há 2 dias</div>
+                </div>
+              </div>
+              <div style="background:#fff;border:2px solid #00A85A;border-radius:20px;padding:14px;display:flex;align-items:center;gap:12px">
+                <div style="width:30px;height:30px;border-radius:9px;background:#00A85A;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 7"></path></svg></div>
+                <div style="width:52px;height:52px;flex-shrink:0;background:repeating-linear-gradient(45deg,#E9EDE8 0 8px,#F2F5F1 8px 16px);border:1px dashed #C7D2C9;border-radius:10px"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:17.5px;font-weight:700;color:#17251C">Mercado Livre</div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Prateleira C1</span><span style="font-size:12px;font-weight:600;color:#B45309;background:#FDF0DC;border-radius:999px;padding:2px 9px">há 5 dias</span></div>
+                </div>
+              </div>
+              <div style="background:#fff;border:1.5px solid #E3EAE4;border-radius:20px;padding:14px;display:flex;align-items:center;gap:12px">
+                <div style="width:30px;height:30px;border-radius:9px;border:2px solid #C7D2C9;flex-shrink:0"></div>
+                <div style="width:52px;height:52px;flex-shrink:0;background:repeating-linear-gradient(45deg,#E9EDE8 0 8px,#F2F5F1 8px 16px);border:1px dashed #C7D2C9;border-radius:10px"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:17.5px;font-weight:700;color:#17251C">Shein</div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63">Prateleira A1 · hoje</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;background:#EEF3EE;border-radius:16px;padding:12px 16px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6E63" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.5"></path></svg>
+                <span style="font-size:14px;font-weight:500;color:#5E6E63">1 encomenda permanece na portaria</span>
+              </div>
+            </div>
+            <div style="padding:14px 16px 18px">
+              <div style="height:72px;border-radius:22px;background:linear-gradient(135deg,#00A85A,#00803E);box-shadow:0 8px 20px rgba(0,140,70,.3);display:flex;align-items:center;justify-content:center;gap:12px" style-active="transform:scale(.98)">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3v13H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+                <span style="font-size:23px;font-weight:700;color:#fff">Foto e entregar (2)</span>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Onboarding" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do morador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Onboarding</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Telefone → código → unidade. Sem senha, sem cadastro longo.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:linear-gradient(160deg,#175C38,#0F4728)">
+            <div style="padding:34px 24px 40px;display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:22px;font-weight:700;letter-spacing:-.5px;color:#7CE3A8;text-transform:lowercase">{{ nomeApp }}</div>
+              <div style="font-size:31px;font-weight:700;color:#fff;letter-spacing:-.5px;line-height:1.15;text-wrap:pretty">Suas encomendas, sem espera na portaria</div>
+              <div style="font-size:16px;font-weight:600;color:rgba(255,255,255,.78)">Avisamos quando chegar. Você retira com um QR.</div>
+            </div>
+            <div style="flex:1;background:#F3F5F2;border-radius:28px 28px 0 0;padding:26px 22px;display:flex;flex-direction:column;gap:22px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:5px;border-radius:3px;background:#00A85A"></div><div style="font-size:12.5px;font-weight:600;color:#17251C">Telefone</div></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:5px;border-radius:3px;background:#D8E0D9"></div><div style="font-size:12.5px;font-weight:500;color:#9FB0A4">Código</div></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:5px;border-radius:3px;background:#D8E0D9"></div><div style="font-size:12.5px;font-weight:500;color:#9FB0A4">Unidade</div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="font-size:16px;font-weight:700;color:#17251C">Seu celular</div>
+                <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #175C38;border-radius:18px;padding:18px 18px">
+                  <span style="font-size:19px;font-weight:600;color:#5E6E63;border-right:1.5px solid #E3EAE4;padding-right:12px">+55</span>
+                  <span style="font-size:21px;font-weight:700;color:#17251C">(41) 99999-0001</span>
+                </div>
+                <div style="font-size:13.5px;font-weight:600;color:#5E6E63">Sem senha e sem cadastro longo: só o número.</div>
+              </div>
+              <div style="height:64px;border-radius:20px;background:linear-gradient(135deg,#00A85A,#00803E);box-shadow:0 8px 20px rgba(0,140,70,.3);display:flex;align-items:center;justify-content:center" style-active="transform:scale(.98)">
+                <span style="font-size:20px;font-weight:700;color:#fff">Receber código por SMS</span>
+              </div>
+              <div style="font-size:12.5px;font-weight:600;color:#7A8A7E;text-align:center;text-wrap:pretty;margin-top:auto">Ao continuar você aceita os <a href="#1e" style="font-weight:600">termos de uso</a> e as notificações de encomendas.</div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Home: minhas encomendas" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do morador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Home: minhas encomendas</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Pendências com urgência visível e retirada a um toque.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px">
+              <div style="display:flex;flex-direction:column;gap:1px">
+                <div style="font-size:24px;font-weight:700;color:#17251C">Oi, Marina</div>
+                <div style="font-size:14px;font-weight:500;color:#5E6E63">{{ condominio }} · <span style="white-space:nowrap">B 302</span></div>
+              </div>
+              <div style="position:relative;width:46px;height:46px;border-radius:50%;background:#fff;border:1px solid #E3EAE4;display:flex;align-items:center;justify-content:center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#17251C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6"></path><path d="M10 19a2 2 0 004 0"></path></svg>
+                <span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:#D9480F;border:2px solid #fff"></span>
+              </div>
+            </div>
+            <div style="flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:14px;overflow:auto">
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="font-size:16.5px;font-weight:700;color:#17251C">Na portaria</div>
+                <div style="min-width:26px;height:26px;border-radius:999px;background:#00A85A;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 8px">2</div>
+              </div>
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;padding:14px;display:flex;align-items:center;gap:13px">
+                <div style="width:58px;height:58px;flex-shrink:0;background:repeating-linear-gradient(45deg,#E9EDE8 0 8px,#F2F5F1 8px 16px);border:1px dashed #C7D2C9;border-radius:12px;display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,monospace;font-size:9px;color:#7A8A7E">foto</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+                  <div style="font-size:17px;font-weight:700;color:#17251C">Amazon</div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63">Chegou ontem às 14h</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FB0A4" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"></path></svg>
+              </div>
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;padding:14px;display:flex;align-items:center;gap:13px">
+                <div style="width:58px;height:58px;flex-shrink:0;background:repeating-linear-gradient(45deg,#E9EDE8 0 8px,#F2F5F1 8px 16px);border:1px dashed #C7D2C9;border-radius:12px;display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,monospace;font-size:9px;color:#7A8A7E">foto</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                  <div style="font-size:17px;font-weight:700;color:#17251C">Mercado Livre</div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Há 5 dias</span><span style="font-size:12px;font-weight:600;color:#B45309;background:#FDF0DC;border-radius:999px;padding:2px 9px">retire logo</span></div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FB0A4" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"></path></svg>
+              </div>
+              <div style="height:66px;border-radius:20px;background:linear-gradient(135deg,#00A85A,#00803E);box-shadow:0 8px 20px rgba(0,140,70,.3);display:flex;align-items:center;justify-content:center;gap:12px" style-active="transform:scale(.98)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z"></path><path d="M15 15h3v3h-3zM18 18h3v3h-3z"></path></svg>
+                <span style="font-size:20px;font-weight:700;color:#fff">Retirar na portaria</span>
+              </div>
+              <div style="font-size:16.5px;font-weight:700;color:#17251C;margin-top:8px">Histórico</div>
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #EEF2EE">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#EAF6EE;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F7A44" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 7"></path></svg></div>
+                  <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;color:#17251C">Shopee</span><span style="font-size:13px;font-weight:600;color:#5E6E63">Entregue · sábado, 14h</span></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#EAF6EE;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F7A44" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 7"></path></svg></div>
+                  <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;color:#17251C">Correios</span><span style="font-size:13px;font-weight:600;color:#5E6E63">Entregue · 08 jul, 19h</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="QR de retirada" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do morador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">QR de retirada</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">QR dinâmico que renova a cada 60 segundos. É só mostrar ao porteiro.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:linear-gradient(160deg,#175C38,#0F4728)">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+              <div style="flex:1;font-size:19px;font-weight:700;color:#fff">Retirar na portaria</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 26px">
+              <div style="background:#fff;border-radius:28px;padding:26px;display:flex;flex-direction:column;align-items:center;gap:18px;box-shadow:0 20px 50px rgba(0,0,0,.3)">
+                <svg width="216" height="216" viewBox="0 0 29 29" style="display:block" shape-rendering="crispEdges">
+                  <rect width="29" height="29" fill="#fff"></rect>
+                  <path fill="#17251C" fill-rule="evenodd" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM22 0h7v7h-7zM23 1v5h5V1zM24 2h3v3h-3zM0 22h7v7H0zM1 23v5h5v-5zM2 24h3v3H2zM9 0h1v1H9zM11 0h2v1h-2zM14 1h1v2h-1zM17 0h1v1h-1zM19 1h1v1h-1zM9 2h1v2H9zM12 2h1v1h-1zM16 2h2v1h-2zM10 4h2v1h-2zM13 4h1v1h-1zM15 4h1v2h-1zM18 4h2v1h-2zM9 6h1v1H9zM11 6h1v1h-1zM13 6h1v1h-1zM17 6h1v1h-1zM19 6h1v1h-1zM0 9h1v1H0zM2 9h1v2H2zM4 9h2v1H4zM6 10h1v1H6zM1 11h1v1H1zM3 12h2v1H3zM5 13h1v1H5zM0 13h2v1H0zM8 9h2v1H8zM11 9h1v2h-1zM13 8h1v2h-1zM15 9h2v1h-2zM18 9h1v1h-1zM20 9h1v1h-1zM22 9h1v2h-1zM24 9h2v1h-2zM27 9h2v1h-2zM9 11h1v1H9zM12 11h2v1h-2zM16 11h1v2h-1zM19 11h2v1h-2zM23 11h1v1h-1zM25 11h1v1h-1zM28 11h1v2h-1zM8 13h2v1H8zM11 13h1v1h-1zM14 13h1v1h-1zM18 13h1v2h-1zM20 13h2v1h-2zM24 13h2v1h-2zM27 13h1v1h-1zM9 15h1v1H9zM12 15h1v1h-1zM15 15h2v1h-2zM19 15h1v1h-1zM22 15h1v1h-1zM25 15h1v2h-1zM28 15h1v1h-1zM8 17h1v2H8zM10 17h2v1h-2zM13 17h1v1h-1zM16 17h2v1h-2zM20 17h1v2h-1zM23 17h2v1h-2zM27 17h1v1h-1zM9 19h1v1H9zM11 19h1v1h-1zM14 19h2v1h-2zM17 19h1v1h-1zM19 20h1v1h-1zM22 19h1v1h-1zM24 19h2v1h-2zM28 19h1v1h-1zM9 21h2v1H9zM12 21h1v2h-1zM15 21h1v1h-1zM17 21h2v1h-2zM20 21h1v1h-1zM23 21h1v2h-1zM26 21h2v1h-2zM9 23h1v1H9zM11 23h1v1h-1zM14 23h2v1h-2zM18 23h1v1h-1zM21 23h2v1h-2zM25 23h1v1h-1zM27 23h2v1h-2zM10 25h2v1h-2zM13 25h1v1h-1zM16 25h2v1h-2zM19 25h1v1h-1zM22 25h1v1h-1zM24 25h2v1h-2zM27 25h1v2h-1zM9 27h1v1H9zM12 27h2v1h-2zM15 27h1v1h-1zM18 27h2v1h-2zM21 27h1v1h-1zM24 27h1v1h-1z"></path>
+                </svg>
+                <div style="width:216px;display:flex;flex-direction:column;gap:7px">
+                  <div style="height:6px;border-radius:3px;background:#E3EAE4;overflow:hidden"><div style="height:100%;border-radius:3px;background:#00A85A;animation:qrbar 60s linear infinite"></div></div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63;text-align:center">O código renova a cada 60 s</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.14);border-radius:999px;padding:9px 18px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7CE3A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V6a2 2 0 00-2-2h-2M3 8V6a2 2 0 012-2h2M21 16v2a2 2 0 01-2 2h-2M3 16v2a2 2 0 002 2h2"></path></svg>
+                <span style="font-size:15px;font-weight:600;color:#fff">2 encomendas para retirar</span>
+              </div>
+              <div style="font-size:16.5px;font-weight:500;color:rgba(255,255,255,.85);text-align:center;text-wrap:pretty;max-width:280px">Mostre este código ao porteiro. Ele confere e registra a entrega com foto.</div>
+            </div>
+            <div style="height:24px"></div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Detalhe da encomenda" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do morador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Detalhe da encomenda</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Fotos de entrada e saída, horários e responsáveis: comprovante anti-disputa.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div style="width:42px;height:42px;border-radius:50%;background:#fff;border:1px solid #E3EAE4;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17251C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+              <div style="flex:1;font-size:19px;font-weight:700;color:#17251C">Encomenda</div>
+              <div style="font-size:13px;font-weight:600;color:#0F7A44;background:#EAF6EE;border-radius:999px;padding:6px 14px">Entregue</div>
+            </div>
+            <div style="flex:1;padding:6px 16px 20px;display:flex;flex-direction:column;gap:14px;overflow:auto">
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <div style="font-size:21px;font-weight:700;color:#17251C">Amazon</div>
+                  <div style="font-size:13.5px;font-weight:500;color:#5E6E63;font-family:ui-monospace,monospace">BR7492810334BR</div>
+                </div>
+                <div style="display:flex;gap:10px">
+                  <div style="flex:1;height:120px;background:repeating-linear-gradient(45deg,#E9EDE8 0 10px,#F2F5F1 10px 20px);border:1px dashed #C7D2C9;border-radius:14px;display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,monospace;font-size:10.5px;color:#7A8A7E">foto da entrada</span></div>
+                  <div style="flex:1;height:120px;background:repeating-linear-gradient(45deg,#E9EDE8 0 10px,#F2F5F1 10px 20px);border:1px dashed #C7D2C9;border-radius:14px;display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,monospace;font-size:10.5px;color:#7A8A7E">foto da entrega</span></div>
+                </div>
+              </div>
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:0">
+                <div style="display:flex;gap:14px">
+                  <div style="display:flex;flex-direction:column;align-items:center">
+                    <div style="width:14px;height:14px;border-radius:50%;background:#00A85A;flex-shrink:0"></div>
+                    <div style="width:2.5px;flex:1;background:#D8E0D9"></div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:2px;padding-bottom:22px">
+                    <div style="font-size:16px;font-weight:700;color:#17251C">Recebida na portaria</div>
+                    <div style="font-size:13.5px;font-weight:500;color:#5E6E63">ter, 12 jul · 14h32 · por Carlos (portaria)</div>
+                    <div style="font-size:13.5px;font-weight:500;color:#5E6E63">Prateleira B2 · morador avisado às 14h33</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:14px">
+                  <div style="display:flex;flex-direction:column;align-items:center">
+                    <div style="width:14px;height:14px;border-radius:50%;background:#175C38;flex-shrink:0"></div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:2px">
+                    <div style="font-size:16px;font-weight:700;color:#17251C">Entregue</div>
+                    <div style="font-size:13.5px;font-weight:500;color:#5E6E63">qui, 14 jul · 18h05 · retirada por Marina</div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;background:#EEF3EE;border-radius:16px;padding:13px 16px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F7A44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"></path><path d="M9 12l2 2 4-4"></path></svg>
+                <span style="font-size:14px;font-weight:500;color:#3C4A40;text-wrap:pretty">Este registro com fotos e horários vale como comprovante de entrega.</span>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Minha unidade" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:110px;padding:0 120px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:560px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">App do morador</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Minha unidade</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Vinculados + convite de familiar; configurações de notificação a um toque.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="428px,908px">
+          <div style="display:flex;flex-direction:column;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div style="width:42px;height:42px;border-radius:50%;background:#fff;border:1px solid #E3EAE4;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17251C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+              <div style="flex:1;font-size:19px;font-weight:700;color:#17251C">Minha unidade</div>
+            </div>
+            <div style="flex:1;padding:6px 16px 20px;display:flex;flex-direction:column;gap:14px;overflow:auto">
+              <div style="background:linear-gradient(135deg,#175C38,#0F4728);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#7CE3A8">{{ condominio }}</div>
+                <div style="font-size:34px;font-weight:700;color:#fff;letter-spacing:-.5px">Bloco B · Apto 302</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="font-size:16px;font-weight:700;color:#17251C">Moradores</div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #EEF2EE">
+                    <div style="width:42px;height:42px;border-radius:50%;background:#175C38;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">MS</div>
+                    <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:600;color:#17251C">Marina Souza</span><span style="font-size:13px;font-weight:600;color:#5E6E63">(41) 99999-0001</span></div>
+                    <span style="font-size:12px;font-weight:600;color:#0F7A44;background:#EAF6EE;border-radius:999px;padding:4px 11px">Titular</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:13px;padding:14px 16px">
+                    <div style="width:42px;height:42px;border-radius:50%;background:#5E6E63;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">JS</div>
+                    <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:600;color:#17251C">João Souza</span><span style="font-size:13px;font-weight:600;color:#5E6E63">(41) 98888-4412</span></div>
+                  </div>
+                </div>
+                <div style="height:56px;border-radius:18px;border:2px solid #175C38;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#175C38" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                  <span style="font-size:17px;font-weight:700;color:#175C38">Convidar familiar</span>
+                </div>
+              </div>
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:20px;display:flex;align-items:center;gap:13px;padding:16px">
+                <div style="width:42px;height:42px;border-radius:50%;background:#EAF6EE;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0F7A44" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6"></path><path d="M10 19a2 2 0 004 0"></path></svg></div>
+                <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:600;color:#17251C">Notificações</span><span style="font-size:13px;font-weight:400;color:#5E6E63">Todos os vinculados recebem os avisos</span></div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FB0A4" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"></path></svg>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Visão geral" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:64px;padding:0 70px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:380px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">Painel do síndico</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Visão geral</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Pendências, adoção do app e movimento dos últimos 14 dias.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1360 }}" height="{{ 850 }}" url="app.guarita.com.br/painel" hint-size="1360px,850px">
+          <div style="display:grid;grid-template-columns:236px 1fr;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="background:linear-gradient(180deg,#175C38,#0F4728);display:flex;flex-direction:column;padding:22px 14px;gap:6px">
+              <div style="font-size:21px;font-weight:700;letter-spacing:-.5px;color:#fff;text-transform:lowercase;padding:0 12px 18px">{{ nomeApp }}</div>
+              <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.16);border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l8-7 8 7v8h-6v-5h-4v5H4z"></path></svg><span style="font-size:14.5px;font-weight:600;color:#fff">Visão geral</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Pacotes</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><path d="M5 20V10M12 20V4M19 20v-8"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Relatórios</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5M16 4.5a3.5 3.5 0 010 7M18 14.7c2 .7 3 2.3 3 5.3"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Moradores</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Configurações</span></div>
+              <div style="margin-top:auto;background:rgba(255,255,255,.12);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#7CE3A8">Condomínio</span>
+                <span style="font-size:14px;font-weight:600;color:#fff">{{ condominio }}</span>
+              </div>
+            </div>
+            <div style="padding:26px 30px;display:flex;flex-direction:column;gap:20px;overflow:auto">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;flex-direction:column"><span style="font-size:24px;font-weight:700;color:#17251C">Visão geral</span><span style="font-size:14px;font-weight:600;color:#5E6E63">terça-feira, 15 de julho</span></div>
+                <div style="display:flex;align-items:center;gap:10px"><span style="font-size:14px;font-weight:500;color:#5E6E63">Sandra Lima · Síndica</span><div style="width:40px;height:40px;border-radius:50%;background:#175C38;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">SL</div></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Na portaria agora</span><span style="font-size:34px;font-weight:700;color:#17251C">38</span><span style="font-size:12.5px;font-weight:600;color:#B45309">12 há 3+ dias</span></div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Entradas hoje</span><span style="font-size:34px;font-weight:700;color:#17251C">124</span><span style="font-size:12.5px;font-weight:500;color:#7A8A7E">média: 118/dia</span></div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Retiradas hoje</span><span style="font-size:34px;font-weight:700;color:#17251C">112</span><span style="font-size:12.5px;font-weight:500;color:#7A8A7E">tempo médio: 1,4 dia</span></div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Adoção do app</span><span style="font-size:34px;font-weight:700;color:#0F7A44">71%</span><span style="font-size:12.5px;font-weight:500;color:#7A8A7E">213 de 300 unidades</span></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;flex:1">
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-size:16px;font-weight:700;color:#17251C">Movimento: últimos 14 dias</span>
+                    <div style="display:flex;gap:14px"><span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:#5E6E63"><span style="width:10px;height:10px;border-radius:3px;background:#00A85A"></span>entradas</span><span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:#5E6E63"><span style="width:10px;height:10px;border-radius:3px;background:#BFDCC9"></span>retiradas</span></div>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:flex-end;gap:10px;min-height:220px">
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:62%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:55%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:48%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:50%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:71%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:60%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:80%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:74%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:57%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:66%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:30%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:38%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:18%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:22%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:66%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:58%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:54%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:57%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:75%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:68%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:88%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:78%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:60%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:70%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:36%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:40%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                    <div style="flex:1;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:82%;border-radius:5px 5px 0 0;background:#00A85A"></div><div style="flex:1;height:72%;border-radius:5px 5px 0 0;background:#BFDCC9"></div></div>
+                  </div>
+                </div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:16px;font-weight:700;color:#17251C">Paradas há 3+ dias</span><a href="#1k" style="font-size:13px;font-weight:600">ver todas</a></div>
+                  <div style="display:flex;flex-direction:column">
+                    <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #EEF2EE"><span style="font-size:15px;font-weight:700;color:#17251C;width:64px">A · 104</span><span style="flex:1;font-size:13.5px;font-weight:500;color:#5E6E63">Shopee · A2</span><span style="font-size:12px;font-weight:600;color:#B45309;background:#FDF0DC;border-radius:999px;padding:2px 9px">7 dias</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #EEF2EE"><span style="font-size:15px;font-weight:700;color:#17251C;width:64px">B · 302</span><span style="flex:1;font-size:13.5px;font-weight:500;color:#5E6E63">Mercado Livre · C1</span><span style="font-size:12px;font-weight:600;color:#B45309;background:#FDF0DC;border-radius:999px;padding:2px 9px">5 dias</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #EEF2EE"><span style="font-size:15px;font-weight:700;color:#17251C;width:64px">C · 811</span><span style="flex:1;font-size:13.5px;font-weight:500;color:#5E6E63">Correios · B1</span><span style="font-size:12px;font-weight:600;color:#B45309;background:#FDF0DC;border-radius:999px;padding:2px 9px">4 dias</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;padding:11px 0"><span style="font-size:15px;font-weight:700;color:#17251C;width:64px">A · 210</span><span style="flex:1;font-size:13.5px;font-weight:500;color:#5E6E63">Amazon · B2</span><span style="font-size:12px;font-weight:600;color:#B45309;background:#FDF0DC;border-radius:999px;padding:2px 9px">3 dias</span></div>
+                  </div>
+                  <div style="margin-top:auto;background:#EEF3EE;border-radius:12px;padding:11px 14px;font-size:13px;font-weight:500;color:#3C4A40;text-wrap:pretty">Lembretes automáticos são enviados no 3º dia.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Pacotes" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:64px;padding:0 70px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:380px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">Painel do síndico</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Pacotes</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Auditoria completa com filtros, busca e exportação.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1360 }}" height="{{ 850 }}" url="app.guarita.com.br/painel/pacotes" hint-size="1360px,850px">
+          <div style="display:grid;grid-template-columns:236px 1fr;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="background:linear-gradient(180deg,#175C38,#0F4728);display:flex;flex-direction:column;padding:22px 14px;gap:6px">
+              <div style="font-size:21px;font-weight:700;letter-spacing:-.5px;color:#fff;text-transform:lowercase;padding:0 12px 18px">{{ nomeApp }}</div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l8-7 8 7v8h-6v-5h-4v5H4z"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Visão geral</span></div>
+              <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.16);border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"></path></svg><span style="font-size:14.5px;font-weight:600;color:#fff">Pacotes</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><path d="M5 20V10M12 20V4M19 20v-8"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Relatórios</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5M16 4.5a3.5 3.5 0 010 7M18 14.7c2 .7 3 2.3 3 5.3"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Moradores</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Configurações</span></div>
+              <div style="margin-top:auto;background:rgba(255,255,255,.12);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#7CE3A8">Condomínio</span>
+                <span style="font-size:14px;font-weight:600;color:#fff">{{ condominio }}</span>
+              </div>
+            </div>
+            <div style="padding:26px 30px;display:flex;flex-direction:column;gap:16px;overflow:auto">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:24px;font-weight:700;color:#17251C">Pacotes</span>
+                <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #175C38;border-radius:10px;padding:9px 16px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#175C38" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M4 20h16"></path></svg><span style="font-size:13.5px;font-weight:600;color:#175C38">Exportar CSV</span></div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center">
+                <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #E3EAE4;border-radius:999px;padding:10px 16px;width:280px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6E63" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><span style="font-size:14px;font-weight:600;color:#9FB0A4">Unidade, rastreio, transportadora…</span></div>
+                <div style="padding:9px 16px;border-radius:999px;background:#175C38;font-size:13.5px;font-weight:600;color:#fff">Na portaria · 38</div>
+                <div style="padding:9px 16px;border-radius:999px;border:1.5px solid #C7D2C9;background:#fff;font-size:13.5px;font-weight:600;color:#17251C">Entregues</div>
+                <div style="padding:9px 16px;border-radius:999px;border:1.5px solid #C7D2C9;background:#fff;font-size:13.5px;font-weight:600;color:#17251C">Extraviados</div>
+                <div style="padding:9px 16px;border-radius:999px;border:1.5px solid #C7D2C9;background:#fff;font-size:13.5px;font-weight:600;color:#17251C">Últimos 30 dias</div>
+              </div>
+              <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:13px 20px;background:#F7FAF7;border-bottom:1px solid #E3EAE4;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#5E6E63"><span>Unidade</span><span>Transportadora</span><span>Rastreio</span><span>Prateleira</span><span>Entrada</span><span>Tempo</span><span>Status</span></div>
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:14px 20px;border-bottom:1px solid #EEF2EE;font-size:14px;font-weight:500;color:#17251C;align-items:center"><span style="font-weight:700">A · 104</span><span>Shopee</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#5E6E63">BR8821004576BR</span><span>A2</span><span>08 jul, 09h14</span><span style="color:#B45309;font-weight:600">7 dias</span><span style="font-size:12px;font-weight:600;color:#0F7A44;background:#EAF6EE;border-radius:999px;padding:4px 10px;text-align:center">na portaria</span></div>
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:14px 20px;border-bottom:1px solid #EEF2EE;font-size:14px;font-weight:500;color:#17251C;align-items:center"><span style="font-weight:700">B · 302</span><span>Mercado Livre</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#5E6E63">ML4410297831</span><span>C1</span><span>10 jul, 16h40</span><span style="color:#B45309;font-weight:600">5 dias</span><span style="font-size:12px;font-weight:600;color:#0F7A44;background:#EAF6EE;border-radius:999px;padding:4px 10px;text-align:center">na portaria</span></div>
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:14px 20px;border-bottom:1px solid #EEF2EE;font-size:14px;font-weight:500;color:#17251C;align-items:center"><span style="font-weight:700">C · 811</span><span>Correios</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#5E6E63">BR5530018822BR</span><span>B1</span><span>11 jul, 11h05</span><span style="color:#B45309;font-weight:600">4 dias</span><span style="font-size:12px;font-weight:600;color:#0F7A44;background:#EAF6EE;border-radius:999px;padding:4px 10px;text-align:center">na portaria</span></div>
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:14px 20px;border-bottom:1px solid #EEF2EE;font-size:14px;font-weight:500;color:#17251C;align-items:center"><span style="font-weight:700">B · 507</span><span>Amazon</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#5E6E63">BR7492810334BR</span><span>B2</span><span>14 jul, 14h32</span><span>1 dia</span><span style="font-size:12px;font-weight:600;color:#0F7A44;background:#EAF6EE;border-radius:999px;padding:4px 10px;text-align:center">na portaria</span></div>
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:14px 20px;border-bottom:1px solid #EEF2EE;font-size:14px;font-weight:500;color:#17251C;align-items:center"><span style="font-weight:700">A · 210</span><span>Shein</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#5E6E63">SH99120388</span><span>A1</span><span>15 jul, 08h51</span><span>hoje</span><span style="font-size:12px;font-weight:600;color:#0F7A44;background:#EAF6EE;border-radius:999px;padding:4px 10px;text-align:center">na portaria</span></div>
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:14px 20px;border-bottom:1px solid #EEF2EE;font-size:14px;font-weight:500;color:#17251C;align-items:center"><span style="font-weight:700">C · 405</span><span>Amazon</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#5E6E63">BR2208471190BR</span><span>B2</span><span>14 jul, 10h18</span><span>:</span><span style="font-size:12px;font-weight:600;color:#3C4A40;background:#EEF2EE;border-radius:999px;padding:4px 10px;text-align:center">entregue</span></div>
+                <div style="display:grid;grid-template-columns:90px 1.1fr 1.5fr 1fr 1fr 1fr 110px;gap:8px;padding:14px 20px;font-size:14px;font-weight:500;color:#17251C;align-items:center"><span style="font-weight:700">B · 302</span><span>Shopee</span><span style="font-family:ui-monospace,monospace;font-size:12.5px;color:#5E6E63">BR6673120945BR</span><span>A2</span><span>12 jul, 15h02</span><span>:</span><span style="font-size:12px;font-weight:600;color:#3C4A40;background:#EEF2EE;border-radius:999px;padding:4px 10px;text-align:center">entregue</span></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:13.5px;font-weight:500;color:#5E6E63">Mostrando 7 de 38</span>
+                <div style="display:flex;gap:6px">
+                  <div style="width:34px;height:34px;border-radius:10px;background:#175C38;color:#fff;font-size:13.5px;font-weight:600;display:flex;align-items:center;justify-content:center">1</div>
+                  <div style="width:34px;height:34px;border-radius:10px;border:1.5px solid #C7D2C9;background:#fff;color:#17251C;font-size:13.5px;font-weight:600;display:flex;align-items:center;justify-content:center">2</div>
+                  <div style="width:34px;height:34px;border-radius:10px;border:1.5px solid #C7D2C9;background:#fff;color:#17251C;font-size:13.5px;font-weight:600;display:flex;align-items:center;justify-content:center">3</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+<section data-label="Relatórios" style="width:1920px;height:1080px;background:#F3F5F2;display:flex;align-items:center;justify-content:center;gap:64px;padding:0 70px;box-sizing:border-box;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif">
+    <div style="width:380px;display:flex;flex-direction:column;gap:22px;flex-shrink:0">
+    <div style="font-size:22px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0F7A44">Painel do síndico</div>
+    <div style="font-size:62px;font-weight:700;letter-spacing:-1px;color:#17251C;line-height:1.05;text-wrap:pretty">Relatórios</div>
+    <div style="font-size:27px;font-weight:400;color:#5E6E63;line-height:1.45;text-wrap:pretty">Tempo até retirada, volume por transportadora e horários de pico.</div>
+  </div>
+    <div style="flex-shrink:0"><x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1360 }}" height="{{ 850 }}" url="app.guarita.com.br/painel/relatorios" hint-size="1360px,850px">
+          <div style="display:grid;grid-template-columns:236px 1fr;height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;background:#F3F5F2">
+            <div style="background:linear-gradient(180deg,#175C38,#0F4728);display:flex;flex-direction:column;padding:22px 14px;gap:6px">
+              <div style="font-size:21px;font-weight:700;letter-spacing:-.5px;color:#fff;text-transform:lowercase;padding:0 12px 18px">{{ nomeApp }}</div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l8-7 8 7v8h-6v-5h-4v5H4z"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Visão geral</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Pacotes</span></div>
+              <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.16);border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M5 20V10M12 20V4M19 20v-8"></path></svg><span style="font-size:14.5px;font-weight:600;color:#fff">Relatórios</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5M16 4.5a3.5 3.5 0 010 7M18 14.7c2 .7 3 2.3 3 5.3"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Moradores</span></div>
+              <div style="display:flex;align-items:center;gap:11px;border-radius:12px;padding:11px 12px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"></path></svg><span style="font-size:14.5px;font-weight:500;color:rgba(255,255,255,.75)">Configurações</span></div>
+              <div style="margin-top:auto;background:rgba(255,255,255,.12);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#7CE3A8">Condomínio</span>
+                <span style="font-size:14px;font-weight:600;color:#fff">{{ condominio }}</span>
+              </div>
+            </div>
+            <div style="padding:26px 30px;display:flex;flex-direction:column;gap:16px;overflow:auto">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:24px;font-weight:700;color:#17251C">Relatórios</span>
+                <div style="display:flex;gap:10px">
+                  <div style="padding:9px 16px;border-radius:999px;background:#175C38;font-size:13.5px;font-weight:600;color:#fff">Últimos 30 dias</div>
+                  <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #175C38;border-radius:10px;padding:9px 16px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#175C38" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M4 20h16"></path></svg><span style="font-size:13.5px;font-weight:600;color:#175C38">Exportar PDF</span></div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Tempo médio até retirada</span><span style="font-size:36px;font-weight:700;color:#17251C">1,4 dia</span><span style="font-size:12.5px;font-weight:600;color:#0F7A44">0,3 dia a menos que junho</span></div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Volume no mês</span><span style="font-size:36px;font-weight:700;color:#17251C">3.482</span><span style="font-size:12.5px;font-weight:500;color:#7A8A7E">pacotes recebidos</span></div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13.5px;font-weight:500;color:#5E6E63">Notificações entregues</span><span style="font-size:36px;font-weight:700;color:#17251C">98,2%</span><span style="font-size:12.5px;font-weight:500;color:#7A8A7E">push + WhatsApp fallback</span></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1">
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:16px">
+                  <span style="font-size:16px;font-weight:700;color:#17251C">Volume por transportadora</span>
+                  <div style="display:flex;flex-direction:column;gap:13px">
+                    <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font-size:13.5px;font-weight:600;color:#17251C">Amazon</span><div style="flex:1;height:22px;border-radius:6px;background:#EEF2EE;overflow:hidden"><div style="width:42%;height:100%;border-radius:6px;background:#00A85A"></div></div><span style="width:40px;font-size:13.5px;font-weight:600;color:#5E6E63;text-align:right">42%</span></div>
+                    <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font-size:13.5px;font-weight:600;color:#17251C">Mercado Livre</span><div style="flex:1;height:22px;border-radius:6px;background:#EEF2EE;overflow:hidden"><div style="width:28%;height:100%;border-radius:6px;background:#00A85A"></div></div><span style="width:40px;font-size:13.5px;font-weight:600;color:#5E6E63;text-align:right">28%</span></div>
+                    <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font-size:13.5px;font-weight:600;color:#17251C">Shopee</span><div style="flex:1;height:22px;border-radius:6px;background:#EEF2EE;overflow:hidden"><div style="width:14%;height:100%;border-radius:6px;background:#00A85A"></div></div><span style="width:40px;font-size:13.5px;font-weight:600;color:#5E6E63;text-align:right">14%</span></div>
+                    <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font-size:13.5px;font-weight:600;color:#17251C">Correios</span><div style="flex:1;height:22px;border-radius:6px;background:#EEF2EE;overflow:hidden"><div style="width:10%;height:100%;border-radius:6px;background:#00A85A"></div></div><span style="width:40px;font-size:13.5px;font-weight:600;color:#5E6E63;text-align:right">10%</span></div>
+                    <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font-size:13.5px;font-weight:600;color:#17251C">Outras</span><div style="flex:1;height:22px;border-radius:6px;background:#EEF2EE;overflow:hidden"><div style="width:6%;height:100%;border-radius:6px;background:#00A85A"></div></div><span style="width:40px;font-size:13.5px;font-weight:600;color:#5E6E63;text-align:right">6%</span></div>
+                  </div>
+                </div>
+                <div style="background:#fff;border:1px solid #E3EAE4;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:16px">
+                  <span style="font-size:16px;font-weight:700;color:#17251C">Retiradas por horário</span>
+                  <div style="flex:1;display:flex;align-items:flex-end;gap:8px;min-height:180px">
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><div style="width:100%;height:12%;border-radius:6px 6px 0 0;background:#BFDCC9"></div><span style="font-size:11.5px;font-weight:500;color:#7A8A7E">6 a 9h</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><div style="width:100%;height:22%;border-radius:6px 6px 0 0;background:#BFDCC9"></div><span style="font-size:11.5px;font-weight:500;color:#7A8A7E">9 a 12h</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><div style="width:100%;height:34%;border-radius:6px 6px 0 0;background:#7CC79A"></div><span style="font-size:11.5px;font-weight:500;color:#7A8A7E">12 a 15h</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><div style="width:100%;height:52%;border-radius:6px 6px 0 0;background:#2FB56E"></div><span style="font-size:11.5px;font-weight:500;color:#7A8A7E">15 a 18h</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><div style="width:100%;height:92%;border-radius:6px 6px 0 0;background:#00A85A"></div><span style="font-size:11.5px;font-weight:500;color:#7A8A7E">18 a 21h</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><div style="width:100%;height:38%;border-radius:6px 6px 0 0;background:#7CC79A"></div><span style="font-size:11.5px;font-weight:500;color:#7A8A7E">21 a 24h</span></div>
+                  </div>
+                  <div style="background:#EEF3EE;border-radius:12px;padding:11px 14px;font-size:13px;font-weight:500;color:#3C4A40">Pico entre 18h e 21h: reforce a portaria nesse turno.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import></div>
+  </section>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;nomeApp&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Guarita&quot;,&quot;Chegou&quot;,&quot;Condô&quot;,&quot;Praça&quot;],&quot;default&quot;:&quot;Guarita&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Marca&quot;},&quot;condominio&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Residencial Aurora&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Marca&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      nomeApp: this.props.nomeApp ?? 'Guarita',
+      condominio: this.props.condominio ?? 'Residencial Aurora',
+    };
+  }
+}
+</script>
+</body>
+</html>

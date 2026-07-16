@@ -59,6 +59,21 @@ export const ResolverQrSchema = z.object({
 });
 export type ResolverQrDto = z.infer<typeof ResolverQrSchema>;
 
+export const ImportarMoradoresSchema = z.object({
+  linhas: z
+    .array(
+      z.object({
+        nome: z.string().min(2).max(120),
+        telefone: TelefoneSchema,
+        bloco: z.string().max(40).optional(),
+        identificacao: z.string().min(1).max(40),
+      }),
+    )
+    .min(1)
+    .max(2000),
+});
+export type ImportarMoradoresDto = z.infer<typeof ImportarMoradoresSchema>;
+
 export const PAPEIS_USUARIO = ["PORTEIRO", "APOIO", "SINDICO", "ADMIN"] as const;
 export type PapelUsuario = (typeof PAPEIS_USUARIO)[number];
 
@@ -70,5 +85,6 @@ export interface JwtPayload {
   tipo: "usuario" | "morador";
   nome: string;
   condominioId?: string;
+  condominioNome?: string;
   papel?: PapelUsuario;
 }

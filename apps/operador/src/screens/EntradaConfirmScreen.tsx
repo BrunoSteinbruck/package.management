@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  FlatList,
   Image,
   ScrollView,
   StyleSheet,
@@ -10,32 +9,48 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { apiFetch, NetworkError, uploadFoto } from "../api/client";
+import { analisarEtiqueta, apiFetch, NetworkError, uploadFoto } from "../api/client";
 import { postOuEnfileirar } from "../api/offlineQueue";
-import { rotuloUnidade, type Pacote, type Unidade } from "../api/types";
-import { Botao, Chip, Rotulo } from "../components/ui";
+import {
+  rotuloUnidade,
+  type Pacote,
+  type RespostaOcr,
+  type Unidade,
+} from "../api/types";
+import { BotaoCta, Chip, HeaderTela, Kicker } from "../components/ui";
+import { Icone } from "../components/icones";
 import { theme } from "../theme";
 import type { RootStackParamList } from "../navigation";
 
-const TRANSPORTADORAS = ["Mercado Livre", "Amazon", "Shopee", "Correios"];
+const PRATELEIRAS = ["A1", "A2", "B1", "B2", "C1"];
 const PRATELEIRA_KEY = "@entrada/ultima-prateleira";
 let cacheUnidades: Unidade[] | null = null;
 
 type Props = NativeStackScreenProps<RootStackParamList, "EntradaConfirm">;
 
 export function EntradaConfirmScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
   const { fotoUri, codigoRastreio } = route.params;
   const [unidades, setUnidades] = useState<Unidade[]>(cacheUnidades ?? []);
   const [busca, setBusca] = useState("");
   const [unidade, setUnidade] = useState<Unidade | null>(null);
-  const [transportadora, setTransportadora] = useState<string>("");
+  const [transportadora, setTransportadora] = useState("");
   const [rastreio, setRastreio] = useState(codigoRastreio ?? "");
   const [prateleira, setPrateleira] = useState("");
+  const [ultimaPrateleira, setUltimaPrateleira] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [fotoKeyOcr, setFotoKeyOcr] = useState<string | null>(null);
+  const [dicaOcr, setDicaOcr] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(PRATELEIRA_KEY).then((v) => v && setPrateleira(v));
+    AsyncStorage.getItem(PRATELEIRA_KEY).then((v) => {
+      if (v) {
+        setUltimaPrateleira(v);
+        setPrateleira((atual) => atual || v);
+      }
+    });
     if (!cacheUnidades) {
       apiFetch<Unidade[]>("/cadastro/unidades")
         .then((lista) => {
@@ -51,20 +66,48 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!fotoUri) return;
+    analisarEtiqueta<RespostaOcr>(fotoUri)
+      .then((res) => {
+        setFotoKeyOcr(res.fotoKey);
+        setTransportadora((atual) => atual || (res.extraido.transportadora ?? ""));
+        setRastreio((atual) => atual || (res.extraido.rastreio ?? ""));
+        const melhor = res.sugestoes[0];
+        if (melhor && melhor.score >= 0.7) {
+          setUnidade(
+            (atual) =>
+              atual ?? {
+                id: melhor.id,
+                bloco: melhor.bloco,
+                identificacao: melhor.identificacao,
+              },
+          );
+          setDicaOcr(true);
+        }
+      })
+      .catch(() => {
+        // Sem OCR (offline ou falha): fluxo manual segue normal.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fotoUri]);
+
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    if (!q) return unidades;
-    return unidades.filter((u) =>
-      `${u.bloco ?? ""} ${u.identificacao}`.toLowerCase().includes(q),
-    );
+    const base = q
+      ? unidades.filter((u) =>
+          `${u.bloco ?? ""} ${u.identificacao}`.toLowerCase().includes(q),
+        )
+      : unidades;
+    return base.slice(0, 12);
   }, [busca, unidades]);
 
   async function confirmar() {
     if (!unidade) return;
     setSalvando(true);
     try {
-      let fotoEntradaKey: string | undefined;
-      if (fotoUri) {
+      let fotoEntradaKey: string | undefined = fotoKeyOcr ?? undefined;
+      if (fotoUri && !fotoEntradaKey) {
         try {
           fotoEntradaKey = await uploadFoto(fotoUri);
         } catch (e) {
@@ -82,10 +125,10 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
       Alert.alert(
         resultado.queued ? "Salvo offline" : "Pacote registrado",
         resultado.queued
-          ? "Será enviado quando a conexão voltar."
-          : `${rotuloUnidade(unidade)} — morador será notificado.`,
+          ? "Será enviado quando a conexão voltar. Pronto para o próximo."
+          : `${rotuloUnidade(unidade)} — morador avisado. Pronto para o próximo.`,
+        [{ text: "Próximo pacote", onPress: () => navigation.replace("EntradaCamera") }],
       );
-      navigation.popToTop();
     } catch (e) {
       Alert.alert("Não foi possível registrar", String((e as Error).message));
     } finally {
@@ -94,130 +137,190 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
   }
 
   return (
-    <ScrollView style={styles.tela} contentContainerStyle={{ padding: theme.spacing.md }}>
-      <View style={{ flexDirection: "row", gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
-        {fotoUri ? (
-          <Image source={{ uri: fotoUri }} style={styles.foto} />
-        ) : (
-          <View style={[styles.foto, styles.fotoVazia]}>
-            <Text style={{ color: theme.colors.textMuted, fontSize: theme.font.sm }}>
-              sem foto
-            </Text>
+    <View style={[styles.tela, { paddingTop: insets.top }]}>
+      <HeaderTela
+        titulo="Confirmar entrada"
+        aoVoltar={() => navigation.replace("EntradaCamera")}
+        direita={<Text style={styles.passo}>2 de 2</Text>}
+      />
+      <ScrollView
+        contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}
+      >
+        <View style={styles.cardFoto}>
+          {fotoUri ? (
+            <Image source={{ uri: fotoUri }} style={styles.thumb} />
+          ) : (
+            <View style={[styles.thumb, styles.thumbVazia]}>
+              <Icone nome="camera" tamanho={22} cor={theme.colors.textFaint} />
+            </View>
+          )}
+          <View style={{ flex: 1, gap: 10 }}>
+            <View>
+              <Kicker>Transportadora</Kicker>
+              <TextInput
+                style={styles.campoInline}
+                value={transportadora}
+                onChangeText={setTransportadora}
+                placeholder="ex.: Amazon"
+                placeholderTextColor={theme.colors.textFaint}
+              />
+            </View>
+            <View>
+              <Kicker>Código de barras</Kicker>
+              <TextInput
+                style={[styles.campoInline, styles.mono]}
+                value={rastreio}
+                onChangeText={setRastreio}
+                placeholder="lido pela câmera"
+                placeholderTextColor={theme.colors.textFaint}
+                autoCapitalize="characters"
+              />
+            </View>
           </View>
-        )}
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          <Text style={styles.titulo}>
-            {unidade ? rotuloUnidade(unidade) : "Escolha a unidade"}
-          </Text>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.font.sm }}>
-            {unidade
-              ? "Confira e confirme — o morador será notificado."
-              : "Única confirmação obrigatória."}
-          </Text>
         </View>
-      </View>
 
-      {!unidade && (
-        <View style={{ marginBottom: theme.spacing.md }}>
-          <TextInput
-            style={styles.campo}
-            placeholder="Buscar: 302, B, 41..."
-            placeholderTextColor={theme.colors.textMuted}
-            value={busca}
-            onChangeText={setBusca}
-            autoFocus
-          />
-          <FlatList
-            data={filtradas.slice(0, 30)}
-            keyExtractor={(u) => u.id}
-            scrollEnabled={false}
-            numColumns={3}
-            columnWrapperStyle={{ gap: theme.spacing.sm }}
-            contentContainerStyle={{ gap: theme.spacing.sm, marginTop: theme.spacing.sm }}
-            renderItem={({ item }) => (
-              <View style={{ flex: 1 / 3 }}>
-                <Chip rotulo={rotuloUnidade(item)} onPress={() => setUnidade(item)} />
+        <View style={styles.cardUnidade}>
+          <Kicker cor={theme.colors.ok}>Unidade</Kicker>
+          {unidade ? (
+            <>
+              <View style={styles.linhaUnidade}>
+                <Text style={styles.unidadeValor}>
+                  {unidade.bloco ? `${unidade.bloco} · ${unidade.identificacao}` : unidade.identificacao}
+                </Text>
+                <Icone nome="chevron" tamanho={26} cor={theme.colors.textFaint} />
               </View>
-            )}
-          />
+              <Text style={styles.unidadeHint} onPress={() => setUnidade(null)}>
+                {dicaOcr ? "Sugerida pela etiqueta · toque para trocar" : "Toque para trocar"}
+              </Text>
+            </>
+          ) : (
+            <>
+              <TextInput
+                style={styles.campoBusca}
+                placeholder="Buscar: 302, B..."
+                placeholderTextColor={theme.colors.textFaint}
+                value={busca}
+                onChangeText={setBusca}
+                autoFocus={!fotoUri}
+              />
+              <View style={styles.gradeUnidades}>
+                {filtradas.map((u) => (
+                  <Chip
+                    key={u.id}
+                    rotulo={rotuloUnidade(u)}
+                    onPress={() => {
+                      setUnidade(u);
+                      setDicaOcr(false);
+                    }}
+                  />
+                ))}
+              </View>
+            </>
+          )}
         </View>
-      )}
-      {unidade && (
-        <Botao
-          titulo="Trocar unidade"
-          variante="secundario"
-          onPress={() => setUnidade(null)}
-          estilo={{ marginBottom: theme.spacing.md }}
+
+        <View style={{ marginTop: 18 }}>
+          <Kicker>Prateleira</Kicker>
+          <View style={styles.linhaChips}>
+            {PRATELEIRAS.map((p) => (
+              <Chip
+                key={p}
+                rotulo={p}
+                ativo={prateleira === p}
+                onPress={() => setPrateleira(prateleira === p ? "" : p)}
+              />
+            ))}
+          </View>
+          {ultimaPrateleira && (
+            <Text style={styles.hintPrateleira}>
+              {ultimaPrateleira} foi a última usada
+            </Text>
+          )}
+        </View>
+
+        <BotaoCta
+          titulo="Confirmar e notificar"
+          icone="check"
+          altura={72}
+          onPress={confirmar}
+          carregando={salvando}
+          desabilitado={!unidade}
+          estilo={{ marginTop: 22 }}
         />
-      )}
-
-      <Rotulo>Transportadora</Rotulo>
-      <View style={styles.linhaChips}>
-        {TRANSPORTADORAS.map((t) => (
-          <Chip
-            key={t}
-            rotulo={t}
-            ativo={transportadora === t}
-            onPress={() => setTransportadora(transportadora === t ? "" : t)}
-          />
-        ))}
-      </View>
-
-      <Rotulo>Código de rastreio</Rotulo>
-      <TextInput
-        style={[styles.campo, { marginBottom: theme.spacing.md }]}
-        value={rastreio}
-        onChangeText={setRastreio}
-        placeholder="lido do código de barras"
-        placeholderTextColor={theme.colors.textMuted}
-        autoCapitalize="characters"
-      />
-
-      <Rotulo>Prateleira</Rotulo>
-      <TextInput
-        style={[styles.campo, { marginBottom: theme.spacing.lg }]}
-        value={prateleira}
-        onChangeText={setPrateleira}
-        placeholder="ex.: C2 (lembra a última usada)"
-        placeholderTextColor={theme.colors.textMuted}
-        autoCapitalize="characters"
-      />
-
-      <Botao
-        titulo="Confirmar e notificar"
-        onPress={confirmar}
-        carregando={salvando}
-        desabilitado={!unidade}
-      />
-    </ScrollView>
+        <Text style={styles.microcopy}>O morador recebe o aviso na hora</Text>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   tela: { flex: 1, backgroundColor: theme.colors.bg },
-  foto: { width: 96, height: 96, borderRadius: theme.radius.md },
-  fotoVazia: {
+  passo: { fontSize: 13.5, color: theme.colors.textMuted, fontWeight: "600" },
+  cardFoto: {
+    flexDirection: "row",
+    gap: 14,
     backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    padding: 14,
+  },
+  thumb: { width: 92, height: 92, borderRadius: theme.radius.foto },
+  thumbVazia: {
+    backgroundColor: theme.colors.placeholder,
+    borderWidth: 1,
+    borderColor: theme.colors.chipBorder,
+    borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
   },
-  titulo: { fontSize: theme.font.lg, fontWeight: "600", color: theme.colors.text },
-  campo: {
+  campoInline: {
+    fontSize: 16.5,
+    fontWeight: "600",
+    color: theme.colors.text,
+    paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.divisor,
+  },
+  mono: { fontFamily: "monospace", fontWeight: "400", fontSize: 14.5 },
+  cardUnidade: {
+    marginTop: 14,
+    backgroundColor: theme.colors.unidadeBg,
+    borderRadius: theme.radius.card,
+    borderWidth: 2.5,
+    borderColor: theme.colors.acao,
+    padding: 16,
+  },
+  linhaUnidade: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  unidadeValor: { fontSize: theme.font.heroMaior, fontWeight: "700", color: theme.colors.text },
+  unidadeHint: { fontSize: 13.5, color: theme.colors.textSecondary, fontWeight: "500", marginTop: 2 },
+  campoBusca: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    minHeight: theme.touch.min,
-    paddingHorizontal: theme.spacing.md,
-    fontSize: theme.font.md,
+    borderRadius: theme.radius.input,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    fontSize: 18,
     color: theme.colors.text,
+    marginTop: 8,
   },
-  linhaChips: {
+  gradeUnidades: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    gap: 8,
+    marginTop: 12,
+  },
+  linhaChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  hintPrateleira: { fontSize: 13, color: theme.colors.textMuted, marginTop: 8 },
+  microcopy: {
+    textAlign: "center",
+    fontSize: 13.5,
+    color: theme.colors.textSecondary,
+    marginTop: 10,
   },
 });

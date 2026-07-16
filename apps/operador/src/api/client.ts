@@ -66,6 +66,32 @@ export async function renovarSessao(): Promise<void> {
   }
 }
 
+/**
+ * Envia a foto da etiqueta para análise (OCR + sugestão de unidade).
+ * A foto já fica armazenada — a resposta traz a fotoKey para o registro.
+ */
+export async function analisarEtiqueta<T>(uri: string): Promise<T> {
+  const token = (await carregarSessao())?.token;
+  const form = new FormData();
+  form.append("file", {
+    uri,
+    name: "etiqueta.jpg",
+    type: "image/jpeg",
+  } as unknown as Blob);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/portaria/ocr`, {
+      method: "POST",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+  } catch {
+    throw new NetworkError("Sem conexão com o servidor");
+  }
+  if (!res.ok) throw new ApiError(res.status, "Falha ao analisar a etiqueta");
+  return (await res.json()) as T;
+}
+
 /** Sobe uma foto (multipart) e retorna a key de armazenamento. */
 export async function uploadFoto(uri: string): Promise<string> {
   const token = (await carregarSessao())?.token;

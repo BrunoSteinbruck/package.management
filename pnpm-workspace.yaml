@@ -5,6 +5,7 @@ allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   prisma: true
+  sharp: true
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.8'
   - '@expo/config-plugins@57.0.5'
