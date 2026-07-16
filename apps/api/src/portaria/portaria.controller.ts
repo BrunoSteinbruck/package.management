@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -85,6 +86,35 @@ export class PortariaController {
   @Get("resumo")
   resumo(@CurrentUser() user: JwtPayload) {
     return this.portaria.resumo(user);
+  }
+
+  @Get("pacotes")
+  listarPacotes(
+    @CurrentUser() user: JwtPayload,
+    @Query("status") status?: string,
+    @Query("busca") busca?: string,
+    @Query("dias") dias?: string,
+    @Query("pagina") pagina?: string,
+  ) {
+    return this.portaria.listarPacotes(user, {
+      status,
+      busca,
+      dias: dias ? Math.max(1, parseInt(dias, 10) || 0) : undefined,
+      pagina: Math.max(1, parseInt(pagina ?? "1", 10) || 1),
+    });
+  }
+
+  @Get("relatorios")
+  relatorios(@CurrentUser() user: JwtPayload, @Query("dias") dias?: string) {
+    return this.portaria.relatorios(user, Math.max(1, parseInt(dias ?? "30", 10) || 30));
+  }
+
+  @Get("serie-diaria")
+  serieDiaria(@CurrentUser() user: JwtPayload, @Query("dias") dias?: string) {
+    return this.portaria.serieDiaria(
+      user,
+      Math.min(60, Math.max(1, parseInt(dias ?? "14", 10) || 14)),
+    );
   }
 
   @Get("pendencias")
