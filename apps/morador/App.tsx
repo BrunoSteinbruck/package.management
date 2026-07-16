@@ -8,8 +8,10 @@ import type { JwtPayload } from "@pacotes/shared";
 import { renovarSessao } from "./src/api/client";
 import { carregarSessao } from "./src/api/session";
 import type { RootStackParamList } from "./src/navigation";
+import { DetalheScreen } from "./src/screens/DetalheScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
+import { MinhaUnidadeScreen } from "./src/screens/MinhaUnidadeScreen";
 import { QrScreen } from "./src/screens/QrScreen";
 import { theme } from "./src/theme";
 
@@ -56,6 +58,8 @@ export default function App() {
           )}
         </Stack.Screen>
         <Stack.Screen name="Qr" component={QrScreen} />
+        <Stack.Screen name="Detalhe" component={DetalheScreen} />
+        <Stack.Screen name="MinhaUnidade" component={MinhaUnidadeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

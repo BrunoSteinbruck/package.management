@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { JwtPayload } from "@pacotes/shared";
-import { apiFetch } from "../api/client";
+import { ApiError, apiFetch } from "../api/client";
 import { salvarSessao } from "../api/session";
 import { registrarPush } from "../api/push";
 import { Botao, BotaoCta, Rotulo } from "../components/ui";
@@ -21,9 +21,11 @@ const PASSOS = ["Telefone", "Código", "Unidade"] as const;
 
 export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
   const insets = useSafeAreaInsets();
-  const [fase, setFase] = useState<0 | 1>(0);
+  const [fase, setFase] = useState<0 | 1 | 2>(0);
   const [telefone, setTelefone] = useState("");
   const [codigo, setCodigo] = useState("");
+  const [nome, setNome] = useState("");
+  const [convite, setConvite] = useState("");
   const [carregando, setCarregando] = useState(false);
 
   async function pedirCodigo() {
@@ -42,14 +44,20 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
     }
   }
 
-  async function verificar() {
+  async function verificar(comConvite: boolean) {
     setCarregando(true);
     try {
       const res = await apiFetch<{ token: string; perfil: JwtPayload }>(
         "/auth/otp/verify",
         {
           method: "POST",
-          body: { telefone: telefone.replace(/\D/g, ""), codigo: codigo.trim() },
+          body: {
+            telefone: telefone.replace(/\D/g, ""),
+            codigo: codigo.trim(),
+            ...(comConvite
+              ? { nome: nome.trim(), convite: convite.trim().toUpperCase() }
+              : {}),
+          },
         },
       );
       if (res.perfil.tipo !== "morador") {
@@ -63,7 +71,15 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
       await registrarPush();
       props.aoEntrar(res.perfil);
     } catch (e) {
-      Alert.alert("Código não aceito", String((e as Error).message));
+      // Telefone desconhecido: passo 3 — vincular por convite.
+      if (!comConvite && e instanceof ApiError && e.status === 404) {
+        setFase(2);
+        return;
+      }
+      Alert.alert(
+        comConvite ? "Convite não aceito" : "Código não aceito",
+        String((e as Error).message),
+      );
     } finally {
       setCarregando(false);
     }
@@ -137,7 +153,7 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
               privacidade do seu condomínio.
             </Text>
           </View>
-        ) : (
+        ) : fase === 1 ? (
           <View>
             <Rotulo>Código de 6 dígitos enviado para {telefone}</Rotulo>
             <TextInput
@@ -151,7 +167,7 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
             <BotaoCta
               titulo="Confirmar"
               altura={64}
-              onPress={verificar}
+              onPress={() => verificar(false)}
               carregando={carregando}
               desabilitado={codigo.trim().length !== 6}
               estilo={{ marginTop: 16 }}
@@ -160,6 +176,47 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
               titulo="Trocar telefone"
               variante="outline"
               onPress={() => setFase(0)}
+              estilo={{ marginTop: 10 }}
+            />
+          </View>
+        ) : (
+          <View>
+            <Text style={styles.tituloConvite}>Vincule-se à sua unidade</Text>
+            <Text style={styles.subConvite}>
+              Seu telefone ainda não está no cadastro. Use o código de convite
+              de um morador da sua unidade — ou peça um à administração.
+            </Text>
+            <Rotulo>Seu nome</Rotulo>
+            <TextInput
+              style={styles.campo}
+              autoFocus
+              value={nome}
+              onChangeText={setNome}
+              placeholder="Nome e sobrenome"
+              placeholderTextColor={theme.colors.textFaint}
+            />
+            <Rotulo estilo={{ marginTop: 14 }}>Código do convite</Rotulo>
+            <TextInput
+              style={[styles.campoCodigo, { letterSpacing: 6, fontSize: 22 }]}
+              autoCapitalize="characters"
+              maxLength={8}
+              value={convite}
+              onChangeText={setConvite}
+              placeholder="A1B2C3"
+              placeholderTextColor={theme.colors.textFaint}
+            />
+            <BotaoCta
+              titulo="Entrar com convite"
+              altura={64}
+              onPress={() => verificar(true)}
+              carregando={carregando}
+              desabilitado={nome.trim().length < 2 || convite.trim().length < 4}
+              estilo={{ marginTop: 16 }}
+            />
+            <Botao
+              titulo="Voltar"
+              variante="outline"
+              onPress={() => setFase(1)}
               estilo={{ marginTop: 10 }}
             />
           </View>
@@ -223,5 +280,23 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "700",
     color: theme.colors.text,
+  },
+  campo: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    minHeight: 56,
+    paddingHorizontal: 16,
+    fontSize: 17,
+    color: theme.colors.text,
+  },
+  tituloConvite: { fontSize: 20, fontWeight: "700", color: theme.colors.text },
+  subConvite: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    marginTop: 6,
+    marginBottom: 18,
   },
 });

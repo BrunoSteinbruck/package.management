@@ -18,6 +18,28 @@ export interface MinhaUnidade {
   historico: PacoteMorador[];
 }
 
+export interface DetalhePacote {
+  id: string;
+  transportadora: string | null;
+  codigoRastreio: string | null;
+  status: "ARMAZENADO" | "ENTREGUE" | "EXTRAVIADO";
+  localArmazenamento: string | null;
+  recebidoEm: string;
+  recebidoPorNome: string;
+  notificadoEm: string | null;
+  fotoEntradaKey: string | null;
+  fotoSaidaKey: string | null;
+  retiradoEm: string | null;
+  entreguePorNome: string | null;
+}
+
+export interface Vinculado {
+  nome: string;
+  telefone: string;
+  titular: boolean;
+  voce: boolean;
+}
+
 export function rotuloUnidade(u: MinhaUnidade["unidade"]): string {
   return u.bloco ? `${u.identificacao} · Bloco ${u.bloco}` : u.identificacao;
 }

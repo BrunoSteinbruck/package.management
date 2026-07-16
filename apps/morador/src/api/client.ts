@@ -66,6 +66,13 @@ export async function renovarSessao(): Promise<void> {
   }
 }
 
+/** URL de exibição de foto (token vai por query — <Image> não envia headers). */
+export async function urlFoto(key: string): Promise<string | null> {
+  const token = (await carregarSessao())?.token;
+  if (!token) return null;
+  return `${API_URL}/uploads/${key}?t=${encodeURIComponent(token)}`;
+}
+
 /** Sobe uma foto (multipart) e retorna a key de armazenamento. */
 export async function uploadFoto(uri: string): Promise<string> {
   const token = (await carregarSessao())?.token;

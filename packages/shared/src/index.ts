@@ -12,8 +12,17 @@ export type RequestOtpDto = z.infer<typeof RequestOtpSchema>;
 export const VerifyOtpSchema = z.object({
   telefone: TelefoneSchema,
   codigo: z.string().length(6),
+  // Onboarding de convidado: telefone ainda não cadastrado + convite válido
+  // criam o morador e o vínculo na hora (confiança transitiva).
+  nome: z.string().min(2).max(120).optional(),
+  convite: z.string().min(4).max(12).optional(),
 });
 export type VerifyOtpDto = z.infer<typeof VerifyOtpSchema>;
+
+export const EmitirConviteSchema = z.object({
+  unidadeId: z.string().uuid(),
+});
+export type EmitirConviteDto = z.infer<typeof EmitirConviteSchema>;
 
 export const RegistrarPacoteSchema = z.object({
   unidadeId: z.string().uuid(),

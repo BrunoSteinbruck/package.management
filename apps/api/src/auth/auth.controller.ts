@@ -30,6 +30,9 @@ export class AuthController {
 
   @Post("otp/verify")
   verifyOtp(@Body(new ZodPipe(VerifyOtpSchema)) body: VerifyOtpDto) {
-    return this.auth.verifyOtp(body.telefone, body.codigo);
+    return this.auth.verifyOtp(body.telefone, body.codigo, {
+      nome: body.nome,
+      convite: body.convite,
+    });
   }
 }

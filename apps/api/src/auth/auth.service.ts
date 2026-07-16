@@ -76,7 +76,11 @@ export class AuthService {
     return { enviado: true };
   }
 
-  async verifyOtp(telefone: string, codigo: string) {
+  async verifyOtp(
+    telefone: string,
+    codigo: string,
+    extra?: { nome?: string; convite?: string },
+  ) {
     const challenge = await this.prisma.otpChallenge.findUnique({
       where: { telefone },
     });
@@ -93,13 +97,16 @@ export class AuthService {
       });
       throw new UnauthorizedException("Código incorreto");
     }
-    await this.prisma.otpChallenge.delete({ where: { telefone } });
+
+    const encerrar = () =>
+      this.prisma.otpChallenge.delete({ where: { telefone } });
 
     const usuario = await this.prisma.usuario.findFirst({
       where: { telefone, ativo: true },
       include: { condominio: true },
     });
     if (usuario) {
+      await encerrar();
       const payload: JwtPayload = {
         sub: usuario.id,
         tipo: "usuario",
@@ -115,6 +122,7 @@ export class AuthService {
       where: { telefone },
     });
     if (morador) {
+      await encerrar();
       const payload: JwtPayload = {
         sub: morador.id,
         tipo: "morador",
@@ -123,9 +131,68 @@ export class AuthService {
       return { token: await this.jwt.signAsync(payload), perfil: payload };
     }
 
+    if (extra?.convite) {
+      const novo = await this.registrarPorConvite(
+        telefone,
+        extra.convite,
+        extra.nome,
+      );
+      await encerrar();
+      return novo;
+    }
+
+    // Mantém o challenge vivo: o app coleta nome + convite e verifica de novo
+    // com o mesmo código (passo "Unidade" do onboarding).
     throw new NotFoundException(
-      "Telefone não cadastrado. Peça um convite ao seu condomínio.",
+      "Telefone não cadastrado. Peça um convite a um morador da sua unidade.",
     );
+  }
+
+  private async registrarPorConvite(
+    telefone: string,
+    codigoConvite: string,
+    nome?: string,
+  ) {
+    if (!nome || nome.trim().length < 2) {
+      throw new UnauthorizedException("Informe seu nome para usar o convite");
+    }
+    const convite = await this.prisma.convite.findUnique({
+      where: { codigo: codigoConvite.toUpperCase().trim() },
+    });
+    if (
+      !convite ||
+      convite.usadoEm !== null ||
+      convite.expiraEm < new Date() ||
+      !convite.unidadeId
+    ) {
+      throw new UnauthorizedException("Convite inválido ou expirado");
+    }
+
+    const morador = await this.prisma.$transaction(async (tx) => {
+      const criado = await tx.morador.create({
+        data: { nome: nome.trim(), telefone },
+      });
+      await tx.vinculo.create({
+        data: {
+          moradorId: criado.id,
+          unidadeId: convite.unidadeId!,
+          condominioId: convite.condominioId,
+          status: "ATIVO",
+        },
+      });
+      await tx.convite.update({
+        where: { id: convite.id },
+        data: { usadoEm: new Date() },
+      });
+      return criado;
+    });
+
+    const payload: JwtPayload = {
+      sub: morador.id,
+      tipo: "morador",
+      nome: morador.nome,
+    };
+    return { token: await this.jwt.signAsync(payload), perfil: payload };
   }
 
   /**

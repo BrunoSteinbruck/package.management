@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -74,17 +75,28 @@ export function HomeScreen({ navigation, perfil, aoSair }: Props) {
       }
     >
       <View style={styles.cabecalho}>
-        <View style={{ flex: 1 }}>
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() =>
+            primeira &&
+            navigation.navigate("MinhaUnidade", {
+              unidadeId: primeira.unidade.id,
+              rotulo: rotuloUnidade(primeira.unidade),
+              condominio: primeira.unidade.condominio,
+            })
+          }
+        >
           <Text style={styles.ola}>Oi, {perfil.nome.split(" ")[0]}</Text>
           {primeira && (
             <Text style={styles.subCabecalho} numberOfLines={1}>
               {primeira.unidade.condominio} ·{" "}
               {primeira.unidade.bloco
                 ? `${primeira.unidade.bloco} ${primeira.unidade.identificacao}`
-                : primeira.unidade.identificacao}
+                : primeira.unidade.identificacao}{" "}
+              ›
             </Text>
           )}
-        </View>
+        </Pressable>
         <View style={styles.sino}>
           <Icone nome="sino" tamanho={22} cor={theme.colors.text} />
           {temPendentes && <View style={styles.sinoDot} />}
@@ -131,7 +143,14 @@ export function HomeScreen({ navigation, perfil, aoSair }: Props) {
                 const dias = diasNaPortaria(p.recebidoEm);
                 const atrasada = dias >= 3;
                 return (
-                  <View key={p.id} style={styles.cardPacote}>
+                  <Pressable
+                    key={p.id}
+                    style={({ pressed }) => [
+                      styles.cardPacote,
+                      { transform: [{ scale: pressed ? 0.98 : 1 }] },
+                    ]}
+                    onPress={() => navigation.navigate("Detalhe", { pacoteId: p.id })}
+                  >
                     <View style={styles.thumb} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.pacoteTitulo}>
@@ -151,7 +170,7 @@ export function HomeScreen({ navigation, perfil, aoSair }: Props) {
                       )}
                     </View>
                     <Icone nome="chevron" tamanho={22} cor={theme.colors.textFaint} />
-                  </View>
+                  </Pressable>
                 );
               })}
               <BotaoCta
@@ -175,12 +194,13 @@ export function HomeScreen({ navigation, perfil, aoSair }: Props) {
               <Text style={styles.tituloSecao}>Histórico</Text>
               <Card estilo={{ marginTop: 10, padding: 6 }}>
                 {minha.historico.slice(0, 5).map((p, i) => (
-                  <View
+                  <Pressable
                     key={p.id}
                     style={[
                       styles.itemHistorico,
                       i > 0 && { borderTopWidth: 1, borderTopColor: theme.colors.divisor },
                     ]}
+                    onPress={() => navigation.navigate("Detalhe", { pacoteId: p.id })}
                   >
                     <View style={styles.checkCirculo}>
                       <Icone nome="check" tamanho={15} cor={theme.colors.ok} traco={2.6} />
@@ -194,7 +214,7 @@ export function HomeScreen({ navigation, perfil, aoSair }: Props) {
                       </Text>
                     </View>
                     <Icone nome="chevron" tamanho={20} cor={theme.colors.textFaint} />
-                  </View>
+                  </Pressable>
                 ))}
               </Card>
             </View>

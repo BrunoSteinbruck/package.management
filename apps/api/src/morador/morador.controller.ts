@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
+import {
+  EmitirConviteDto,
+  EmitirConviteSchema,
   EmitirQrDto,
   EmitirQrSchema,
   JwtPayload,
@@ -34,5 +44,29 @@ export class MoradorController {
     @Body(new ZodPipe(EmitirQrSchema)) dto: EmitirQrDto,
   ) {
     return this.morador.emitirQr(user, dto);
+  }
+
+  @Post("convites")
+  emitirConvite(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(EmitirConviteSchema)) dto: EmitirConviteDto,
+  ) {
+    return this.morador.emitirConvite(user, dto);
+  }
+
+  @Get("unidades/:unidadeId/vinculados")
+  vinculados(
+    @CurrentUser() user: JwtPayload,
+    @Param("unidadeId", ParseUUIDPipe) unidadeId: string,
+  ) {
+    return this.morador.vinculadosDaUnidade(user, unidadeId);
+  }
+
+  @Get("pacotes/:pacoteId")
+  detalhePacote(
+    @CurrentUser() user: JwtPayload,
+    @Param("pacoteId", ParseUUIDPipe) pacoteId: string,
+  ) {
+    return this.morador.detalhePacote(user, pacoteId);
   }
 }
