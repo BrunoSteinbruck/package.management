@@ -17,12 +17,19 @@ export class AuthGuard implements CanActivate {
     const header: string | undefined = req.headers.authorization;
     const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
     if (!token) throw new UnauthorizedException("Token ausente");
+    let payload: JwtPayload;
     try {
-      req.user = await this.jwt.verifyAsync<JwtPayload>(token);
-      return true;
+      payload = await this.jwt.verifyAsync<JwtPayload>(token);
     } catch {
       throw new UnauthorizedException("Token inválido ou expirado");
     }
+    // Só tokens de SESSÃO abrem rotas. Foto-tokens e QR-tokens são assinados
+    // com o mesmo segredo, mas não têm tipo de sessão — barrados aqui.
+    if (payload.tipo !== "usuario" && payload.tipo !== "morador") {
+      throw new UnauthorizedException("Token não é de sessão");
+    }
+    req.user = payload;
+    return true;
   }
 }
 

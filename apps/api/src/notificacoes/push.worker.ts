@@ -73,12 +73,17 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
           where: { moradorId: { in: vinculos.map((v) => v.moradorId) } },
         });
 
-        if (devices.length === 0) {
+        // Só tokens no formato Expo — evita mandar lixo pra API de push.
+        const tokensValidos = devices
+          .map((d) => d.pushToken)
+          .filter((t) => /^ExponentPushToken\[.+\]$/.test(t));
+
+        if (tokensValidos.length === 0) {
           providerMsgId = "sem-destinatario";
           // TODO(fase 2): acionar fallback WhatsApp/SMS de convite aqui.
         } else {
           const resultado = await this.enviarExpo(
-            devices.map((d) => d.pushToken),
+            tokensValidos,
             notif.tipo === "ENTRADA"
               ? "Encomenda na portaria"
               : "Encomenda entregue",

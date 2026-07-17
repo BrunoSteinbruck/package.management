@@ -18,6 +18,11 @@ export interface MinhaUnidade {
   historico: PacoteMorador[];
 }
 
+export interface FotoAssinada {
+  key: string;
+  token: string;
+}
+
 export interface DetalhePacote {
   id: string;
   transportadora: string | null;
@@ -27,8 +32,8 @@ export interface DetalhePacote {
   recebidoEm: string;
   recebidoPorNome: string;
   notificadoEm: string | null;
-  fotoEntradaKey: string | null;
-  fotoSaidaKey: string | null;
+  fotoEntrada: FotoAssinada | null;
+  fotoSaida: FotoAssinada | null;
   retiradoEm: string | null;
   entreguePorNome: string | null;
 }

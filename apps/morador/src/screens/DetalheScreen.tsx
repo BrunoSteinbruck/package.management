@@ -22,22 +22,17 @@ export function DetalheScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const [detalhe, setDetalhe] = useState<DetalhePacote | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [fotos, setFotos] = useState<{ entrada: string | null; saida: string | null }>({
-    entrada: null,
-    saida: null,
-  });
 
   useEffect(() => {
     apiFetch<DetalhePacote>(`/morador/pacotes/${route.params.pacoteId}`)
-      .then(async (d) => {
-        setDetalhe(d);
-        setFotos({
-          entrada: d.fotoEntradaKey ? await urlFoto(d.fotoEntradaKey) : null,
-          saida: d.fotoSaidaKey ? await urlFoto(d.fotoSaidaKey) : null,
-        });
-      })
+      .then(setDetalhe)
       .catch((e) => setErro(String((e as Error).message)));
   }, [route.params.pacoteId]);
+
+  const fotos = {
+    entrada: detalhe?.fotoEntrada ? urlFoto(detalhe.fotoEntrada) : null,
+    saida: detalhe?.fotoSaida ? urlFoto(detalhe.fotoSaida) : null,
+  };
 
   const entregue = detalhe?.status === "ENTREGUE";
 

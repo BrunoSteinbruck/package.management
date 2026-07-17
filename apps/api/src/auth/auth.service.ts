@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type { JwtPayload } from "@pacotes/shared";
-import { createHash, randomInt } from "node:crypto";
+import { createHmac, randomInt } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -18,8 +18,13 @@ const JANELA_ENVIO_MS = 60 * 60 * 1000;
 const MAX_ENVIOS_POR_TELEFONE = 3;
 const MAX_ENVIOS_POR_IP = 10;
 
+// HMAC com o segredo do servidor: um dump do banco sozinho não permite
+// derivar códigos válidos (o espaço de 6 dígitos é pequeno demais para
+// hash puro). Lido em tempo de chamada para respeitar o .env do Config.
 function hash(codigo: string) {
-  return createHash("sha256").update(codigo).digest("hex");
+  return createHmac("sha256", process.env.JWT_SECRET || "dev-secret")
+    .update(codigo)
+    .digest("hex");
 }
 
 @Injectable()
@@ -68,8 +73,10 @@ export class AuthService {
       },
     });
 
-    // TODO(etapa 5): enviar via provedor de SMS. Em dev, o código sai no log.
-    if (process.env.NODE_ENV !== "production") {
+    // TODO(etapa 5): enviar via provedor de SMS.
+    // O código só é ecoado na resposta com opt-in EXPLÍCITO (OTP_DEV_ECHO=1):
+    // depender de NODE_ENV seria takeover de conta num deploy mal configurado.
+    if (process.env.OTP_DEV_ECHO === "1") {
       console.log(`[dev] OTP para ${telefone}: ${codigo}`);
       return { enviado: true, devCodigo: codigo };
     }
@@ -132,13 +139,23 @@ export class AuthService {
     }
 
     if (extra?.convite) {
-      const novo = await this.registrarPorConvite(
-        telefone,
-        extra.convite,
-        extra.nome,
-      );
-      await encerrar();
-      return novo;
+      try {
+        const novo = await this.registrarPorConvite(
+          telefone,
+          extra.convite,
+          extra.nome,
+        );
+        await encerrar();
+        return novo;
+      } catch (e) {
+        // Convite inválido consome tentativa do challenge: impede varredura
+        // de códigos de convite reutilizando o mesmo OTP válido.
+        await this.prisma.otpChallenge.update({
+          where: { telefone },
+          data: { tentativas: { increment: 1 } },
+        });
+        throw e;
+      }
     }
 
     // Mantém o challenge vivo: o app coleta nome + convite e verifica de novo

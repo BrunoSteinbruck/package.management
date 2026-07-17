@@ -1,9 +1,15 @@
-import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from "@nestjs/common";
 import type { JwtPayload } from "@pacotes/shared";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaService } from "../prisma/prisma.service";
+import { extPorMime } from "../uploads/foto.util";
 import { parsearEtiqueta, sugerirUnidades } from "./etiqueta.parser";
 import { criarOcrProvider, OcrProvider } from "./ocr.provider";
 
@@ -23,19 +29,15 @@ export class OcrService {
    * extrai texto via provider e sugere unidades do condomínio do operador.
    * Nunca lança por falha de OCR — sem sugestão, o fluxo manual segue.
    */
-  async analisarEtiqueta(
-    user: JwtPayload,
-    arquivo: Buffer,
-    mimeType: string,
-    nomeOriginal: string,
-  ) {
+  async analisarEtiqueta(user: JwtPayload, arquivo: Buffer, mimeType: string) {
     if (user.tipo !== "usuario" || !user.condominioId) {
       throw new ForbiddenException("Apenas operadores do condomínio");
     }
 
-    const ext = nomeOriginal.includes(".")
-      ? nomeOriginal.slice(nomeOriginal.lastIndexOf("."))
-      : ".jpg";
+    // Extensão SEMPRE do mimetype — nome original é controlado pelo cliente
+    // e permitia path traversal na escrita.
+    const ext = extPorMime(mimeType);
+    if (!ext) throw new BadRequestException("Apenas imagens JPEG/PNG/WebP");
     const fotoKey = `${randomUUID()}${ext}`;
     writeFileSync(join(UPLOADS_DIR, fotoKey), arquivo);
 

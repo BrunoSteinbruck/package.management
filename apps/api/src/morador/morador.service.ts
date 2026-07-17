@@ -173,14 +173,24 @@ export class MoradorService {
           recebidoEm: pacote.recebidoEm,
           recebidoPorNome: pacote.recebidoPor.nome,
           notificadoEm,
-          fotoEntradaKey: pacote.fotoEntradaKey,
-          fotoSaidaKey: pacote.retirada?.fotoSaidaKey ?? null,
+          fotoEntrada: await this.fotoAssinada(pacote.fotoEntradaKey),
+          fotoSaida: await this.fotoAssinada(pacote.retirada?.fotoSaidaKey ?? null),
           retiradoEm: pacote.retirada?.retiradoEm ?? null,
           entreguePorNome: pacote.retirada?.entreguePor.nome ?? null,
         };
       }
     }
     throw new NotFoundException("Encomenda não encontrada");
+  }
+
+  /** Foto-token dedicado: curto (1h), preso à key — o JWT de sessão nunca vai em URL. */
+  private async fotoAssinada(key: string | null) {
+    if (!key) return null;
+    const token = await this.jwt.signAsync(
+      { tipo: "foto", key },
+      { expiresIn: "1h" },
+    );
+    return { key, token };
   }
 
   async emitirQr(user: JwtPayload, dto: EmitirQrDto) {

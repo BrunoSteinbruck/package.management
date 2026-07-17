@@ -66,11 +66,12 @@ export async function renovarSessao(): Promise<void> {
   }
 }
 
-/** URL de exibição de foto (token vai por query — <Image> não envia headers). */
-export async function urlFoto(key: string): Promise<string | null> {
-  const token = (await carregarSessao())?.token;
-  if (!token) return null;
-  return `${API_URL}/uploads/${key}?t=${encodeURIComponent(token)}`;
+/**
+ * URL de exibição de foto usando o FOTO-TOKEN dedicado emitido pela API
+ * (curto e preso à key). O JWT de sessão nunca vai em URL.
+ */
+export function urlFoto(foto: { key: string; token: string }): string {
+  return `${API_URL}/uploads/${foto.key}?t=${encodeURIComponent(foto.token)}`;
 }
 
 /** Sobe uma foto (multipart) e retorna a key de armazenamento. */

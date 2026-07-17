@@ -43,12 +43,7 @@ export class PortariaController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file) throw new BadRequestException("Arquivo ausente (campo 'file')");
-    return this.ocr.analisarEtiqueta(
-      user,
-      file.buffer,
-      file.mimetype,
-      file.originalname ?? "foto.jpg",
-    );
+    return this.ocr.analisarEtiqueta(user, file.buffer, file.mimetype);
   }
 
   @Post("pacotes")
@@ -106,7 +101,10 @@ export class PortariaController {
 
   @Get("relatorios")
   relatorios(@CurrentUser() user: JwtPayload, @Query("dias") dias?: string) {
-    return this.portaria.relatorios(user, Math.max(1, parseInt(dias ?? "30", 10) || 30));
+    return this.portaria.relatorios(
+      user,
+      Math.min(365, Math.max(1, parseInt(dias ?? "30", 10) || 30)),
+    );
   }
 
   @Get("serie-diaria")

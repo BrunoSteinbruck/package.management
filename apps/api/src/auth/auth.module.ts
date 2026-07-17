@@ -8,10 +8,18 @@ import { AuthService } from "./auth.service";
   imports: [
     JwtModule.registerAsync({
       global: true,
-      useFactory: () => ({
-        secret: process.env.JWT_SECRET ?? "dev-secret",
-        signOptions: { expiresIn: "30d" },
-      }),
+      useFactory: () => {
+        const secret = process.env.JWT_SECRET;
+        if (!secret && process.env.NODE_ENV === "production") {
+          throw new Error(
+            "JWT_SECRET é obrigatório em produção — a API não sobe sem ele.",
+          );
+        }
+        return {
+          secret: secret || "dev-secret",
+          signOptions: { expiresIn: "30d" },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

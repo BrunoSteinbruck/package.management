@@ -30,6 +30,15 @@ export class PortariaService {
   registrarEntrada(user: JwtPayload, dto: RegistrarPacoteDto) {
     const condominioId = this.tenantDe(user);
     return this.prisma.withTenant(condominioId, async (tx) => {
+      // O RLS filtra por tenant: unidade de outro condomínio volta null.
+      // Sem esta checagem seria possível criar pacote (e notificar moradores)
+      // de uma unidade alheia.
+      const unidade = await tx.unidade.findUnique({
+        where: { id: dto.unidadeId },
+      });
+      if (!unidade) {
+        throw new BadRequestException("Unidade não encontrada neste condomínio");
+      }
       const pacote = await tx.pacote.create({
         data: {
           condominioId,
