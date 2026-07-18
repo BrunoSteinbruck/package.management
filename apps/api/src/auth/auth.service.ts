@@ -9,6 +9,7 @@ import { JwtService } from "@nestjs/jwt";
 import type { JwtPayload } from "@pacotes/shared";
 import { createHmac, randomInt } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import { SmsService } from "../sms/sms.service";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_TENTATIVAS = 5;
@@ -34,6 +35,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly sms: SmsService,
   ) {}
 
   private registrarEnvio(chave: string, maximo: number): boolean {
@@ -73,7 +75,23 @@ export class AuthService {
       },
     });
 
-    // TODO(etapa 5): enviar via provedor de SMS.
+    // Envio real quando o provedor está configurado (Twilio via env).
+    // Falha de envio vira erro visível — melhor que o usuário esperar um SMS
+    // que nunca chega.
+    if (this.sms.configurado) {
+      try {
+        await this.sms.enviar(
+          telefone,
+          `Guarita: seu codigo de acesso e ${codigo}. Vale por 5 minutos.`,
+        );
+      } catch (e) {
+        throw new HttpException(
+          "Não foi possível enviar o SMS agora. Tente novamente.",
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+    }
+
     // O código só é ecoado na resposta com opt-in EXPLÍCITO (OTP_DEV_ECHO=1):
     // depender de NODE_ENV seria takeover de conta num deploy mal configurado.
     if (process.env.OTP_DEV_ECHO === "1") {

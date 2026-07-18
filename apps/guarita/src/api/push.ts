@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { apiFetch } from "./client";
@@ -27,7 +28,16 @@ export async function registrarPush(): Promise<void> {
         importance: Notifications.AndroidImportance.HIGH,
       });
     }
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    // Em development build o token exige o projectId do EAS (vem do app.json
+    // depois do `eas init`); no Expo Go o parâmetro é dispensável.
+    const projectId =
+      (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)
+        ?.eas?.projectId ?? (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId;
+    const token = (
+      await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined,
+      )
+    ).data;
     await apiFetch("/morador/devices", {
       method: "POST",
       body: {

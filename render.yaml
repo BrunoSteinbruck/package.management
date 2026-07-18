@@ -1,0 +1,31 @@
+# Blueprint do Render: API + PostgreSQL gerenciado com HTTPS automático.
+# Uso: dashboard.render.com → New → Blueprint → conectar o repo Guarita.
+# Depois do primeiro deploy, rodar o bootstrap (ver docs/piloto-checklist.md).
+
+databases:
+  - name: guarita-db
+    plan: free # expira em 30 dias — trocar para 'basic-256mb' antes do piloto real
+    databaseName: guarita
+    user: guarita
+
+services:
+  - type: web
+    name: guarita-api
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pacotes/shared build && pnpm --filter @pacotes/api exec prisma generate && pnpm --filter @pacotes/api build
+    startCommand: pnpm --filter @pacotes/api exec prisma migrate deploy && node apps/api/dist/main.js
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: guarita-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Preencher no dashboard quando tiver as credenciais:
+      # TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM (SMS real)
+      # GOOGLE_VISION_API_KEY (OCR real)
+      # CORS_ORIGINS (URL do painel quando for hospedado)
