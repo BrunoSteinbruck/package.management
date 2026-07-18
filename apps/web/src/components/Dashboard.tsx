@@ -563,6 +563,139 @@ function RelatoriosView() {
   );
 }
 
+interface MembroEquipe {
+  id: string;
+  nome: string;
+  telefone: string;
+  papel: string;
+  ativo: boolean;
+}
+
+function EquipeSection() {
+  const [equipe, setEquipe] = useState<MembroEquipe[]>([]);
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [papel, setPapel] = useState("PORTEIRO");
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      setEquipe(await apiFetch<MembroEquipe[]>("/cadastro/equipe"));
+    } catch (e) {
+      setErro((e as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  async function adicionar() {
+    setEnviando(true);
+    setErro(null);
+    try {
+      await apiFetch("/cadastro/equipe", {
+        method: "POST",
+        body: { nome, telefone: telefone.replace(/\D/g, ""), papel },
+      });
+      setNome("");
+      setTelefone("");
+      carregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function alternar(id: string) {
+    try {
+      await apiFetch(`/cadastro/equipe/${id}/alternar-ativo`, { method: "POST" });
+      carregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Equipe da portaria</h2>
+      <p className="aviso" style={{ marginBottom: 10 }}>
+        O telefone cadastrado aqui passa a entrar direto no app da portaria
+        (porteiro/apoio) ou neste painel (síndico).
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>Papel</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {equipe.map((m) => (
+            <tr key={m.id}>
+              <td className="unidade">{m.nome}</td>
+              <td>{m.telefone}</td>
+              <td>{m.papel.toLowerCase()}</td>
+              <td>
+                <span className={`selo ${m.ativo ? "ok" : "alerta"}`}>
+                  {m.ativo ? "ativo" : "desativado"}
+                </span>
+              </td>
+              <td style={{ textAlign: "right" }}>
+                <button className="outline" onClick={() => alternar(m.id)}>
+                  {m.ativo ? "Desativar" : "Reativar"}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="linha" style={{ marginTop: 16 }}>
+        <input
+          style={{ width: 200 }}
+          placeholder="Nome"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+        />
+        <input
+          style={{ width: 160 }}
+          placeholder="Telefone (DDD+número)"
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
+        />
+        <select
+          value={papel}
+          onChange={(e) => setPapel(e.target.value)}
+          style={{
+            border: "1px solid var(--borda)",
+            borderRadius: 18,
+            padding: "10px 14px",
+            fontSize: 14,
+            background: "var(--surface)",
+          }}
+        >
+          <option value="PORTEIRO">porteiro</option>
+          <option value="APOIO">apoio</option>
+          <option value="SINDICO">síndico</option>
+        </select>
+        <button
+          className="acao"
+          onClick={adicionar}
+          disabled={enviando || nome.trim().length < 2 || telefone.replace(/\D/g, "").length < 10}
+        >
+          Adicionar à equipe
+        </button>
+      </div>
+      {erro && <p className="erro" style={{ marginTop: 10 }}>{erro}</p>}
+    </section>
+  );
+}
+
 function MoradoresView() {
   const [vinculos, setVinculos] = useState<VinculoPendente[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -622,6 +755,8 @@ function MoradoresView() {
       )}
 
       <Importar aoImportar={carregar} />
+
+      <EquipeSection />
     </>
   );
 }

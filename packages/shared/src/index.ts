@@ -86,6 +86,13 @@ export type ImportarMoradoresDto = z.infer<typeof ImportarMoradoresSchema>;
 export const PAPEIS_USUARIO = ["PORTEIRO", "APOIO", "SINDICO", "ADMIN"] as const;
 export type PapelUsuario = (typeof PAPEIS_USUARIO)[number];
 
+export const CriarUsuarioSchema = z.object({
+  nome: z.string().min(2).max(120),
+  telefone: TelefoneSchema,
+  papel: z.enum(["PORTEIRO", "APOIO", "SINDICO"]),
+});
+export type CriarUsuarioDto = z.infer<typeof CriarUsuarioSchema>;
+
 export const STATUS_PACOTE = ["ARMAZENADO", "ENTREGUE", "EXTRAVIADO"] as const;
 export type StatusPacote = (typeof STATUS_PACOTE)[number];
 

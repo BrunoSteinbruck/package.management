@@ -10,6 +10,8 @@ import {
 import {
   CriarUnidadesDto,
   CriarUnidadesSchema,
+  CriarUsuarioDto,
+  CriarUsuarioSchema,
   ImportarMoradoresDto,
   ImportarMoradoresSchema,
   JwtPayload,
@@ -47,6 +49,27 @@ export class CadastroController {
   @Get("adocao")
   adocao(@CurrentUser() user: JwtPayload) {
     return this.cadastro.adocao(user);
+  }
+
+  @Get("equipe")
+  listarEquipe(@CurrentUser() user: JwtPayload) {
+    return this.cadastro.listarEquipe(user);
+  }
+
+  @Post("equipe")
+  criarUsuario(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(CriarUsuarioSchema)) dto: CriarUsuarioDto,
+  ) {
+    return this.cadastro.criarUsuario(user, dto);
+  }
+
+  @Post("equipe/:usuarioId/alternar-ativo")
+  alternarAtivoUsuario(
+    @CurrentUser() user: JwtPayload,
+    @Param("usuarioId", ParseUUIDPipe) usuarioId: string,
+  ) {
+    return this.cadastro.alternarAtivoUsuario(user, usuarioId);
   }
 
   @Get("vinculos/pendentes")

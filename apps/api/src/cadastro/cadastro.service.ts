@@ -1,6 +1,11 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from "@nestjs/common";
 import type {
   CriarUnidadesDto,
+  CriarUsuarioDto,
   ImportarMoradoresDto,
   JwtPayload,
 } from "@pacotes/shared";
@@ -114,6 +119,53 @@ export class CadastroService {
       unidadesComApp,
       percentual: totalUnidades > 0 ? Math.round((unidadesComApp / totalUnidades) * 100) : 0,
     };
+  }
+
+  /** Equipe do condomínio (porteiros, apoio, síndicos). Tabela global, escopada pela coluna. */
+  listarEquipe(user: JwtPayload) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    return this.prisma.usuario.findMany({
+      where: { condominioId },
+      select: { id: true, nome: true, telefone: true, papel: true, ativo: true },
+      orderBy: [{ ativo: "desc" }, { papel: "asc" }, { nome: "asc" }],
+    });
+  }
+
+  async criarUsuario(user: JwtPayload, dto: CriarUsuarioDto) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    const telefone = dto.telefone.replace(/\D/g, "");
+    // Telefone é identidade global de login: não pode colidir com outra
+    // conta de equipe (de qualquer condomínio).
+    const existente = await this.prisma.usuario.findUnique({
+      where: { telefone },
+    });
+    if (existente) {
+      throw new ConflictException("Este telefone já pertence a alguém da equipe");
+    }
+    return this.prisma.usuario.create({
+      data: { condominioId, nome: dto.nome.trim(), telefone, papel: dto.papel },
+      select: { id: true, nome: true, telefone: true, papel: true, ativo: true },
+    });
+  }
+
+  async alternarAtivoUsuario(user: JwtPayload, usuarioId: string) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    if (usuarioId === user.sub) {
+      throw new ForbiddenException("Você não pode desativar a si mesmo");
+    }
+    const alvo = await this.prisma.usuario.findFirst({
+      where: { id: usuarioId, condominioId },
+    });
+    if (!alvo) throw new ForbiddenException("Usuário não encontrado");
+    const atualizado = await this.prisma.usuario.update({
+      where: { id: alvo.id },
+      data: { ativo: !alvo.ativo },
+      select: { id: true, ativo: true },
+    });
+    return atualizado;
   }
 
   async vinculosPendentes(user: JwtPayload) {
