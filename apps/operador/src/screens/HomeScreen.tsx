@@ -159,10 +159,19 @@ export function HomeScreen({ navigation, perfil, aoSair }: Props) {
         </Pressable>
 
         <View style={styles.linhaStats}>
-          <View style={styles.statCard}>
+          <Pressable
+            onPress={() => navigation.navigate("Armazenados")}
+            style={({ pressed }) => [
+              styles.statCard,
+              { transform: [{ scale: pressed ? 0.98 : 1 }] },
+            ]}
+          >
             <Text style={styles.statNumero}>{resumo?.naPortaria ?? "—"}</Text>
-            <Text style={styles.statRotulo}>na portaria agora</Text>
-          </View>
+            <View style={styles.statLinhaRotulo}>
+              <Text style={styles.statRotulo}>na portaria agora</Text>
+              <Icone nome="chevron" tamanho={16} cor={theme.colors.textFaint} />
+            </View>
+          </Pressable>
           <View style={styles.statCard}>
             <Text style={styles.statNumero}>{resumo?.retiradasHoje ?? "—"}</Text>
             <Text style={styles.statRotulo}>retiradas hoje</Text>
@@ -270,6 +279,11 @@ const styles = StyleSheet.create({
   },
   statNumero: { fontSize: theme.font.hero, fontWeight: "700", color: theme.colors.text },
   statRotulo: { fontSize: 13.5, color: theme.colors.textSecondary, fontWeight: "500", marginTop: 2 },
+  statLinhaRotulo: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   avisoParadas: {
     flexDirection: "row",
     alignItems: "center",

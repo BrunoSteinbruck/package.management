@@ -26,6 +26,17 @@ export interface ResultadoRetirada {
   pendentesRestantes: number;
 }
 
+export interface PacoteArmazenado extends Pacote {
+  unidade: Unidade;
+}
+
+export interface ListaPacotes {
+  total: number;
+  pagina: number;
+  porPagina: number;
+  itens: PacoteArmazenado[];
+}
+
 export interface RespostaOcr {
   fotoKey: string;
   extraido: {

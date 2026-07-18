@@ -8,6 +8,7 @@ import type { JwtPayload } from "@pacotes/shared";
 import { renovarSessao } from "./src/api/client";
 import { carregarSessao } from "./src/api/session";
 import type { RootStackParamList } from "./src/navigation";
+import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
 import { EntradaConfirmScreen } from "./src/screens/EntradaConfirmScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
@@ -58,6 +59,7 @@ export default function App() {
             <HomeScreen {...props} perfil={perfil} aoSair={() => setPerfil(null)} />
           )}
         </Stack.Screen>
+        <Stack.Screen name="Armazenados" component={ArmazenadosScreen} />
         <Stack.Screen name="EntradaCamera" component={EntradaCameraScreen} />
         <Stack.Screen name="EntradaConfirm" component={EntradaConfirmScreen} />
         <Stack.Screen name="Retirada" component={RetiradaScreen} />
