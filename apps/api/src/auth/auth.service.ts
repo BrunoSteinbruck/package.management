@@ -85,10 +85,18 @@ export class AuthService {
           `Guarita: seu codigo de acesso e ${codigo}. Vale por 5 minutos.`,
         );
       } catch (e) {
-        throw new HttpException(
-          "Não foi possível enviar o SMS agora. Tente novamente.",
-          HttpStatus.BAD_GATEWAY,
-        );
+        // Em dev (echo ligado) a falha de SMS não é fatal: números do seed
+        // não são verificados no trial do Twilio e o código sai no log.
+        if (process.env.OTP_DEV_ECHO === "1") {
+          console.warn(
+            `[dev] SMS falhou para ${telefone} (${(e as Error).message.slice(0, 80)}) — seguindo com echo`,
+          );
+        } else {
+          throw new HttpException(
+            "Não foi possível enviar o SMS agora. Tente novamente.",
+            HttpStatus.BAD_GATEWAY,
+          );
+        }
       }
     }
 
