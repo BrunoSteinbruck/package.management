@@ -9,10 +9,10 @@ fallback para quem ainda não aderiu).
 - `apps/api` — API NestJS + Prisma/PostgreSQL (multi-tenant com RLS), worker
   de push (Expo Push) e OCR de etiquetas (stub em dev; Google Vision via
   `GOOGLE_VISION_API_KEY`)
-- `apps/operador` — app Expo da portaria: entrada com câmera/scanner + OCR,
-  retirada parcial com foto, scan do QR do morador, fila offline
-- `apps/morador` — app Expo do morador: push, pendentes/histórico, QR de
-  retirada
+- `apps/guarita` — app Expo único: o login roteia por papel. Equipe da
+  portaria: entrada com câmera/scanner + OCR, retirada parcial com foto,
+  scan do QR do morador, fila offline. Morador: push, pendentes/histórico,
+  QR de retirada, convite de familiar
 - `apps/web` — painel Next.js do síndico: pendências, adoção, aprovação de
   vínculos, import de moradores (`pnpm --filter @pacotes/web dev`, porta 3002)
 - `packages/shared` — tipos e schemas zod compartilhados

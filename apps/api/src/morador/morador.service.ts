@@ -183,6 +183,43 @@ export class MoradorService {
     throw new NotFoundException("Encomenda não encontrada");
   }
 
+  /** Histórico de avisos do morador (entradas/retiradas das suas unidades). */
+  async minhasNotificacoes(user: JwtPayload) {
+    const moradorId = this.exigirMorador(user);
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { moradorId, status: "ATIVO" },
+    });
+    const avisos: Array<{
+      id: string;
+      tipo: string;
+      criadoEm: Date;
+      transportadora: string | null;
+      pacoteId: string | null;
+    }> = [];
+    for (const vinculo of vinculos) {
+      const notifs = await this.prisma.withTenant(vinculo.condominioId, (tx) =>
+        tx.notificacao.findMany({
+          where: { pacote: { unidadeId: vinculo.unidadeId } },
+          include: { pacote: { select: { transportadora: true } } },
+          orderBy: { criadoEm: "desc" },
+          take: 30,
+        }),
+      );
+      avisos.push(
+        ...notifs.map((n) => ({
+          id: n.id,
+          tipo: n.tipo,
+          criadoEm: n.criadoEm,
+          transportadora: n.pacote?.transportadora ?? null,
+          pacoteId: n.pacoteId,
+        })),
+      );
+    }
+    return avisos
+      .sort((a, b) => b.criadoEm.getTime() - a.criadoEm.getTime())
+      .slice(0, 30);
+  }
+
   /** Foto-token dedicado: curto (1h), preso à key — o JWT de sessão nunca vai em URL. */
   private async fotoAssinada(key: string | null) {
     if (!key) return null;

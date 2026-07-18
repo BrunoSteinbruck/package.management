@@ -30,6 +30,11 @@ export class MoradorController {
     return this.morador.meusPacotes(user);
   }
 
+  @Get("notificacoes")
+  minhasNotificacoes(@CurrentUser() user: JwtPayload) {
+    return this.morador.minhasNotificacoes(user);
+  }
+
   @Post("devices")
   registrarDevice(
     @CurrentUser() user: JwtPayload,

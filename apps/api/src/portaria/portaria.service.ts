@@ -165,13 +165,24 @@ export class PortariaService {
   /** Listagem filtrada para o painel (tela Pacotes). */
   listarPacotes(
     user: JwtPayload,
-    filtro: { status?: string; busca?: string; dias?: number; pagina: number },
+    filtro: {
+      status?: string;
+      busca?: string;
+      dias?: number;
+      pagina: number;
+      retiradasHoje?: boolean;
+    },
   ) {
     const condominioId = this.tenantDe(user);
     const porPagina = 12;
     const where: Record<string, unknown> = {};
     if (filtro.status && ["ARMAZENADO", "ENTREGUE", "EXTRAVIADO"].includes(filtro.status)) {
       where.status = filtro.status;
+    }
+    if (filtro.retiradasHoje) {
+      const inicioDoDia = new Date();
+      inicioDoDia.setHours(0, 0, 0, 0);
+      where.retirada = { retiradoEm: { gte: inicioDoDia } };
     }
     if (filtro.dias) {
       where.recebidoEm = { gte: new Date(Date.now() - filtro.dias * 86_400_000) };
@@ -190,7 +201,9 @@ export class PortariaService {
       const itens = await tx.pacote.findMany({
         where,
         include: { unidade: true, retirada: true },
-        orderBy: { recebidoEm: "desc" },
+        orderBy: filtro.retiradasHoje
+          ? { retirada: { retiradoEm: "desc" } }
+          : { recebidoEm: "desc" },
         skip: (filtro.pagina - 1) * porPagina,
         take: porPagina,
       });

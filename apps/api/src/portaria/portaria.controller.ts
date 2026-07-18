@@ -90,12 +90,14 @@ export class PortariaController {
     @Query("busca") busca?: string,
     @Query("dias") dias?: string,
     @Query("pagina") pagina?: string,
+    @Query("retiradasHoje") retiradasHoje?: string,
   ) {
     return this.portaria.listarPacotes(user, {
       status,
       busca,
       dias: dias ? Math.max(1, parseInt(dias, 10) || 0) : undefined,
       pagina: Math.max(1, parseInt(pagina ?? "1", 10) || 1),
+      retiradasHoje: retiradasHoje === "1",
     });
   }
 
