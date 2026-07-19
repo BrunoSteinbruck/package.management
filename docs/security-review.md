@@ -1,4 +1,43 @@
-# Revisão de segurança — Guarita (2026-07-16)
+# Revisão de segurança — Guarita
+
+## Revisão 2 (2026-07-19) — delta desde a Revisão 1
+
+Escopo: tudo que entrou depois da revisão 1 — gestão de equipe, app único,
+convite por SMS, foto-tokens, ocr-texto, listagem filtrada, notificações do
+morador, EAS/Twilio.
+
+### Verificado e correto
+
+- Guards presentes em todos os endpoints novos: equipe (gestor), ocr/ocr-texto
+  (operador + tenant), morador/* (vínculo ativo), pacotes (tenant via RLS).
+- Filtros de listagem parametrizados via Prisma (sem injeção); paginação e
+  períodos com cap.
+- `.env` fora do git; projectId do EAS não é segredo.
+- Telefone normalizado (dígitos) em app e painel antes do envio.
+- AuthGuard rejeita tokens que não são de sessão (foto/QR-token barrados).
+
+### Corrigido nesta revisão
+
+| Sev. | Achado | Correção |
+|---|---|---|
+| Média | `POST /morador/convites` sem teto — morador podia emitir convites (credenciais de vínculo) ilimitados | Cap de **5 convites ativos por unidade** (não usados, não expirados) |
+
+### Recomendações operacionais (fora do código)
+
+1. **Rotacionar credenciais antes de produção**: o Auth Token do Twilio e a
+   chave do Vision foram colados no chat durante o setup — regenerar ambos
+   nos consoles (5 min) quando o piloto virar produção.
+2. **Twilio Geo Permissions**: no console, restringir envio de SMS a
+   **Brasil apenas** — é a defesa real contra SMS pumping (fraude que dispara
+   OTPs para números premium internacionais). Nosso rate limit ajuda, mas o
+   geo-lock corta o golpe na raiz.
+3. **Superfície aceita**: `otp/request` envia SMS para números desconhecidos
+   por design (necessário ao onboarding por convite). Mitigações: rate limit
+   3/telefone/h e 10/IP/h + geo-lock acima + monitorar consumo Twilio.
+
+---
+
+## Revisão 1 (2026-07-16)
 
 Auditoria da Fase 1 antes do piloto. Escopo: API NestJS, os dois apps Expo e
 o painel web. Modelo de ameaça central: **isolamento entre condomínios

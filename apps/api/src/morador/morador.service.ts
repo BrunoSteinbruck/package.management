@@ -97,9 +97,24 @@ export class MoradorService {
     return vinculo;
   }
 
-  async emitirConvite(user: JwtPayload, dto: EmitirConviteDto) {
+  async emitirConvite(user: JwtPayload, dto: EmitirQrDto | EmitirConviteDto) {
     const moradorId = this.exigirMorador(user);
     const vinculo = await this.exigirVinculoAtivo(moradorId, dto.unidadeId);
+    // Cap de convites vivos por unidade: cada código é uma credencial de
+    // vínculo — sem teto, um morador poderia emitir infinitos.
+    const ativos = await this.prisma.convite.count({
+      where: {
+        unidadeId: dto.unidadeId,
+        canal: "MORADOR",
+        usadoEm: null,
+        expiraEm: { gt: new Date() },
+      },
+    });
+    if (ativos >= 5) {
+      throw new ForbiddenException(
+        "Sua unidade já tem 5 convites ativos. Use um deles ou aguarde expirarem.",
+      );
+    }
     const convite = await this.prisma.convite.create({
       data: {
         condominioId: vinculo.condominioId,
