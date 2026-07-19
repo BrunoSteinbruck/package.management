@@ -171,9 +171,11 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       ? ` Baixe: ${process.env.APP_DOWNLOAD_URL}`
       : "";
     try {
+      // Sem acentos de propósito: mantém o SMS em codificação GSM-7
+      // (160 chars/segmento em vez de 70) — metade do custo por envio.
       await this.sms.enviar(
         titular.morador.telefone,
-        `Guarita: chegou encomenda para ${rotulo} na portaria do ${condominio.nome}. Baixe o app Guarita e entre com este numero para acompanhar.${link}`,
+        `Guarita: um pacote chegou para ${rotulo} na portaria do ${condominio.nome}! Baixe o app Guarita e receba estes avisos na hora, sempre que chegar encomenda.${link}`,
       );
       this.logger.log(`Convite SMS enviado para unidade ${rotulo}`);
       return "sem-app-convite-enviado";
