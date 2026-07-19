@@ -83,6 +83,11 @@ export const ImportarMoradoresSchema = z.object({
 });
 export type ImportarMoradoresDto = z.infer<typeof ImportarMoradoresSchema>;
 
+export const AnalisarTextoSchema = z.object({
+  texto: z.string().min(1).max(20000),
+});
+export type AnalisarTextoDto = z.infer<typeof AnalisarTextoSchema>;
+
 export const PAPEIS_USUARIO = ["PORTEIRO", "APOIO", "SINDICO", "ADMIN"] as const;
 export type PapelUsuario = (typeof PAPEIS_USUARIO)[number];
 

@@ -14,6 +14,8 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { OcrService } from "../ocr/ocr.service";
 import {
+  AnalisarTextoDto,
+  AnalisarTextoSchema,
   JwtPayload,
   RegistrarPacoteDto,
   RegistrarPacoteSchema,
@@ -44,6 +46,14 @@ export class PortariaController {
   ) {
     if (!file) throw new BadRequestException("Arquivo ausente (campo 'file')");
     return this.ocr.analisarEtiqueta(user, file.buffer, file.mimetype);
+  }
+
+  @Post("ocr-texto")
+  analisarTexto(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(AnalisarTextoSchema)) dto: AnalisarTextoDto,
+  ) {
+    return this.ocr.analisarTexto(user, dto.texto);
   }
 
   @Post("pacotes")

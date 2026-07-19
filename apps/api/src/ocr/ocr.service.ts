@@ -29,6 +29,28 @@ export class OcrService {
    * extrai texto via provider e sugere unidades do condomínio do operador.
    * Nunca lança por falha de OCR — sem sugestão, o fluxo manual segue.
    */
+  /**
+   * OCR feito NO APARELHO (ML Kit, dev build): o app manda só o texto
+   * reconhecido; aqui rodam o parser e o match de unidades — grátis e offline
+   * do lado do celular, sem provider de nuvem.
+   */
+  async analisarTexto(user: JwtPayload, texto: string) {
+    if (user.tipo !== "usuario" || !user.condominioId) {
+      throw new ForbiddenException("Apenas operadores do condomínio");
+    }
+    const extraido = parsearEtiqueta(texto);
+    const unidades = await this.prisma.withTenant(user.condominioId, (tx) =>
+      tx.unidade.findMany(),
+    );
+    const sugestoes = sugerirUnidades(extraido, unidades).map((s) => ({
+      id: s.unidade.id,
+      bloco: s.unidade.bloco,
+      identificacao: s.unidade.identificacao,
+      score: s.score,
+    }));
+    return { extraido, sugestoes };
+  }
+
   async analisarEtiqueta(user: JwtPayload, arquivo: Buffer, mimeType: string) {
     if (user.tipo !== "usuario" || !user.condominioId) {
       throw new ForbiddenException("Apenas operadores do condomínio");

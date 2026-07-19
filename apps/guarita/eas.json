@@ -5,13 +5,19 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "pnpm": "11.13.0",
+      "node": "24.13.0"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "pnpm": "11.13.0",
+      "node": "24.13.0"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "pnpm": "11.13.0",
+      "node": "24.13.0"
     }
   },
   "submit": {

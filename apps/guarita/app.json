@@ -18,7 +18,11 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +35,12 @@
           "cameraPermission": "A câmera é usada para fotografar etiquetas, registrar entregas e ler QR codes."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9fcf5a8b-bcb3-4219-b3a1-61c49c878c13"
+      }
+    },
+    "owner": "brunosteinbruck"
   }
 }

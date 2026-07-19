@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { analisarEtiqueta, apiFetch, NetworkError, uploadFoto } from "../api/client";
+import { lerTextoLocal, ocrLocalDisponivel } from "../api/ocrLocal";
 import { postOuEnfileirar } from "../api/offlineQueue";
 import {
   rotuloUnidade,
@@ -68,27 +69,55 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (!fotoUri) return;
-    analisarEtiqueta<RespostaOcr>(fotoUri)
-      .then((res) => {
-        setFotoKeyOcr(res.fotoKey);
-        setTransportadora((atual) => atual || (res.extraido.transportadora ?? ""));
-        setRastreio((atual) => atual || (res.extraido.rastreio ?? ""));
-        const melhor = res.sugestoes[0];
-        if (melhor && melhor.score >= 0.7) {
-          setUnidade(
-            (atual) =>
-              atual ?? {
-                id: melhor.id,
-                bloco: melhor.bloco,
-                identificacao: melhor.identificacao,
-              },
-          );
-          setDicaOcr(true);
+
+    const aplicar = (res: {
+      extraido: RespostaOcr["extraido"];
+      sugestoes: RespostaOcr["sugestoes"];
+    }) => {
+      setTransportadora((atual) => atual || (res.extraido.transportadora ?? ""));
+      setRastreio((atual) => atual || (res.extraido.rastreio ?? ""));
+      const melhor = res.sugestoes[0];
+      if (melhor && melhor.score >= 0.7) {
+        setUnidade(
+          (atual) =>
+            atual ?? {
+              id: melhor.id,
+              bloco: melhor.bloco,
+              identificacao: melhor.identificacao,
+            },
+        );
+        setDicaOcr(true);
+      }
+    };
+
+    (async () => {
+      try {
+        if (ocrLocalDisponivel) {
+          // Dev/production build: ML Kit lê a etiqueta NO aparelho (grátis,
+          // offline); a foto sobe em paralelo só como comprovante.
+          const [key, texto] = await Promise.all([
+            uploadFoto(fotoUri).catch(() => undefined),
+            lerTextoLocal(fotoUri),
+          ]);
+          if (key) setFotoKeyOcr(key);
+          if (texto.trim()) {
+            aplicar(
+              await apiFetch<{
+                extraido: RespostaOcr["extraido"];
+                sugestoes: RespostaOcr["sugestoes"];
+              }>("/portaria/ocr-texto", { method: "POST", body: { texto } }),
+            );
+          }
+        } else {
+          // Expo Go: servidor guarda a foto e roda o OCR (Vision, se houver chave).
+          const res = await analisarEtiqueta<RespostaOcr>(fotoUri);
+          setFotoKeyOcr(res.fotoKey);
+          aplicar(res);
         }
-      })
-      .catch(() => {
+      } catch {
         // Sem OCR (offline ou falha): fluxo manual segue normal.
-      });
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fotoUri]);
 
