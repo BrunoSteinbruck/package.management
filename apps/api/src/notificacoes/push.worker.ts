@@ -4,10 +4,16 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from "@nestjs/common";
+import { gerarCodigoConvite } from "../common/convite.util";
 import { PrismaService } from "../prisma/prisma.service";
+import { SmsService } from "../sms/sms.service";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const INTERVALO_MS = 15_000;
+// Convite de adoção: no máximo 1 SMS por unidade a cada 14 dias, disparado
+// quando chega encomenda para unidade SEM app. Decisão de produto: quem não
+// tem o app NÃO recebe aviso de pacote — recebe o convite para instalar.
+const CONVITE_SMS_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
 /**
  * Worker simples por polling (dev). Em produção vira consumidor BullMQ.
@@ -22,7 +28,10 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
   private timer?: ReturnType<typeof setInterval>;
   private rodando = false;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sms: SmsService,
+  ) {}
 
   onModuleInit() {
     if (process.env.PUSH_WORKER_DESLIGADO === "1") return;
@@ -38,10 +47,10 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     this.rodando = true;
     try {
       const condominios = await this.prisma.condominio.findMany({
-        select: { id: true },
+        select: { id: true, nome: true },
       });
-      for (const { id } of condominios) {
-        await this.processarCondominio(id);
+      for (const condominio of condominios) {
+        await this.processarCondominio(condominio);
       }
     } catch (e) {
       this.logger.error(`Falha no ciclo de push: ${(e as Error).message}`);
@@ -50,7 +59,8 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async processarCondominio(condominioId: string) {
+  private async processarCondominio(condominio: { id: string; nome: string }) {
+    const condominioId = condominio.id;
     const notificacoes = await this.prisma.withTenant(condominioId, (tx) =>
       tx.notificacao.findMany({
         where: { status: "FILA", canal: "PUSH" },
@@ -79,8 +89,12 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
           .filter((t) => /^ExponentPushToken\[.+\]$/.test(t));
 
         if (tokensValidos.length === 0) {
-          providerMsgId = "sem-destinatario";
-          // TODO(fase 2): acionar fallback WhatsApp/SMS de convite aqui.
+          // Unidade sem app: aviso de pacote não vai (decisão de produto) —
+          // vai o convite de adoção, com teto de 1 SMS/unidade a cada 14 dias.
+          providerMsgId =
+            notif.tipo === "ENTRADA"
+              ? await this.enviarConviteSms(condominio, notif.pacote.unidadeId)
+              : "sem-destinatario";
         } else {
           const resultado = await this.enviarExpo(
             tokensValidos,
@@ -107,6 +121,65 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
           data: { status: novoStatus, providerMsgId },
         }),
       );
+    }
+  }
+
+  /**
+   * Convite de adoção para unidade sem app. O registro na tabela Convite É o
+   * rate-limit: enquanto existir um convite SMS não expirado (14 dias) para a
+   * unidade, nenhum novo SMS sai. Vai para o titular (vínculo mais antigo).
+   */
+  private async enviarConviteSms(
+    condominio: { id: string; nome: string },
+    unidadeId: string,
+  ): Promise<string> {
+    if (!this.sms.configurado) return "sem-app";
+    const recente = await this.prisma.convite.findFirst({
+      where: { unidadeId, canal: "SMS", expiraEm: { gt: new Date() } },
+    });
+    if (recente) return "sem-app-convite-recente";
+
+    const titular = await this.prisma.vinculo.findFirst({
+      where: { unidadeId, status: "ATIVO" },
+      orderBy: { criadoEm: "asc" },
+      include: { morador: true },
+    });
+    if (!titular) return "sem-morador";
+
+    const unidade = await this.prisma.withTenant(condominio.id, (tx) =>
+      tx.unidade.findUnique({ where: { id: unidadeId } }),
+    );
+    const rotulo = unidade
+      ? unidade.bloco
+        ? `${unidade.bloco}-${unidade.identificacao}`
+        : unidade.identificacao
+      : "sua unidade";
+
+    // Registra ANTES de enviar: mesmo se o envio falhar, segura a janela de
+    // 14 dias (evita rajada de tentativas a cada pacote novo).
+    await this.prisma.convite.create({
+      data: {
+        condominioId: condominio.id,
+        unidadeId,
+        codigo: gerarCodigoConvite(),
+        canal: "SMS",
+        expiraEm: new Date(Date.now() + CONVITE_SMS_TTL_MS),
+      },
+    });
+
+    const link = process.env.APP_DOWNLOAD_URL
+      ? ` Baixe: ${process.env.APP_DOWNLOAD_URL}`
+      : "";
+    try {
+      await this.sms.enviar(
+        titular.morador.telefone,
+        `Guarita: chegou encomenda para ${rotulo} na portaria do ${condominio.nome}. Baixe o app Guarita e entre com este numero para acompanhar.${link}`,
+      );
+      this.logger.log(`Convite SMS enviado para unidade ${rotulo}`);
+      return "sem-app-convite-enviado";
+    } catch (e) {
+      this.logger.warn(`Convite SMS falhou: ${(e as Error).message.slice(0, 80)}`);
+      return "sem-app-convite-falhou";
     }
   }
 

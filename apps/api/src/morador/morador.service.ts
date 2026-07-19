@@ -10,19 +10,10 @@ import type {
   JwtPayload,
   RegistrarDeviceDto,
 } from "@pacotes/shared";
-import { randomBytes } from "node:crypto";
+import { gerarCodigoConvite } from "../common/convite.util";
 import { PrismaService } from "../prisma/prisma.service";
 
-// Sem caracteres ambíguos (0/O, 1/I/L) — o código é digitado por humanos.
-const ALFABETO_CONVITE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const CONVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-function gerarCodigoConvite(): string {
-  const bytes = randomBytes(6);
-  let codigo = "";
-  for (const b of bytes) codigo += ALFABETO_CONVITE[b % ALFABETO_CONVITE.length];
-  return codigo;
-}
 
 export interface QrPayload {
   tipo: "qr-retirada";
