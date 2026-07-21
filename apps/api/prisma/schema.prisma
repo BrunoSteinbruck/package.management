@@ -42,6 +42,7 @@ enum TipoNotificacao {
   ENTRADA
   RETIRADA
   CONVITE
+  LEMBRETE
 }
 
 enum StatusNotificacao {

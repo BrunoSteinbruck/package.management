@@ -4,7 +4,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { NetworkError, uploadFoto } from "../api/client";
-import { postOuEnfileirar } from "../api/offlineQueue";
+import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
 import type { ResultadoRetirada } from "../api/types";
 import { Botao } from "../components/ui";
 import { Icone } from "../components/icones";
@@ -25,6 +25,7 @@ export function SaidaCameraScreen({ navigation, route }: Props) {
     setEnviando(true);
     try {
       let fotoSaidaKey: string | undefined;
+      let fotoPendente: FotoPendente | undefined;
       if (comFoto) {
         const foto = await cameraRef.current?.takePictureAsync({ quality: 0.5 });
         if (foto?.uri) {
@@ -32,12 +33,15 @@ export function SaidaCameraScreen({ navigation, route }: Props) {
             fotoSaidaKey = await uploadFoto(foto.uri);
           } catch (e) {
             if (!(e instanceof NetworkError)) throw e;
+            // Offline: o comprovante de saída sobe no flush.
+            fotoPendente = { uri: foto.uri, campo: "fotoSaidaKey" };
           }
         }
       }
       const resultado = await postOuEnfileirar<ResultadoRetirada>(
         "/portaria/retiradas",
         { pacoteIds, fotoSaidaKey },
+        fotoPendente,
       );
       if (resultado.queued) {
         Alert.alert("Salvo offline", "A saída será registrada quando a conexão voltar.");

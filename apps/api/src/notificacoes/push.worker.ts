@@ -14,6 +14,11 @@ const INTERVALO_MS = 15_000;
 // quando chega encomenda para unidade SEM app. Decisão de produto: quem não
 // tem o app NÃO recebe aviso de pacote — recebe o convite para instalar.
 const CONVITE_SMS_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+// Lembrete de pacote parado: pacote ARMAZENADO há 3+ dias gera 1 push por
+// unidade (agrupado). Decisão de produto: SÓ push, SÓ para quem tem o app —
+// não-adotante não recebe nada (segue só o convite SMS de 14 dias na entrada).
+const LEMBRETE_DIAS = 3;
+const LEMBRETE_INTERVALO_MS = 20 * 60 * 60 * 1000; // roda no máx. 1x/~dia
 
 /**
  * Worker simples por polling (dev). Em produção vira consumidor BullMQ.
@@ -27,6 +32,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PushWorker.name);
   private timer?: ReturnType<typeof setInterval>;
   private rodando = false;
+  private ultimoLembrete = 0;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -52,6 +58,14 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       for (const condominio of condominios) {
         await this.processarCondominio(condominio);
       }
+
+      // Passo diário: lembretes de pacotes parados há 3+ dias.
+      if (Date.now() - this.ultimoLembrete >= LEMBRETE_INTERVALO_MS) {
+        this.ultimoLembrete = Date.now();
+        for (const condominio of condominios) {
+          await this.lembretesDoCondominio(condominio.id);
+        }
+      }
     } catch (e) {
       this.logger.error(`Falha no ciclo de push: ${(e as Error).message}`);
     } finally {
@@ -75,18 +89,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       let providerMsgId: string | undefined;
 
       if (notif.pacote) {
-        const vinculos = await this.prisma.vinculo.findMany({
-          where: { unidadeId: notif.pacote.unidadeId, status: "ATIVO" },
-          select: { moradorId: true },
-        });
-        const devices = await this.prisma.device.findMany({
-          where: { moradorId: { in: vinculos.map((v) => v.moradorId) } },
-        });
-
-        // Só tokens no formato Expo — evita mandar lixo pra API de push.
-        const tokensValidos = devices
-          .map((d) => d.pushToken)
-          .filter((t) => /^ExponentPushToken\[.+\]$/.test(t));
+        const tokensValidos = await this.tokensDaUnidade(notif.pacote.unidadeId);
 
         if (tokensValidos.length === 0) {
           // Unidade sem app: aviso de pacote não vai (decisão de produto) —
@@ -121,6 +124,88 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
           data: { status: novoStatus, providerMsgId },
         }),
       );
+    }
+  }
+
+  /** Tokens Expo válidos das unidades (moradores com vínculo ativo + device). */
+  private async tokensDaUnidade(unidadeId: string): Promise<string[]> {
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { unidadeId, status: "ATIVO" },
+      select: { moradorId: true },
+    });
+    const devices = await this.prisma.device.findMany({
+      where: { moradorId: { in: vinculos.map((v) => v.moradorId) } },
+    });
+    return devices
+      .map((d) => d.pushToken)
+      .filter((t) => /^ExponentPushToken\[.+\]$/.test(t));
+  }
+
+  /**
+   * Lembrete de pacotes parados há 3+ dias: 1 push por unidade (agrupando os
+   * pacotes), só para quem tem app. Dedup: cada pacote lembrado ganha uma
+   * Notificacao LEMBRETE — sem novo lembrete enquanto ele existir. Unidade sem
+   * app não é marcada, então se o morador instalar depois, recebe no próximo dia.
+   */
+  private async lembretesDoCondominio(condominioId: string) {
+    const limite = new Date(Date.now() - LEMBRETE_DIAS * 24 * 60 * 60 * 1000);
+    const parados = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.pacote.findMany({
+        where: {
+          status: "ARMAZENADO",
+          recebidoEm: { lte: limite },
+          notificacoes: { none: { tipo: "LEMBRETE" } },
+        },
+        select: { id: true, unidadeId: true, recebidoEm: true },
+      }),
+    );
+    if (parados.length === 0) return;
+
+    // Agrupa por unidade.
+    const porUnidade = new Map<string, typeof parados>();
+    for (const p of parados) {
+      const lista = porUnidade.get(p.unidadeId) ?? [];
+      lista.push(p);
+      porUnidade.set(p.unidadeId, lista);
+    }
+
+    for (const [unidadeId, pacotes] of porUnidade) {
+      const tokens = await this.tokensDaUnidade(unidadeId);
+      if (tokens.length === 0) continue; // sem app: nada (decisão de produto)
+
+      const n = pacotes.length;
+      const maisAntigo = pacotes.reduce(
+        (min, p) => Math.min(min, p.recebidoEm.getTime()),
+        Date.now(),
+      );
+      const dias = Math.floor((Date.now() - maisAntigo) / 86_400_000);
+      const resultado = await this.enviarExpo(
+        tokens,
+        n === 1 ? "Encomenda esperando" : "Encomendas esperando",
+        n === 1
+          ? `Você tem uma encomenda há ${dias} dias na portaria. Passe para retirar.`
+          : `Você tem ${n} encomendas na portaria (a mais antiga há ${dias} dias). Passe para retirar.`,
+        { tipo: "lembrete", unidadeId },
+      );
+
+      // Marca cada pacote como lembrado (dedup) só se enviou de fato.
+      if (resultado.ok) {
+        await this.prisma.withTenant(condominioId, async (tx) => {
+          for (const p of pacotes) {
+            await tx.notificacao.create({
+              data: {
+                condominioId,
+                pacoteId: p.id,
+                canal: "PUSH",
+                tipo: "LEMBRETE",
+                status: "ENVIADA",
+                providerMsgId: resultado.ticketId,
+              },
+            });
+          }
+        });
+        this.logger.log(`Lembrete: ${n} pacote(s) parados, unidade ${unidadeId}`);
+      }
     }
   }
 
@@ -198,6 +283,13 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     body: string,
     data: Record<string, unknown>,
   ): Promise<{ ok: boolean; ticketId?: string; erro?: string }> {
+    // DEV ONLY: simula entrega bem-sucedida (loga em vez de enviar), para
+    // testar o pipeline completo — marcadores, dedup, agrupamento — sem um
+    // aparelho real com token Expo. Nunca ligar em produção.
+    if (process.env.PUSH_DEV_SIMULAR === "1") {
+      this.logger.log(`[push simulado] "${title}" → ${tokens.length} device(s): ${body}`);
+      return { ok: true, ticketId: "simulado" };
+    }
     try {
       const res = await fetch(EXPO_PUSH_URL, {
         method: "POST",

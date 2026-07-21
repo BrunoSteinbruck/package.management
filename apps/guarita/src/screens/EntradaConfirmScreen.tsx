@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { analisarEtiqueta, apiFetch, NetworkError, uploadFoto } from "../api/client";
 import { lerTextoLocal, ocrLocalDisponivel } from "../api/ocrLocal";
-import { postOuEnfileirar } from "../api/offlineQueue";
+import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
 import {
   rotuloUnidade,
   type Pacote,
@@ -136,20 +136,27 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
     setSalvando(true);
     try {
       let fotoEntradaKey: string | undefined = fotoKeyOcr ?? undefined;
+      let fotoPendente: FotoPendente | undefined;
       if (fotoUri && !fotoEntradaKey) {
         try {
           fotoEntradaKey = await uploadFoto(fotoUri);
         } catch (e) {
           if (!(e instanceof NetworkError)) throw e;
+          // Offline: guarda o URI para a foto subir no flush (não perde o comprovante).
+          fotoPendente = { uri: fotoUri, campo: "fotoEntradaKey" };
         }
       }
-      const resultado = await postOuEnfileirar<Pacote>("/portaria/pacotes", {
-        unidadeId: unidade.id,
-        transportadora: transportadora || undefined,
-        codigoRastreio: rastreio || undefined,
-        fotoEntradaKey,
-        localArmazenamento: prateleira || undefined,
-      });
+      const resultado = await postOuEnfileirar<Pacote>(
+        "/portaria/pacotes",
+        {
+          unidadeId: unidade.id,
+          transportadora: transportadora || undefined,
+          codigoRastreio: rastreio || undefined,
+          fotoEntradaKey,
+          localArmazenamento: prateleira || undefined,
+        },
+        fotoPendente,
+      );
       if (prateleira) await AsyncStorage.setItem(PRATELEIRA_KEY, prateleira);
       Alert.alert(
         resultado.queued ? "Salvo offline" : "Entrada registrada",
