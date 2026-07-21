@@ -13,12 +13,15 @@ services:
     name: guarita-api
     runtime: node
     plan: free
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pacotes/shared build && pnpm --filter @pacotes/api exec prisma generate && pnpm --filter @pacotes/api build
+    # pnpm via npm global (corepack não instala o pnpm 11 na imagem do Render).
+    buildCommand: npm install -g pnpm@11.13.0 && pnpm install --frozen-lockfile && pnpm --filter @pacotes/shared build && pnpm --filter @pacotes/api exec prisma generate && pnpm --filter @pacotes/api build
     startCommand: pnpm --filter @pacotes/api exec prisma migrate deploy && node apps/api/dist/main.js
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "22.11.0"
       - key: DATABASE_URL
         fromDatabase:
           name: guarita-db
