@@ -6,6 +6,7 @@ dist/
 .expo/
 .next/
 coverage/
+*.tsbuildinfo
 # Pastas de fotos em runtime (NÃO o código-fonte apps/api/src/uploads).
 /uploads/
 /apps/api/uploads/

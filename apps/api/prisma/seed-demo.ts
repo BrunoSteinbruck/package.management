@@ -12,10 +12,12 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const SINDICO_NOME = process.env.SINDICO_NOME ?? "Bruno Steinbruck";
+// Números reais (do síndico/porteiro/morador da demo) são passados por ENV na
+// hora de semear — NUNCA hardcoded (repo público). Defaults são placeholders.
+const SINDICO_NOME = process.env.SINDICO_NOME ?? "Síndico Demo";
 const SINDICO_TELEFONE = (process.env.SINDICO_TELEFONE ?? "51900000001").replace(/\D/g, "");
-const PORTEIRO_TELEFONE = (process.env.PORTEIRO_TELEFONE ?? "51999990001").replace(/\D/g, "");
-const MORADOR_DEMO_TELEFONE = (process.env.MORADOR_DEMO_TELEFONE ?? "51988880001").replace(/\D/g, "");
+const PORTEIRO_TELEFONE = (process.env.PORTEIRO_TELEFONE ?? "51900000002").replace(/\D/g, "");
+const MORADOR_DEMO_TELEFONE = (process.env.MORADOR_DEMO_TELEFONE ?? "51900000003").replace(/\D/g, "");
 
 function diasAtras(dias: number, horas = 10): Date {
   const d = new Date();
