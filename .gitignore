@@ -6,4 +6,6 @@ dist/
 .expo/
 .next/
 coverage/
-uploads/
+# Pastas de fotos em runtime (NÃO o código-fonte apps/api/src/uploads).
+/uploads/
+/apps/api/uploads/
