@@ -5,7 +5,7 @@
  * transportadoras (para o gráfico de relatórios). Idempotente por telefone/slug.
  *
  * Uso (no Shell do Render, após o bootstrap ou direto):
- *   SINDICO_TELEFONE=51900000001 SINDICO_NOME="Bruno Steinbruck" \
+ *   SINDICO_TELEFONE=SEU_NUMERO SINDICO_NOME="Seu Nome" \
  *   pnpm --filter @pacotes/api exec ts-node prisma/seed-demo.ts
  */
 import { PrismaClient } from "@prisma/client";
