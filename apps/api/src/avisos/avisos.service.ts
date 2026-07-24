@@ -1,5 +1,7 @@
 import {
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -14,6 +16,10 @@ import { normalizarPlaca } from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
 
 const PLACA_NO_TEXTO = /[A-Z]{3}\d[A-Z0-9]\d{2}/;
+
+// Rate limit de reportes: evita inundar a fila do síndico. Contagem no banco
+// (não em memória) — sobrevive a restart e vale em multi-instância.
+const MAX_OCORRENCIAS_POR_DIA = 10;
 
 @Injectable()
 export class AvisosService {
@@ -130,8 +136,22 @@ export class AvisosService {
       where: { moradorId, unidadeId: dto.unidadeId, status: "ATIVO" },
     });
     if (!vinculo) throw new ForbiddenException("Você não tem vínculo com esta unidade");
-    return this.prisma.withTenant(vinculo.condominioId, (tx) =>
-      tx.aviso.create({
+    return this.prisma.withTenant(vinculo.condominioId, async (tx) => {
+      const desde = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentes = await tx.aviso.count({
+        where: {
+          via: "OCORRENCIA",
+          criadoPorMoradorId: moradorId,
+          criadoEm: { gte: desde },
+        },
+      });
+      if (recentes >= MAX_OCORRENCIAS_POR_DIA) {
+        throw new HttpException(
+          "Limite diário de reportes atingido. Tente novamente amanhã.",
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      return tx.aviso.create({
         data: {
           condominioId: vinculo.condominioId,
           via: "OCORRENCIA",
@@ -141,8 +161,8 @@ export class AvisosService {
           fotoKey: dto.fotoKey,
           criadoPorMoradorId: moradorId,
         },
-      }),
-    );
+      });
+    });
   }
 
   /** Ocorrências (Via 2) para o painel do síndico. */
