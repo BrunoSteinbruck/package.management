@@ -58,9 +58,10 @@ export class UploadsController {
     @CurrentUser() user: JwtPayload,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    // Só a equipe da portaria fotografa pacotes; morador nunca sobe arquivo.
-    if (user.tipo !== "usuario") {
-      throw new ForbiddenException("Apenas operadores do condomínio");
+    // Equipe (fotos de pacote/aviso) e morador (fotos de ocorrência) sobem
+    // arquivo; qualquer outro tipo de token é barrado.
+    if (user.tipo !== "usuario" && user.tipo !== "morador") {
+      throw new ForbiddenException("Sessão inválida para upload");
     }
     if (!file) throw new BadRequestException("Arquivo ausente (campo 'file')");
     return { key: file.filename };

@@ -6,6 +6,7 @@ import {
 import type {
   CriarUnidadesDto,
   CriarUsuarioDto,
+  CriarVagasDto,
   ImportarMoradoresDto,
   JwtPayload,
 } from "@pacotes/shared";
@@ -166,6 +167,52 @@ export class CadastroService {
       select: { id: true, ativo: true },
     });
     return atualizado;
+  }
+
+  listarVagas(user: JwtPayload) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    return this.prisma.withTenant(condominioId, (tx) =>
+      tx.vaga.findMany({
+        include: { unidade: true },
+        orderBy: { identificacao: "asc" },
+      }),
+    );
+  }
+
+  /** Import em massa de vagas: casa cada vaga com uma unidade existente. */
+  async criarVagas(user: JwtPayload, dto: CriarVagasDto) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    return this.prisma.withTenant(condominioId, async (tx) => {
+      const unidades = await tx.unidade.findMany();
+      const porChave = new Map(
+        unidades.map((u) => [
+          `${(u.bloco ?? "").toUpperCase()}|${u.identificacao.toUpperCase()}`,
+          u,
+        ]),
+      );
+      let criadas = 0;
+      const semUnidade: string[] = [];
+      for (const v of dto.vagas) {
+        const unidade = porChave.get(
+          `${(v.bloco ?? "").toUpperCase()}|${v.unidade.toUpperCase()}`,
+        );
+        if (!unidade) {
+          semUnidade.push(`${v.identificacao} (${v.bloco ?? "-"}/${v.unidade})`);
+          continue;
+        }
+        await tx.vaga.upsert({
+          where: {
+            condominioId_identificacao: { condominioId, identificacao: v.identificacao },
+          },
+          update: { unidadeId: unidade.id },
+          create: { condominioId, identificacao: v.identificacao, unidadeId: unidade.id },
+        });
+        criadas++;
+      }
+      return { criadas, semUnidade };
+    });
   }
 
   async vinculosPendentes(user: JwtPayload) {

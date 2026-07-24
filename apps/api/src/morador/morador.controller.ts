@@ -1,13 +1,17 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import {
+  CriarVeiculoDto,
+  CriarVeiculoSchema,
   EmitirConviteDto,
   EmitirConviteSchema,
   EmitirQrDto,
@@ -33,6 +37,30 @@ export class MoradorController {
   @Get("notificacoes")
   minhasNotificacoes(@CurrentUser() user: JwtPayload) {
     return this.morador.minhasNotificacoes(user);
+  }
+
+  @Get("veiculos")
+  listarVeiculos(
+    @CurrentUser() user: JwtPayload,
+    @Query("unidadeId", ParseUUIDPipe) unidadeId: string,
+  ) {
+    return this.morador.listarVeiculos(user, unidadeId);
+  }
+
+  @Post("veiculos")
+  criarVeiculo(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(CriarVeiculoSchema)) dto: CriarVeiculoDto,
+  ) {
+    return this.morador.criarVeiculo(user, dto);
+  }
+
+  @Delete("veiculos/:id")
+  removerVeiculo(
+    @CurrentUser() user: JwtPayload,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.morador.removerVeiculo(user, id);
   }
 
   @Post("devices")

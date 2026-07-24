@@ -101,9 +101,29 @@ async function main() {
       }
     }
 
+    // Vagas e veículos para o módulo de avisos (Via 1 por placa/vaga).
+    // Vaga "42" e placa "ABC1D23" apontam para a unidade 101-A (índice 0).
+    await tx.vaga.upsert({
+      where: { condominioId_identificacao: { condominioId: condominio.id, identificacao: "42" } },
+      update: { unidadeId: todasUnidades[0].id },
+      create: { condominioId: condominio.id, identificacao: "42", unidadeId: todasUnidades[0].id },
+    });
+    await tx.veiculo.upsert({
+      where: { condominioId_placa: { condominioId: condominio.id, placa: "ABC1D23" } },
+      update: { unidadeId: todasUnidades[0].id },
+      create: {
+        condominioId: condominio.id,
+        placa: "ABC1D23",
+        modelo: "Fiat Argo",
+        cor: "Prata",
+        unidadeId: todasUnidades[0].id,
+      },
+    });
+
     console.log("Seed concluído:");
     console.log(`  Condomínio: ${condominio.nome}`);
     console.log(`  Unidades: ${todasUnidades.length} | Moradores: ${nomes.length} | Pacotes: 6`);
+    console.log("  Vaga 42 e placa ABC1D23 → unidade 101-A (para testar avisos)");
     console.log("  Login operador (OTP no log da API): 41999990001");
   });
 }

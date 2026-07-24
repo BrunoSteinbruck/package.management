@@ -80,7 +80,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         where: { status: "FILA", canal: "PUSH" },
         take: 20,
         orderBy: { criadoEm: "asc" },
-        include: { pacote: true },
+        include: { pacote: true, aviso: true },
       }),
     );
 
@@ -90,7 +90,6 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
 
       if (notif.pacote) {
         const tokensValidos = await this.tokensDaUnidade(notif.pacote.unidadeId);
-
         if (tokensValidos.length === 0) {
           // Unidade sem app: aviso de pacote não vai (decisão de produto) —
           // vai o convite de adoção, com teto de 1 SMS/unidade a cada 14 dias.
@@ -101,21 +100,52 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         } else {
           const resultado = await this.enviarExpo(
             tokensValidos,
-            notif.tipo === "ENTRADA"
-              ? "Encomenda na portaria"
-              : "Encomenda entregue",
+            notif.tipo === "ENTRADA" ? "Encomenda na portaria" : "Encomenda entregue",
             this.corpo(notif.tipo, notif.pacote.transportadora),
             { pacoteId: notif.pacoteId },
           );
           if (resultado.ok) {
             novoStatus = "ENVIADA";
             providerMsgId = resultado.ticketId;
-          } else {
-            providerMsgId = resultado.erro?.slice(0, 180);
-          }
+          } else providerMsgId = resultado.erro?.slice(0, 180);
+        }
+      } else if (notif.aviso && notif.tipo === "AVISO") {
+        // Via 1: aviso direcionado à unidade. Sem app → nada (sem SMS).
+        const tokens = await this.tokensDaUnidade(notif.aviso.unidadeId);
+        if (tokens.length === 0) {
+          providerMsgId = "sem-app";
+        } else {
+          const corpo =
+            notif.aviso.motivo + (notif.aviso.fotoKey ? " (com foto)" : "");
+          const r = await this.enviarExpo(tokens, "Aviso da portaria", corpo, {
+            avisoId: notif.avisoId,
+          });
+          if (r.ok) {
+            novoStatus = "ENVIADA";
+            providerMsgId = r.ticketId;
+          } else providerMsgId = r.erro?.slice(0, 180);
+        }
+      } else if (notif.aviso && notif.tipo === "OCORRENCIA") {
+        // Via 2: mudança de status → avisa o morador autor.
+        const tokens = notif.aviso.criadoPorMoradorId
+          ? await this.tokensDoMorador(notif.aviso.criadoPorMoradorId)
+          : [];
+        if (tokens.length === 0) {
+          providerMsgId = "autor-sem-app";
+        } else {
+          const r = await this.enviarExpo(
+            tokens,
+            "Seu reporte foi atualizado",
+            `${notif.aviso.motivo}: ${this.rotuloStatus(notif.aviso.status)}`,
+            { avisoId: notif.avisoId },
+          );
+          if (r.ok) {
+            novoStatus = "ENVIADA";
+            providerMsgId = r.ticketId;
+          } else providerMsgId = r.erro?.slice(0, 180);
         }
       } else {
-        providerMsgId = "sem-pacote";
+        providerMsgId = "sem-alvo";
       }
 
       await this.prisma.withTenant(condominioId, (tx) =>
@@ -125,6 +155,18 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         }),
       );
     }
+  }
+
+  private rotuloStatus(s: string): string {
+    return s === "ABERTO" ? "aberto" : s === "EM_ANDAMENTO" ? "em andamento" : "resolvido";
+  }
+
+  /** Tokens Expo válidos de um morador específico (destinatário de OCORRENCIA). */
+  private async tokensDoMorador(moradorId: string): Promise<string[]> {
+    const devices = await this.prisma.device.findMany({ where: { moradorId } });
+    return devices
+      .map((d) => d.pushToken)
+      .filter((t) => /^ExponentPushToken\[.+\]$/.test(t));
   }
 
   /** Tokens Expo válidos das unidades (moradores com vínculo ativo + device). */

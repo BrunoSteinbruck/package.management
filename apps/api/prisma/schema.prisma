@@ -43,6 +43,19 @@ enum TipoNotificacao {
   RETIRADA
   CONVITE
   LEMBRETE
+  AVISO
+  OCORRENCIA
+}
+
+enum ViaAviso {
+  DIRECIONADO // equipe → morador (Via 1)
+  OCORRENCIA // morador → administração (Via 2)
+}
+
+enum StatusAviso {
+  ABERTO
+  EM_ANDAMENTO
+  RESOLVIDO
 }
 
 enum StatusNotificacao {
@@ -77,6 +90,9 @@ model Condominio {
   pacotes      Pacote[]
   convites     Convite[]
   notificacoes Notificacao[]
+  vagas        Vaga[]
+  veiculos     Veiculo[]
+  avisos       Aviso[]
 
   @@map("condominios")
 }
@@ -91,6 +107,9 @@ model Unidade {
   vinculos   Vinculo[]
   pacotes    Pacote[]
   convites   Convite[]
+  vagas      Vaga[]
+  veiculos   Veiculo[]
+  avisos     Aviso[]
 
   @@unique([condominioId, bloco, identificacao])
   @@index([condominioId])
@@ -103,23 +122,24 @@ model Morador {
   telefone String   @unique
   criadoEm DateTime @default(now()) @map("criado_em")
 
-  vinculos Vinculo[]
-  devices  Device[]
+  vinculos         Vinculo[]
+  devices          Device[]
+  avisosReportados Aviso[]   @relation("avisoCriadoPorMorador")
 
   @@map("moradores")
 }
 
 model Vinculo {
-  id                   String        @id @default(uuid()) @db.Uuid
-  moradorId            String        @map("morador_id") @db.Uuid
-  unidadeId            String        @map("unidade_id") @db.Uuid
+  id                  String        @id @default(uuid()) @db.Uuid
+  moradorId           String        @map("morador_id") @db.Uuid
+  unidadeId           String        @map("unidade_id") @db.Uuid
   // Denormalizado da unidade (imutável): permite descobrir o tenant a partir
   // do vínculo global antes de abrir a transação com RLS.
-  condominioId         String        @map("condominio_id") @db.Uuid
-  status               StatusVinculo @default(PENDENTE)
-  contatoPreferencial  Boolean       @default(false) @map("contato_preferencial")
-  aprovadoPorId        String?       @map("aprovado_por_id") @db.Uuid
-  criadoEm             DateTime      @default(now()) @map("criado_em")
+  condominioId        String        @map("condominio_id") @db.Uuid
+  status              StatusVinculo @default(PENDENTE)
+  contatoPreferencial Boolean       @default(false) @map("contato_preferencial")
+  aprovadoPorId       String?       @map("aprovado_por_id") @db.Uuid
+  criadoEm            DateTime      @default(now()) @map("criado_em")
 
   morador     Morador  @relation(fields: [moradorId], references: [id])
   unidade     Unidade  @relation(fields: [unidadeId], references: [id])
@@ -144,6 +164,7 @@ model Usuario {
   pacotesRecebidos   Pacote[]   @relation("recebidoPor")
   retiradasEntregues Retirada[] @relation("entreguePor")
   vinculosAprovados  Vinculo[]
+  avisosCriados      Aviso[]    @relation("avisoCriadoPorUsuario")
 
   @@index([condominioId])
   @@map("usuarios")
@@ -192,6 +213,7 @@ model Notificacao {
   id            String            @id @default(uuid()) @db.Uuid
   condominioId  String            @map("condominio_id") @db.Uuid
   pacoteId      String?           @map("pacote_id") @db.Uuid
+  avisoId       String?           @map("aviso_id") @db.Uuid
   canal         CanalNotificacao
   tipo          TipoNotificacao
   status        StatusNotificacao @default(FILA)
@@ -200,6 +222,7 @@ model Notificacao {
 
   condominio Condominio @relation(fields: [condominioId], references: [id])
   pacote     Pacote?    @relation(fields: [pacoteId], references: [id])
+  aviso      Aviso?     @relation(fields: [avisoId], references: [id])
 
   @@index([condominioId, status])
   @@map("notificacoes")
@@ -221,11 +244,11 @@ model Convite {
 }
 
 model Device {
-  id        String     @id @default(uuid()) @db.Uuid
-  moradorId String     @map("morador_id") @db.Uuid
-  pushToken String     @unique @map("push_token")
+  id         String     @id @default(uuid()) @db.Uuid
+  moradorId  String     @map("morador_id") @db.Uuid
+  pushToken  String     @unique @map("push_token")
   plataforma Plataforma
-  ultimoUso DateTime   @default(now()) @map("ultimo_uso")
+  ultimoUso  DateTime   @default(now()) @map("ultimo_uso")
 
   morador Morador @relation(fields: [moradorId], references: [id])
 
@@ -241,4 +264,64 @@ model OtpChallenge {
   criadoEm   DateTime @default(now()) @map("criado_em")
 
   @@map("otp_challenges")
+}
+
+// Vaga de garagem ligada a uma unidade — resolve o dono na Via 1.
+model Vaga {
+  id            String @id @default(uuid()) @db.Uuid
+  condominioId  String @map("condominio_id") @db.Uuid
+  identificacao String
+  unidadeId     String @map("unidade_id") @db.Uuid
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  unidade    Unidade    @relation(fields: [unidadeId], references: [id])
+
+  @@unique([condominioId, identificacao])
+  @@index([condominioId])
+  @@map("vagas")
+}
+
+// Veículo do morador (placa normalizada UPPER sem hífen) — resolve o dono
+// por OCR de placa na Via 1.
+model Veiculo {
+  id           String  @id @default(uuid()) @db.Uuid
+  condominioId String  @map("condominio_id") @db.Uuid
+  placa        String
+  modelo       String?
+  cor          String?
+  unidadeId    String  @map("unidade_id") @db.Uuid
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  unidade    Unidade    @relation(fields: [unidadeId], references: [id])
+
+  @@unique([condominioId, placa])
+  @@index([condominioId])
+  @@map("veiculos")
+}
+
+// Aviso direcionado (Via 1) OU ocorrência reportada pelo morador (Via 2).
+model Aviso {
+  id                 String      @id @default(uuid()) @db.Uuid
+  condominioId       String      @map("condominio_id") @db.Uuid
+  via                ViaAviso
+  // Via 1: unidade destinatária. Via 2: unidade do morador autor.
+  unidadeId          String      @map("unidade_id") @db.Uuid
+  motivo             String
+  descricao          String?
+  fotoKey            String?     @map("foto_key")
+  criadoPorUsuarioId String?     @map("criado_por_usuario_id") @db.Uuid
+  criadoPorMoradorId String?     @map("criado_por_morador_id") @db.Uuid
+  status             StatusAviso @default(ABERTO)
+  criadoEm           DateTime    @default(now()) @map("criado_em")
+  resolvidoEm        DateTime?   @map("resolvido_em")
+
+  condominio       Condominio    @relation(fields: [condominioId], references: [id])
+  unidade          Unidade       @relation(fields: [unidadeId], references: [id])
+  criadoPorUsuario Usuario?      @relation("avisoCriadoPorUsuario", fields: [criadoPorUsuarioId], references: [id])
+  criadoPorMorador Morador?      @relation("avisoCriadoPorMorador", fields: [criadoPorMoradorId], references: [id])
+  notificacoes     Notificacao[]
+
+  @@index([condominioId, via, status])
+  @@index([unidadeId])
+  @@map("avisos")
 }

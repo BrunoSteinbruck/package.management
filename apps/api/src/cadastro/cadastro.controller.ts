@@ -12,6 +12,8 @@ import {
   CriarUnidadesSchema,
   CriarUsuarioDto,
   CriarUsuarioSchema,
+  CriarVagasDto,
+  CriarVagasSchema,
   ImportarMoradoresDto,
   ImportarMoradoresSchema,
   JwtPayload,
@@ -44,6 +46,19 @@ export class CadastroController {
     @Body(new ZodPipe(ImportarMoradoresSchema)) dto: ImportarMoradoresDto,
   ) {
     return this.cadastro.importarMoradores(user, dto);
+  }
+
+  @Get("vagas")
+  listarVagas(@CurrentUser() user: JwtPayload) {
+    return this.cadastro.listarVagas(user);
+  }
+
+  @Post("vagas")
+  criarVagas(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(CriarVagasSchema)) dto: CriarVagasDto,
+  ) {
+    return this.cadastro.criarVagas(user, dto);
   }
 
   @Get("adocao")

@@ -7,6 +7,7 @@ import { CadastroModule } from "./cadastro/cadastro.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { MoradorModule } from "./morador/morador.module";
 import { NotificacoesModule } from "./notificacoes/notificacoes.module";
+import { AvisosModule } from "./avisos/avisos.module";
 
 @Controller("health")
 class HealthController {
@@ -26,6 +27,7 @@ class HealthController {
     UploadsModule,
     MoradorModule,
     NotificacoesModule,
+    AvisosModule,
   ],
   controllers: [HealthController],
 })

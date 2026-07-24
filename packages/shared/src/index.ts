@@ -98,6 +98,90 @@ export const CriarUsuarioSchema = z.object({
 });
 export type CriarUsuarioDto = z.infer<typeof CriarUsuarioSchema>;
 
+// ----- Módulo Avisos & Ocorrências -----
+
+/** Placa normalizada: UPPER, só alfanumérico. Aceita Mercosul e antiga. */
+export function normalizarPlaca(placa: string): string {
+  return placa.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+const PLACA_REGEX = /^[A-Z]{3}\d[A-Z0-9]\d{2}$/; // Mercosul ABC1D23 e antiga ABC1234
+
+export const PlacaSchema = z
+  .string()
+  .transform(normalizarPlaca)
+  .refine((p) => PLACA_REGEX.test(p), "Placa inválida");
+
+export const CriarVagasSchema = z.object({
+  vagas: z
+    .array(
+      z.object({
+        identificacao: z.string().min(1).max(40),
+        bloco: z.string().max(40).optional(),
+        unidade: z.string().min(1).max(40),
+      }),
+    )
+    .min(1)
+    .max(2000),
+});
+export type CriarVagasDto = z.infer<typeof CriarVagasSchema>;
+
+export const CriarVeiculoSchema = z.object({
+  unidadeId: z.string().uuid(),
+  placa: PlacaSchema,
+  modelo: z.string().max(80).optional(),
+  cor: z.string().max(40).optional(),
+});
+export type CriarVeiculoDto = z.infer<typeof CriarVeiculoSchema>;
+
+export const IdentificarAlvoSchema = z.object({
+  texto: z.string().min(1).max(200),
+});
+export type IdentificarAlvoDto = z.infer<typeof IdentificarAlvoSchema>;
+
+/** Via 1: aviso da equipe para uma unidade. */
+export const CriarAvisoSchema = z.object({
+  unidadeId: z.string().uuid(),
+  motivo: z.string().min(1).max(120),
+  descricao: z.string().max(500).optional(),
+  fotoKey: z.string().max(500).optional(),
+});
+export type CriarAvisoDto = z.infer<typeof CriarAvisoSchema>;
+
+/** Via 2: ocorrência reportada pelo morador. */
+export const CriarOcorrenciaSchema = z.object({
+  unidadeId: z.string().uuid(),
+  categoria: z.string().min(1).max(120),
+  descricao: z.string().max(500).optional(),
+  fotoKey: z.string().max(500).optional(),
+});
+export type CriarOcorrenciaDto = z.infer<typeof CriarOcorrenciaSchema>;
+
+export const STATUS_AVISO = ["ABERTO", "EM_ANDAMENTO", "RESOLVIDO"] as const;
+export type StatusAviso = (typeof STATUS_AVISO)[number];
+
+export const MudarStatusAvisoSchema = z.object({
+  status: z.enum(STATUS_AVISO),
+});
+export type MudarStatusAvisoDto = z.infer<typeof MudarStatusAvisoSchema>;
+
+/** Motivos sugeridos na Via 1 (equipe) e categorias na Via 2 (morador). */
+export const MOTIVOS_AVISO = [
+  "Luz acesa",
+  "Alarme disparado",
+  "Vidro aberto",
+  "Mal estacionado",
+  "Vazamento",
+  "Janela aberta",
+] as const;
+export const CATEGORIAS_OCORRENCIA = [
+  "Segurança",
+  "Iluminação",
+  "Limpeza",
+  "Vazamento",
+  "Elevador",
+  "Portão",
+] as const;
+
 export const STATUS_PACOTE = ["ARMAZENADO", "ENTREGUE", "EXTRAVIADO"] as const;
 export type StatusPacote = (typeof STATUS_PACOTE)[number];
 

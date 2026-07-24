@@ -5,6 +5,7 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type {
+  CriarVeiculoDto,
   EmitirConviteDto,
   EmitirQrDto,
   JwtPayload,
@@ -75,6 +76,53 @@ export class MoradorService {
       });
     }
     return resultado;
+  }
+
+  /** Veículos da unidade (self-service do morador; usados na Via 1 por placa). */
+  async listarVeiculos(user: JwtPayload, unidadeId: string) {
+    const moradorId = this.exigirMorador(user);
+    const vinculo = await this.exigirVinculoAtivo(moradorId, unidadeId);
+    return this.prisma.withTenant(vinculo.condominioId, (tx) =>
+      tx.veiculo.findMany({ where: { unidadeId }, orderBy: { placa: "asc" } }),
+    );
+  }
+
+  async criarVeiculo(user: JwtPayload, dto: CriarVeiculoDto) {
+    const moradorId = this.exigirMorador(user);
+    const vinculo = await this.exigirVinculoAtivo(moradorId, dto.unidadeId);
+    return this.prisma.withTenant(vinculo.condominioId, (tx) =>
+      tx.veiculo.upsert({
+        where: {
+          condominioId_placa: { condominioId: vinculo.condominioId, placa: dto.placa },
+        },
+        update: { unidadeId: dto.unidadeId, modelo: dto.modelo, cor: dto.cor },
+        create: {
+          condominioId: vinculo.condominioId,
+          unidadeId: dto.unidadeId,
+          placa: dto.placa,
+          modelo: dto.modelo,
+          cor: dto.cor,
+        },
+      }),
+    );
+  }
+
+  async removerVeiculo(user: JwtPayload, veiculoId: string) {
+    const moradorId = this.exigirMorador(user);
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { moradorId, status: "ATIVO" },
+      select: { unidadeId: true, condominioId: true },
+    });
+    for (const v of vinculos) {
+      const ok = await this.prisma.withTenant(v.condominioId, async (tx) => {
+        const { count } = await tx.veiculo.deleteMany({
+          where: { id: veiculoId, unidadeId: v.unidadeId },
+        });
+        return count > 0;
+      });
+      if (ok) return { removido: true };
+    }
+    throw new ForbiddenException("Veículo não encontrado");
   }
 
   async registrarDevice(user: JwtPayload, dto: RegistrarDeviceDto) {
