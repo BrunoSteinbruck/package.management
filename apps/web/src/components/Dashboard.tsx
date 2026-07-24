@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { JwtPayload } from "@pacotes/shared";
-import { apiFetch, limparSessao } from "@/lib/api";
+import { apiFetch, API_URL, limparSessao } from "@/lib/api";
 import { Importar } from "./Importar";
 
 interface Pendencia {
@@ -62,12 +62,52 @@ interface Relatorios {
   porHorario: { faixa: string; qtd: number; pct: number }[];
 }
 
-type Visao = "visao-geral" | "pacotes" | "relatorios" | "moradores";
+interface FotoRef {
+  key: string;
+  token: string;
+}
+
+interface Ocorrencia {
+  id: string;
+  categoria: string;
+  descricao: string | null;
+  status: "ABERTO" | "EM_ANDAMENTO" | "RESOLVIDO";
+  criadoEm: string;
+  unidade: { bloco: string | null; identificacao: string };
+  autor: string;
+  foto: FotoRef | null;
+}
+
+interface VagaLinha {
+  id: string;
+  identificacao: string;
+  unidade: { bloco: string | null; identificacao: string };
+}
+
+type Visao =
+  | "visao-geral"
+  | "pacotes"
+  | "relatorios"
+  | "moradores"
+  | "ocorrencias";
 
 function rotulo(u?: { bloco: string | null; identificacao: string }) {
   if (!u) return "—";
   return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
 }
+
+function urlFoto(foto: FotoRef): string {
+  return `${API_URL}/uploads/${foto.key}?t=${encodeURIComponent(foto.token)}`;
+}
+
+const STATUS_OCORRENCIA: Record<
+  Ocorrencia["status"],
+  { rotulo: string; selo: string }
+> = {
+  ABERTO: { rotulo: "aberta", selo: "alerta" },
+  EM_ANDAMENTO: { rotulo: "em andamento", selo: "info" },
+  RESOLVIDO: { rotulo: "resolvida", selo: "ok" },
+};
 
 function diasDesde(iso: string | null): number {
   if (!iso) return 0;
@@ -88,11 +128,15 @@ export function Dashboard({
   const gestor = perfil.papel === "SINDICO" || perfil.papel === "ADMIN";
   const [visao, setVisao] = useState<Visao>("visao-geral");
   const [pendentesAprovacao, setPendentesAprovacao] = useState(0);
+  const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState(0);
 
   useEffect(() => {
     if (gestor) {
       apiFetch<VinculoPendente[]>("/cadastro/vinculos/pendentes")
         .then((v) => setPendentesAprovacao(v.length))
+        .catch(() => {});
+      apiFetch<Ocorrencia[]>("/cadastro/ocorrencias?status=ABERTO")
+        .then((o) => setOcorrenciasAbertas(o.length))
         .catch(() => {});
     }
   }, [gestor, visao]);
@@ -122,6 +166,19 @@ export function Dashboard({
           </button>
           {gestor && (
             <button
+              className={`item ${visao === "ocorrencias" ? "ativo" : ""}`}
+              onClick={() => setVisao("ocorrencias")}
+            >
+              Ocorrências
+              {ocorrenciasAbertas > 0 && (
+                <span className="embreve" style={{ color: "#7CE3A8" }}>
+                  {ocorrenciasAbertas}
+                </span>
+              )}
+            </button>
+          )}
+          {gestor && (
+            <button
               className={`item ${visao === "moradores" ? "ativo" : ""}`}
               onClick={() => setVisao("moradores")}
             >
@@ -146,16 +203,31 @@ export function Dashboard({
       </aside>
 
       <main className="conteudo">
-        {visao === "visao-geral" && <VisaoGeral />}
+        {visao === "visao-geral" && (
+          <VisaoGeral
+            gestor={gestor}
+            ocorrenciasAbertas={ocorrenciasAbertas}
+            aoVerOcorrencias={() => setVisao("ocorrencias")}
+          />
+        )}
         {visao === "pacotes" && <PacotesView />}
         {visao === "relatorios" && <RelatoriosView />}
+        {visao === "ocorrencias" && gestor && <OcorrenciasView />}
         {visao === "moradores" && gestor && <MoradoresView />}
       </main>
     </div>
   );
 }
 
-function VisaoGeral() {
+function VisaoGeral({
+  gestor,
+  ocorrenciasAbertas,
+  aoVerOcorrencias,
+}: {
+  gestor: boolean;
+  ocorrenciasAbertas: number;
+  aoVerOcorrencias: () => void;
+}) {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [adocao, setAdocao] = useState<Adocao | null>(null);
@@ -209,6 +281,19 @@ function VisaoGeral() {
             {adocao?.unidadesComApp ?? 0} de {adocao?.totalUnidades ?? 0} unidades
           </div>
         </div>
+        {gestor && (
+          <div
+            className="metrica"
+            onClick={ocorrenciasAbertas > 0 ? aoVerOcorrencias : undefined}
+            style={ocorrenciasAbertas > 0 ? { cursor: "pointer" } : undefined}
+          >
+            <div className={`valor ${ocorrenciasAbertas > 0 ? "" : "verde"}`}>
+              {ocorrenciasAbertas}
+            </div>
+            <div className="rotulo">ocorrências abertas</div>
+            <div className="sub">reportadas pelos moradores</div>
+          </div>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 16 }}>
@@ -696,6 +781,297 @@ function EquipeSection() {
   );
 }
 
+function OcorrenciasView() {
+  const [filtro, setFiltro] = useState<string>("");
+  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ampliada, setAmpliada] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    try {
+      const q = filtro ? `?status=${filtro}` : "";
+      setOcorrencias(await apiFetch<Ocorrencia[]>(`/cadastro/ocorrencias${q}`));
+      setErro(null);
+    } catch (e) {
+      setErro((e as Error).message);
+    }
+  }, [filtro]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  async function mudarStatus(id: string, status: Ocorrencia["status"]) {
+    try {
+      await apiFetch(`/cadastro/ocorrencias/${id}/status`, {
+        method: "POST",
+        body: { status },
+      });
+      carregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    }
+  }
+
+  const filtros: { valor: string; rotulo: string }[] = [
+    { valor: "", rotulo: "Todas" },
+    { valor: "ABERTO", rotulo: "Abertas" },
+    { valor: "EM_ANDAMENTO", rotulo: "Em andamento" },
+    { valor: "RESOLVIDO", rotulo: "Resolvidas" },
+  ];
+
+  return (
+    <>
+      <h1>Ocorrências</h1>
+      <p className="aviso">
+        Problemas do condomínio reportados pelos moradores. Atualize o status —
+        o morador é avisado a cada mudança.
+      </p>
+
+      <div className="chips" style={{ marginTop: 16 }}>
+        {filtros.map((f) => (
+          <button
+            key={f.valor || "todas"}
+            className={`chip ${filtro === f.valor ? "ativo" : ""}`}
+            onClick={() => setFiltro(f.valor)}
+          >
+            {f.rotulo}
+          </button>
+        ))}
+      </div>
+
+      {erro && <p className="erro" style={{ marginTop: 12 }}>{erro}</p>}
+
+      <section className="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Foto</th>
+              <th>Categoria</th>
+              <th>Unidade</th>
+              <th>Morador</th>
+              <th>Data</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {ocorrencias.map((o) => {
+              const s = STATUS_OCORRENCIA[o.status];
+              return (
+                <tr key={o.id}>
+                  <td>
+                    {o.foto ? (
+                      <img
+                        src={urlFoto(o.foto)}
+                        alt="foto da ocorrência"
+                        onClick={() =>
+                          setAmpliada(ampliada === o.id ? null : o.id)
+                        }
+                        style={{
+                          width: 52,
+                          height: 52,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          cursor: "pointer",
+                        }}
+                      />
+                    ) : (
+                      <span className="aviso">—</span>
+                    )}
+                  </td>
+                  <td>
+                    <div className="unidade">{o.categoria}</div>
+                    {o.descricao && (
+                      <div className="aviso" style={{ marginTop: 2 }}>
+                        {o.descricao}
+                      </div>
+                    )}
+                  </td>
+                  <td>{rotulo(o.unidade)}</td>
+                  <td>{o.autor}</td>
+                  <td>
+                    {new Date(o.criadoEm).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </td>
+                  <td>
+                    <span className={`selo ${s.selo}`}>{s.rotulo}</span>
+                  </td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {o.status === "ABERTO" && (
+                      <button
+                        className="outline"
+                        onClick={() => mudarStatus(o.id, "EM_ANDAMENTO")}
+                      >
+                        Em andamento
+                      </button>
+                    )}
+                    {o.status !== "RESOLVIDO" && (
+                      <button
+                        className="acao"
+                        style={{ marginLeft: 8 }}
+                        onClick={() => mudarStatus(o.id, "RESOLVIDO")}
+                      >
+                        Resolver
+                      </button>
+                    )}
+                    {o.status === "RESOLVIDO" && (
+                      <button
+                        className="outline"
+                        onClick={() => mudarStatus(o.id, "EM_ANDAMENTO")}
+                      >
+                        Reabrir
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {ocorrencias.length === 0 && !erro && (
+              <tr>
+                <td colSpan={7} className="aviso">
+                  Nenhuma ocorrência {filtro ? "com esse status" : "reportada"} até agora.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      {ampliada &&
+        (() => {
+          const o = ocorrencias.find((x) => x.id === ampliada);
+          if (!o?.foto) return null;
+          return (
+            <div
+              onClick={() => setAmpliada(null)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.72)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 32,
+                zIndex: 50,
+              }}
+            >
+              <img
+                src={urlFoto(o.foto)}
+                alt="foto da ocorrência"
+                style={{ maxWidth: "90%", maxHeight: "90%", borderRadius: 12 }}
+              />
+            </div>
+          );
+        })()}
+    </>
+  );
+}
+
+function VagasSection({ aoImportar }: { aoImportar: () => void }) {
+  const [vagas, setVagas] = useState<VagaLinha[]>([]);
+  const [csv, setCsv] = useState("");
+  const [resultado, setResultado] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      setVagas(await apiFetch<VagaLinha[]>("/cadastro/vagas"));
+    } catch {
+      // silencioso: a seção principal já mostra erros
+    }
+  }, []);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  async function importar() {
+    setEnviando(true);
+    setErro(null);
+    setResultado(null);
+    try {
+      const vagasPayload = csv
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => {
+          const [identificacao, bloco, unidade] = l
+            .split(/[;,\t]/)
+            .map((c) => c.trim());
+          return { identificacao, bloco: bloco || undefined, unidade };
+        });
+      const res = await apiFetch<{ criadas: number; semUnidade: string[] }>(
+        "/cadastro/vagas",
+        { method: "POST", body: { vagas: vagasPayload } },
+      );
+      setResultado(
+        `${res.criadas} vaga(s) cadastradas.` +
+          (res.semUnidade.length > 0
+            ? ` Sem unidade correspondente: ${res.semUnidade.join(", ")}`
+            : ""),
+      );
+      setCsv("");
+      carregar();
+      aoImportar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Vagas de garagem</h2>
+      <p className="aviso" style={{ marginBottom: 10 }}>
+        Uma linha por vaga: vaga; bloco; unidade — separados por ponto e vírgula,
+        vírgula ou tab. A vaga liga a portaria ao morador (ex.: &quot;carro na vaga 42
+        com luz acesa&quot;).
+      </p>
+      {vagas.length > 0 && (
+        <table style={{ marginBottom: 14 }}>
+          <thead>
+            <tr>
+              <th>Vaga</th>
+              <th>Unidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vagas.map((v) => (
+              <tr key={v.id}>
+                <td className="unidade">{v.identificacao}</td>
+                <td>{rotulo(v.unidade)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <textarea
+        rows={4}
+        value={csv}
+        onChange={(e) => setCsv(e.target.value)}
+        placeholder={"42; A; 302\n17; B; 101"}
+      />
+      <button
+        className="acao"
+        style={{ marginTop: 14 }}
+        onClick={importar}
+        disabled={enviando || !csv.trim()}
+      >
+        Importar vagas
+      </button>
+      {resultado && <p className="aviso" style={{ marginTop: 10 }}>{resultado}</p>}
+      {erro && <p className="erro" style={{ marginTop: 10 }}>{erro}</p>}
+    </section>
+  );
+}
+
 function MoradoresView() {
   const [vinculos, setVinculos] = useState<VinculoPendente[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -755,6 +1131,8 @@ function MoradoresView() {
       )}
 
       <Importar aoImportar={carregar} />
+
+      <VagasSection aoImportar={carregar} />
 
       <EquipeSection />
     </>
