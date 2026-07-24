@@ -10,6 +10,8 @@ export type PortariaStackParamList = {
   Retirada: { unidadeInicial?: Unidade } | undefined;
   QrScan: undefined;
   SaidaCamera: { pacoteIds: string[]; unidadeLabel: string };
+  AvisarCamera: undefined;
+  AvisarConfirm: { fotoUri: string | null };
 };
 
 /** Pilha do morador (perfil.tipo === "morador"). */
@@ -19,4 +21,5 @@ export type MoradorStackParamList = {
   Detalhe: { pacoteId: string };
   MinhaUnidade: { unidadeId: string; rotulo: string; condominio: string };
   Avisos: undefined;
+  Reportar: { unidadeId: string; rotulo: string };
 };

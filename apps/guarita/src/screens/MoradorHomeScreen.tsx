@@ -231,19 +231,38 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
         )}
       </ScrollView>
 
-      {historico.length > 0 && (
+      {primeira && (
         <View style={[styles.rodape, { paddingBottom: insets.bottom + 12 }]}>
-          <Pressable
-            onPress={() => setHistoricoAberto(true)}
-            style={({ pressed }) => [
-              styles.botaoHistorico,
-              { transform: [{ scale: pressed ? 0.98 : 1 }] },
-            ]}
-          >
-            <Icone nome="lista" tamanho={19} cor={theme.colors.marca} traco={2.2} />
-            <Text style={styles.botaoHistoricoTexto}>Histórico</Text>
-            <Text style={styles.botaoHistoricoContagem}>{historico.length}</Text>
-          </Pressable>
+          <View style={styles.linhaRodape}>
+            <Pressable
+              onPress={() =>
+                navigation.navigate("Reportar", {
+                  unidadeId: primeira.unidade.id,
+                  rotulo: rotuloUnidade(primeira.unidade),
+                })
+              }
+              style={({ pressed }) => [
+                styles.botaoRodape,
+                { transform: [{ scale: pressed ? 0.98 : 1 }] },
+              ]}
+            >
+              <Icone nome="camera" tamanho={19} cor={theme.colors.marca} traco={2.2} />
+              <Text style={styles.botaoHistoricoTexto}>Reportar</Text>
+            </Pressable>
+            {historico.length > 0 && (
+              <Pressable
+                onPress={() => setHistoricoAberto(true)}
+                style={({ pressed }) => [
+                  styles.botaoRodape,
+                  { transform: [{ scale: pressed ? 0.98 : 1 }] },
+                ]}
+              >
+                <Icone nome="lista" tamanho={19} cor={theme.colors.marca} traco={2.2} />
+                <Text style={styles.botaoHistoricoTexto}>Histórico</Text>
+                <Text style={styles.botaoHistoricoContagem}>{historico.length}</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       )}
 
@@ -395,11 +414,13 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     backgroundColor: theme.colors.bg,
   },
-  botaoHistorico: {
+  linhaRodape: { flexDirection: "row", gap: 10 },
+  botaoRodape: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
     minHeight: 54,
     borderRadius: theme.radius.pill,
     borderWidth: 1.5,

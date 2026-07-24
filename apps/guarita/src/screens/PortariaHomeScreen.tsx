@@ -171,6 +171,17 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
           <Text style={styles.tileRetiradaSub}>Toque no pacote ou bipe o QR</Text>
         </Pressable>
 
+        <Pressable
+          onPress={() => navigation.navigate("AvisarCamera")}
+          style={({ pressed }) => [
+            styles.botaoAvisar,
+            { transform: [{ scale: pressed ? 0.98 : 1 }] },
+          ]}
+        >
+          <Icone nome="sino" tamanho={20} cor={theme.colors.marca} traco={2.2} />
+          <Text style={styles.botaoAvisarTexto}>Avisar morador</Text>
+        </Pressable>
+
         <View style={styles.linhaStats}>
           <Pressable
             onPress={() => navigation.navigate("Armazenados")}
@@ -291,6 +302,19 @@ const styles = StyleSheet.create({
   },
   tileRetiradaTitulo: { color: "#FFF", fontSize: 27, fontWeight: "700" },
   tileRetiradaSub: { color: "rgba(255,255,255,0.8)", fontSize: 13.5, fontWeight: "500" },
+  botaoAvisar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    minHeight: 56,
+    borderRadius: theme.radius.card,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 14,
+  },
+  botaoAvisarTexto: { fontSize: 16, fontWeight: "600", color: theme.colors.text },
   linhaStats: { flexDirection: "row", gap: 12, marginTop: 14 },
   statCard: {
     flex: 1,

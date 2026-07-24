@@ -134,3 +134,58 @@ export interface Vinculado {
   titular: boolean;
   voce: boolean;
 }
+
+// ----- Avisos & Ocorrências -----
+
+export interface Veiculo {
+  id: string;
+  placa: string;
+  modelo: string | null;
+  cor: string | null;
+}
+
+export interface AlvoIdentificado {
+  origem: "placa" | "vaga" | null;
+  valor: string;
+  unidade: Unidade | null;
+}
+
+export interface AvisoMorador {
+  id: string;
+  motivo: string;
+  descricao: string | null;
+  status: "ABERTO" | "EM_ANDAMENTO" | "RESOLVIDO";
+  criadoEm: string;
+  foto: FotoAssinada | null;
+}
+
+export interface OcorrenciaMorador {
+  id: string;
+  categoria: string;
+  descricao: string | null;
+  status: "ABERTO" | "EM_ANDAMENTO" | "RESOLVIDO";
+  criadoEm: string;
+  foto: FotoAssinada | null;
+}
+
+export const MOTIVOS_AVISO = [
+  "Luz acesa",
+  "Alarme disparado",
+  "Vidro aberto",
+  "Mal estacionado",
+  "Vazamento",
+  "Janela aberta",
+] as const;
+
+export const CATEGORIAS_OCORRENCIA = [
+  "Segurança",
+  "Iluminação",
+  "Limpeza",
+  "Vazamento",
+  "Elevador",
+  "Portão",
+] as const;
+
+export function rotuloStatusAviso(s: string): string {
+  return s === "ABERTO" ? "Aberto" : s === "EM_ANDAMENTO" ? "Em andamento" : "Resolvido";
+}

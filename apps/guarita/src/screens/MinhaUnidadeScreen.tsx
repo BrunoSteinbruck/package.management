@@ -6,6 +6,7 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,7 +15,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch } from "../api/client";
 import { limparSessao } from "../api/session";
-import type { Vinculado } from "../api/types";
+import type { Veiculo, Vinculado } from "../api/types";
 import { Botao, Card, HeaderTela, Kicker } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
@@ -34,14 +35,52 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
   const { unidadeId, rotulo, condominio } = route.params;
   const [vinculados, setVinculados] = useState<Vinculado[]>([]);
   const [convidando, setConvidando] = useState(false);
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [placa, setPlaca] = useState("");
+  const [modelo, setModelo] = useState("");
+  const [salvandoVeiculo, setSalvandoVeiculo] = useState(false);
+
+  const carregarVeiculos = useCallback(() => {
+    apiFetch<Veiculo[]>(`/morador/veiculos?unidadeId=${unidadeId}`)
+      .then(setVeiculos)
+      .catch(() => {});
+  }, [unidadeId]);
 
   useFocusEffect(
     useCallback(() => {
       apiFetch<Vinculado[]>(`/morador/unidades/${unidadeId}/vinculados`)
         .then(setVinculados)
         .catch(() => {});
-    }, [unidadeId]),
+      carregarVeiculos();
+    }, [unidadeId, carregarVeiculos]),
   );
+
+  async function adicionarVeiculo() {
+    if (placa.trim().length < 6) return;
+    setSalvandoVeiculo(true);
+    try {
+      await apiFetch("/morador/veiculos", {
+        method: "POST",
+        body: { unidadeId, placa: placa.trim(), modelo: modelo.trim() || undefined },
+      });
+      setPlaca("");
+      setModelo("");
+      carregarVeiculos();
+    } catch (e) {
+      Alert.alert("Não foi possível salvar", String((e as Error).message));
+    } finally {
+      setSalvandoVeiculo(false);
+    }
+  }
+
+  async function removerVeiculo(id: string) {
+    try {
+      await apiFetch(`/morador/veiculos/${id}`, { method: "DELETE" });
+      carregarVeiculos();
+    } catch {
+      // ignora
+    }
+  }
 
   async function convidar() {
     setConvidando(true);
@@ -119,6 +158,61 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
           carregando={convidando}
           estilo={{ marginTop: 14, minHeight: 56 }}
         />
+
+        <Text style={[styles.tituloSecao, { marginTop: 26 }]}>Veículos</Text>
+        <Text style={styles.subVeiculos}>
+          Cadastre a placa para a portaria te avisar rápido (luz acesa, alarme...).
+        </Text>
+        <Card estilo={{ padding: 6 }}>
+          {veiculos.length === 0 && (
+            <Text style={styles.vazioVeiculo}>Nenhum veículo cadastrado.</Text>
+          )}
+          {veiculos.map((v, i) => (
+            <View
+              key={v.id}
+              style={[
+                styles.itemVeiculo,
+                i > 0 && { borderTopWidth: 1, borderTopColor: theme.colors.divisor },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.placaVeiculo}>{v.placa}</Text>
+                {(v.modelo || v.cor) && (
+                  <Text style={styles.modeloVeiculo}>
+                    {[v.modelo, v.cor].filter(Boolean).join(" · ")}
+                  </Text>
+                )}
+              </View>
+              <Pressable onPress={() => removerVeiculo(v.id)} hitSlop={10}>
+                <Icone nome="fechar" tamanho={18} cor={theme.colors.textFaint} />
+              </Pressable>
+            </View>
+          ))}
+          <View style={styles.formVeiculo}>
+            <TextInput
+              style={[styles.inputVeiculo, { flex: 1.2 }]}
+              placeholder="Placa"
+              placeholderTextColor={theme.colors.textFaint}
+              autoCapitalize="characters"
+              value={placa}
+              onChangeText={setPlaca}
+            />
+            <TextInput
+              style={[styles.inputVeiculo, { flex: 1.5 }]}
+              placeholder="Modelo (opcional)"
+              placeholderTextColor={theme.colors.textFaint}
+              value={modelo}
+              onChangeText={setModelo}
+            />
+            <Pressable
+              style={[styles.addVeiculo, { opacity: placa.trim().length < 6 ? 0.4 : 1 }]}
+              onPress={adicionarVeiculo}
+              disabled={salvandoVeiculo || placa.trim().length < 6}
+            >
+              <Icone nome="mais" tamanho={20} cor="#FFF" traco={2.4} />
+            </Pressable>
+          </View>
+        </Card>
 
         <Pressable
           style={({ pressed }) => [styles.linhaNotif, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
@@ -216,4 +310,59 @@ const styles = StyleSheet.create({
   },
   notifTitulo: { fontSize: 15.5, fontWeight: "600", color: theme.colors.text },
   notifSub: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 1 },
+  subVeiculos: {
+    fontSize: 13.5,
+    color: theme.colors.textSecondary,
+    marginTop: -4,
+    marginBottom: 10,
+    lineHeight: 19,
+  },
+  vazioVeiculo: {
+    fontSize: 14,
+    color: theme.colors.textFaint,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+  },
+  itemVeiculo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+  },
+  placaVeiculo: {
+    fontSize: 15.5,
+    fontWeight: "700",
+    color: theme.colors.text,
+    letterSpacing: 0.5,
+  },
+  modeloVeiculo: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 1 },
+  formVeiculo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divisor,
+    marginTop: 2,
+  },
+  inputVeiculo: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    minHeight: 46,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: theme.colors.text,
+  },
+  addVeiculo: {
+    width: 46,
+    height: 46,
+    borderRadius: theme.radius.input,
+    backgroundColor: theme.colors.marca,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

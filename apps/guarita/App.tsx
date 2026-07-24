@@ -12,6 +12,8 @@ import type {
   PortariaStackParamList,
 } from "./src/navigation";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
+import { AvisarCameraScreen } from "./src/screens/AvisarCameraScreen";
+import { AvisarConfirmScreen } from "./src/screens/AvisarConfirmScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
 import { DetalheScreen } from "./src/screens/DetalheScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
@@ -23,6 +25,7 @@ import { PortariaHomeScreen } from "./src/screens/PortariaHomeScreen";
 import { QrScanScreen } from "./src/screens/QrScanScreen";
 import { QrScreen } from "./src/screens/QrScreen";
 import { RetiradaScreen } from "./src/screens/RetiradaScreen";
+import { ReportarScreen } from "./src/screens/ReportarScreen";
 import { RetiradasHojeScreen } from "./src/screens/RetiradasHojeScreen";
 import { SaidaCameraScreen } from "./src/screens/SaidaCameraScreen";
 
@@ -84,6 +87,8 @@ export default function App() {
           <Portaria.Screen name="Retirada" component={RetiradaScreen} />
           <Portaria.Screen name="QrScan" component={QrScanScreen} />
           <Portaria.Screen name="SaidaCamera" component={SaidaCameraScreen} />
+          <Portaria.Screen name="AvisarCamera" component={AvisarCameraScreen} />
+          <Portaria.Screen name="AvisarConfirm" component={AvisarConfirmScreen} />
         </Portaria.Navigator>
       </NavigationContainer>
     );
@@ -104,6 +109,7 @@ export default function App() {
           )}
         </Morador.Screen>
         <Morador.Screen name="Avisos" component={AvisosScreen} />
+        <Morador.Screen name="Reportar" component={ReportarScreen} />
       </Morador.Navigator>
     </NavigationContainer>
   );
