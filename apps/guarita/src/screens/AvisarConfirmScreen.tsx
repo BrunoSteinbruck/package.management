@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch, NetworkError, uploadFoto } from "../api/client";
+import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
 import { lerTextoLocal, ocrLocalDisponivel } from "../api/ocrLocal";
 import {
   MOTIVOS_AVISO,
@@ -83,24 +84,37 @@ export function AvisarConfirmScreen({ navigation, route }: Props) {
     setSalvando(true);
     try {
       let fotoKey: string | undefined;
+      let fotoPendente: FotoPendente | undefined;
       if (fotoUri) {
         try {
           fotoKey = await uploadFoto(fotoUri);
         } catch (e) {
           if (!(e instanceof NetworkError)) throw e;
+          // Offline: guarda o URI para a foto subir junto no flush da fila.
+          fotoPendente = { uri: fotoUri, campo: "fotoKey" };
         }
       }
-      const res = await apiFetch<{ temApp: boolean }>("/portaria/avisos", {
-        method: "POST",
-        body: { unidadeId: unidade.id, motivo, descricao: descricao || undefined, fotoKey },
-      });
-      Alert.alert(
-        res.temApp ? "Aviso enviado" : "Unidade sem app",
-        res.temApp
-          ? `${rotuloUnidade(unidade)} — morador notificado.`
-          : `${rotuloUnidade(unidade)} não tem o app. Avise pelo interfone.`,
-        [{ text: "OK", onPress: () => navigation.popToTop() }],
+      const resultado = await postOuEnfileirar<{ temApp: boolean }>(
+        "/portaria/avisos",
+        { unidadeId: unidade.id, motivo, descricao: descricao || undefined, fotoKey },
+        fotoPendente,
       );
+      if (resultado.queued) {
+        Alert.alert(
+          "Salvo offline",
+          `Aviso para ${rotuloUnidade(unidade)} será enviado quando a conexão voltar.`,
+          [{ text: "OK", onPress: () => navigation.popToTop() }],
+        );
+      } else {
+        const temApp = resultado.data?.temApp ?? false;
+        Alert.alert(
+          temApp ? "Aviso enviado" : "Unidade sem app",
+          temApp
+            ? `${rotuloUnidade(unidade)} — morador notificado.`
+            : `${rotuloUnidade(unidade)} não tem o app. Avise pelo interfone.`,
+          [{ text: "OK", onPress: () => navigation.popToTop() }],
+        );
+      }
     } catch (e) {
       Alert.alert("Não foi possível enviar", String((e as Error).message));
     } finally {

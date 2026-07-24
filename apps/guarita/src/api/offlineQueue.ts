@@ -10,7 +10,7 @@ const QUEUE_KEY = "@fila/pendentes";
  */
 export interface FotoPendente {
   uri: string;
-  campo: "fotoEntradaKey" | "fotoSaidaKey";
+  campo: "fotoEntradaKey" | "fotoSaidaKey" | "fotoKey";
 }
 
 export interface OperacaoPendente {
