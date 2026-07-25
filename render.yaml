@@ -1,5 +1,6 @@
 # Blueprint do Render: API + PostgreSQL gerenciado com HTTPS automático.
-# Uso: dashboard.render.com → New → Blueprint → conectar o repo Guarita.
+# Uso: dashboard.render.com → New → Blueprint → conectar o repo
+# BrunoSteinbruck/package.management.
 # Depois do primeiro deploy, rodar o bootstrap (ver docs/piloto-checklist.md).
 
 databases:
@@ -32,3 +33,7 @@ services:
       # TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM (SMS real)
       # GOOGLE_VISION_API_KEY (OCR real)
       # CORS_ORIGINS (URL do painel quando for hospedado)
+      # R2_ACCOUNT_ID / R2_BUCKET / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
+      #   OBRIGATÓRIO: sem isso as fotos vão para o disco EFÊMERO daqui e
+      #   somem a cada deploy.
+      # DEMO_TELEFONES / DEMO_CODIGO (contas de review das lojas)

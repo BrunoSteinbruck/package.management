@@ -3,7 +3,6 @@ import {
   Controller,
   ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Post,
   Query,
@@ -18,33 +17,30 @@ import { JwtService } from "@nestjs/jwt";
 import type { JwtPayload } from "@pacotes/shared";
 import type { Response } from "express";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
-import { diskStorage } from "multer";
-import { join } from "node:path";
+import { memoryStorage } from "multer";
 import { AuthGuard, CurrentUser } from "../auth/auth.guard";
-import { extPorMime, FotoTokenPayload, KEY_FOTO_SEGURA } from "./foto.util";
-
-// Armazenamento em disco local para desenvolvimento.
-// TODO(produção): trocar por R2/S3 com URLs assinadas.
-const UPLOADS_DIR = join(process.cwd(), "uploads");
-mkdirSync(UPLOADS_DIR, { recursive: true });
+import {
+  extPorMime,
+  FotoTokenPayload,
+  KEY_FOTO_SEGURA,
+  mimePorKey,
+} from "./foto.util";
+import { StorageService } from "./storage.service";
 
 @Controller("uploads")
 export class UploadsController {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly storage: StorageService,
+  ) {}
 
   @Post()
   @UseGuards(AuthGuard)
   @UseInterceptors(
+    // Memória, não disco: o destino final pode ser o R2, e o limite de 10 MB
+    // por arquivo (1 por request) mantém o custo previsível.
     FileInterceptor("file", {
-      storage: diskStorage({
-        destination: UPLOADS_DIR,
-        filename: (_req, file, cb) => {
-          const ext = extPorMime(file.mimetype);
-          if (!ext) return cb(new BadRequestException("Apenas imagens JPEG/PNG/WebP"), "");
-          cb(null, `${randomUUID()}${ext}`);
-        },
-      }),
+      storage: memoryStorage(),
       fileFilter: (_req, file, cb) => {
         if (!extPorMime(file.mimetype)) {
           return cb(new BadRequestException("Apenas imagens JPEG/PNG/WebP"), false);
@@ -54,7 +50,7 @@ export class UploadsController {
       limits: { fileSize: 10 * 1024 * 1024, files: 1 },
     }),
   )
-  upload(
+  async upload(
     @CurrentUser() user: JwtPayload,
     @UploadedFile() file?: Express.Multer.File,
   ) {
@@ -64,7 +60,13 @@ export class UploadsController {
       throw new ForbiddenException("Sessão inválida para upload");
     }
     if (!file) throw new BadRequestException("Arquivo ausente (campo 'file')");
-    return { key: file.filename };
+    // Nome SEMPRE derivado do mimetype validado — nunca do nome original,
+    // que é controlado pelo cliente.
+    const ext = extPorMime(file.mimetype);
+    if (!ext) throw new BadRequestException("Apenas imagens JPEG/PNG/WebP");
+    const key = `${randomUUID()}${ext}`;
+    await this.storage.salvar(key, file.buffer, file.mimetype);
+    return { key };
   }
 
   /**
@@ -89,9 +91,9 @@ export class UploadsController {
       throw new UnauthorizedException("Token não autoriza esta foto");
     }
     if (!KEY_FOTO_SEGURA.test(key)) throw new BadRequestException("Key inválida");
-    const caminho = join(UPLOADS_DIR, key);
-    if (!existsSync(caminho)) throw new NotFoundException("Foto não encontrada");
+    const { corpo, mimetype } = await this.storage.ler(key);
     res.setHeader("Cache-Control", "private, max-age=3600");
-    res.sendFile(caminho);
+    res.setHeader("Content-Type", mimetype ?? mimePorKey(key) ?? "image/jpeg");
+    res.send(corpo);
   }
 }
