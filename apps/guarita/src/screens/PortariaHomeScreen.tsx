@@ -15,6 +15,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { JwtPayload } from "@pacotes/shared";
 import { apiFetch, NetworkError } from "../api/client";
 import { drenarFila, tamanhoFila } from "../api/offlineQueue";
+import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
@@ -95,11 +96,15 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
           </View>
           <Pressable
             onPress={() =>
-              Alert.alert("Sair da conta?", `Conectado como ${perfil.nome}.`, [
+              Alert.alert("Conta", `Conectado como ${perfil.nome}.`, [
                 { text: "Cancelar", style: "cancel" },
                 {
-                  text: "Sair",
+                  text: "Excluir minha conta",
                   style: "destructive",
+                  onPress: () => excluirConta(aoSair),
+                },
+                {
+                  text: "Sair",
                   onPress: async () => {
                     await limparSessao();
                     aoSair();

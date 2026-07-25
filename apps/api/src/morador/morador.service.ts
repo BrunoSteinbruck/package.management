@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type {
@@ -127,6 +128,10 @@ export class MoradorService {
 
   async registrarDevice(user: JwtPayload, dto: RegistrarDeviceDto) {
     const moradorId = this.exigirMorador(user);
+    // Token de conta já excluída: a FK estouraria em 500. O app chama isto ao
+    // abrir, antes de qualquer tela — devolver 401 faz ele cair no login.
+    const existe = await this.prisma.morador.count({ where: { id: moradorId } });
+    if (!existe) throw new UnauthorizedException("Conta não encontrada");
     await this.prisma.device.upsert({
       where: { pushToken: dto.pushToken },
       create: { moradorId, pushToken: dto.pushToken, plataforma: dto.plataforma },

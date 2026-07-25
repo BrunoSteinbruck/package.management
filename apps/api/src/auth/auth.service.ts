@@ -28,6 +28,37 @@ function hash(codigo: string) {
     .digest("hex");
 }
 
+// Contas de demonstração para o review das lojas: a Apple exige credenciais
+// que funcionem sem o aparelho do dono, e nosso login é OTP por SMS — o
+// revisor não recebe o código. Estes telefones usam um código FIXO (vai nas
+// notas de review) e não disparam SMS.
+//
+// São vários números porque o app roteia por papel: o revisor precisa de um
+// login de portaria E um de morador para ver o app inteiro.
+//
+// Por que não reaproveitar OTP_DEV_ECHO: aquele devolve o código de QUALQUER
+// telefone na resposta — em produção seria takeover de conta. Aqui o código
+// nunca sai na resposta e o desvio vale só para os números listados.
+function contasDemo(): { telefones: Set<string>; codigo: string } | null {
+  const telefones = new Set(
+    (process.env.DEMO_TELEFONES ?? "")
+      .split(",")
+      .map(soDigitos)
+      .filter(Boolean),
+  );
+  const codigo = (process.env.DEMO_CODIGO ?? "").trim();
+  // Falha fechada: configuração pela metade (ou código fora do formato) não
+  // ativa nada, em vez de abrir um desvio com valor inesperado.
+  if (telefones.size === 0 || !/^\d{6}$/.test(codigo)) return null;
+  return { telefones, codigo };
+}
+
+// O schema aceita o telefone com ou sem "+"; compara sempre pelos dígitos
+// para o revisor não errar o login por causa do formato.
+function soDigitos(valor: string) {
+  return valor.replace(/\D/g, "");
+}
+
 @Injectable()
 export class AuthService {
   private enviosPorChave = new Map<string, number[]>();
@@ -60,7 +91,13 @@ export class AuthService {
       );
     }
 
-    const codigo = randomInt(100000, 999999).toString();
+    // O rate limit acima vale também para as contas de demo, de propósito: o
+    // código delas é fixo e vive meses, então o teto de tentativas é a única
+    // barreira contra força bruta (3 envios/h × 5 tentativas = 15/h).
+    const demo = contasDemo();
+    const ehDemo = demo !== null && demo.telefones.has(soDigitos(telefone));
+
+    const codigo = ehDemo ? demo.codigo : randomInt(100000, 999999).toString();
     await this.prisma.otpChallenge.upsert({
       where: { telefone },
       create: {
@@ -77,8 +114,9 @@ export class AuthService {
 
     // Envio real quando o provedor está configurado (Twilio via env).
     // Falha de envio vira erro visível — melhor que o usuário esperar um SMS
-    // que nunca chega.
-    if (this.sms.configurado) {
+    // que nunca chega. A conta de demo não manda SMS: o número pode nem
+    // existir, e o revisor já tem o código nas notas.
+    if (this.sms.configurado && !ehDemo) {
       try {
         await this.sms.enviar(
           telefone,
@@ -244,6 +282,18 @@ export class AuthService {
    * app abandonado por mais de 30 dias.
    */
   async refresh(user: JwtPayload) {
+    // Conta excluída (ou membro de equipe desativado) não renova. O token
+    // continua assinado e válido por até 30 dias, então sem esta checagem o
+    // app de um SEGUNDO aparelho ficaria preso numa sessão fantasma —
+    // mostrando telas vazias em vez de voltar para o login.
+    const existe =
+      user.tipo === "morador"
+        ? await this.prisma.morador.count({ where: { id: user.sub } })
+        : await this.prisma.usuario.count({
+            where: { id: user.sub, ativo: true },
+          });
+    if (!existe) throw new UnauthorizedException("Conta não encontrada");
+
     const { exp, iat, ...payload } = user as JwtPayload & {
       exp?: number;
       iat?: number;

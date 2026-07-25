@@ -52,17 +52,24 @@ export async function apiFetch<T>(
 
 /**
  * Renova a sessão silenciosamente (token novo com validade cheia).
- * Chamado ao abrir o app; falha é ignorada — o token atual segue valendo.
+ * Chamado ao abrir o app.
+ *
+ * Retorna `false` quando o servidor recusa a sessão (conta excluída em outro
+ * aparelho, ou membro de equipe desativado pelo síndico) — aí o app volta
+ * para o login em vez de ficar preso numa sessão fantasma. Falha de REDE não
+ * desloga ninguém: o token atual segue valendo offline.
  */
-export async function renovarSessao(): Promise<void> {
+export async function renovarSessao(): Promise<boolean> {
   try {
     const res = await apiFetch<{ token: string; perfil: JwtPayload }>(
       "/auth/refresh",
       { method: "POST" },
     );
     await salvarSessao(res);
-  } catch {
-    // offline ou token expirado — o fluxo normal de login cuida disso
+    return true;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) return false;
+    return true;
   }
 }
 

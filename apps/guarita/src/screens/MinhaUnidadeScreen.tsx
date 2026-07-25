@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch } from "../api/client";
+import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
 import type { Veiculo, Vinculado } from "../api/types";
 import { Botao, Card, HeaderTela, Kicker } from "../components/ui";
@@ -251,6 +252,14 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
           }
           estilo={{ marginTop: 22 }}
         />
+
+        <Pressable
+          onPress={() => excluirConta(aoSair)}
+          hitSlop={8}
+          style={({ pressed }) => [styles.excluirConta, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Text style={styles.excluirContaTexto}>Excluir minha conta</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -365,4 +374,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // Discreto, mas não escondido: as lojas exigem que a exclusão seja
+  // encontrável sem suporte, e esta é a tela de perfil do morador.
+  excluirConta: { alignSelf: "center", marginTop: 18, padding: 8 },
+  excluirContaTexto: { fontSize: 14, fontWeight: "600", color: theme.colors.notif },
 });

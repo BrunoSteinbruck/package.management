@@ -8,6 +8,7 @@ import { UploadsModule } from "./uploads/uploads.module";
 import { MoradorModule } from "./morador/morador.module";
 import { NotificacoesModule } from "./notificacoes/notificacoes.module";
 import { AvisosModule } from "./avisos/avisos.module";
+import { ContaModule } from "./conta/conta.module";
 
 @Controller("health")
 class HealthController {
@@ -28,6 +29,7 @@ class HealthController {
     MoradorModule,
     NotificacoesModule,
     AvisosModule,
+    ContaModule,
   ],
   controllers: [HealthController],
 })

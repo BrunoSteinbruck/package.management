@@ -6,7 +6,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { JwtPayload } from "@pacotes/shared";
 import { renovarSessao } from "./src/api/client";
-import { carregarSessao } from "./src/api/session";
+import { carregarSessao, limparSessao } from "./src/api/session";
 import type {
   MoradorStackParamList,
   PortariaStackParamList,
@@ -37,10 +37,14 @@ export default function App() {
   const [perfil, setPerfil] = useState<JwtPayload | null>(null);
 
   useEffect(() => {
-    carregarSessao().then((sessao) => {
+    carregarSessao().then(async (sessao) => {
       if (sessao) {
         setPerfil(sessao.perfil);
-        renovarSessao();
+        if (!(await renovarSessao())) {
+          // Conta excluída/desativada em outro aparelho: cai para o login.
+          await limparSessao();
+          setPerfil(null);
+        }
       }
       setCarregado(true);
     });
