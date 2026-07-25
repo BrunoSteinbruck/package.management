@@ -26,10 +26,15 @@ vira o D-U-N-S.
 
 ## Contas
 
-- [ ] Apple Developer — US$ 99/ano, 24-48h de aprovação
+- [x] Apple Developer — US$ 99/ano (conta **pessoa física**; migrar para
+      Organization depois, via App Transfer, quando o CNPJ sair)
 - [ ] Google Play Console — US$ 25, pagamento único
-- [ ] Firebase (grátis) → `google-services.json` em `apps/guarita/`
-      **sem isso não há push no Android**
+- [x] Firebase (grátis) → `google-services.json` em `apps/guarita/`,
+      referenciado em `android.googleServicesFile`
+- [ ] `eas credentials` → Android → **FCM V1 service account key**. O arquivo
+      acima faz o app RECEBER; sem esta chave a Expo não consegue ENVIAR o
+      push em nosso nome. Só dá para conferir de ponta a ponta num Android
+      físico.
 
 ## Credenciais no Render (Environment)
 
