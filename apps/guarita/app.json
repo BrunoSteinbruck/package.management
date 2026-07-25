@@ -8,7 +8,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "br.com.pacotes.guarita"
+      "bundleIdentifier": "br.com.pacotes.guarita",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "br.com.pacotes.guarita",
@@ -20,8 +23,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -32,7 +34,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "A câmera é usada para fotografar etiquetas, registrar entregas e ler QR codes."
+          "cameraPermission": "A câmera é usada para fotografar etiquetas, registrar entregas e ler QR codes.",
+          "recordAudioAndroid": false
         }
       ]
     ],
