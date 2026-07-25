@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "656399942296",
+    "project_id": "gestaocondo-db9c2",
+    "storage_bucket": "gestaocondo-db9c2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:656399942296:android:c704100ef5f5c915cf86ed",
+        "android_client_info": {
+          "package_name": "br.com.pacotes.guarita"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtnsQhWkLqDOTuXkAV1pUwZQN3aqUu0RU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
