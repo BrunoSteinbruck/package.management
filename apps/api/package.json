@@ -22,6 +22,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@pacotes/shared": "workspace:*",
     "@prisma/client": "^6.2.0",
+    "@sentry/nestjs": "^10.68.0",
     "multer": "^2.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

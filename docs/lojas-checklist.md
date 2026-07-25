@@ -105,6 +105,16 @@ seed é idempotente: rode de novo antes da próxima submissão.
 
 ## Ainda sem dono
 
-- [ ] Sentry (ou equivalente) — hoje não há observabilidade nenhuma
+- [ ] `SENTRY_DSN` no Render — a API já está instrumentada; basta criar o
+      projeto no Sentry e colar o DSN. Sem ele, fica inerte.
+- [ ] **Sentry no app — deliberadamente adiado para DEPOIS do primeiro build
+      aprovado.** Não é copiar um pacote: `@sentry/react-native` é módulo
+      nativo (rebuild obrigatório), tem postinstall que baixa binário, precisa
+      de auth token no EAS para subir source maps e o Expo prende o SDK 54 na
+      série `~7.2.0` enquanto o upstream já está na 8.x. Nada disso dá para
+      validar sem rodar um build de verdade na EAS — e um build quebrado bem na
+      hora de submeter custa mais do que ficar sem crash report no piloto.
+      Fazer quando houver um build aprovado como ponto de retorno.
 - [ ] Hospedar o painel web (Vercel) e apontar `CORS_ORIGINS`
-- [ ] Página web de exclusão de conta (exigida pelo Play)
+- [x] Página web de exclusão de conta (exigida pelo Play) — `/excluir-conta`
+      no painel. Informar a URL no Play Console quando o painel estiver no ar.

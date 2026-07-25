@@ -1,3 +1,5 @@
+// Sentry primeiro: só instrumenta o que é carregado depois dele.
+import "./instrument";
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import type { Request, Response, NextFunction } from "express";

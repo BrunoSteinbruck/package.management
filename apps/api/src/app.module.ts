@@ -1,5 +1,7 @@
 import { Module, Controller, Get } from "@nestjs/common";
+import { APP_FILTER } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
+import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { PortariaModule } from "./portaria/portaria.module";
@@ -20,6 +22,9 @@ class HealthController {
 
 @Module({
   imports: [
+    // Sem SENTRY_DSN o SDK não foi inicializado (ver instrument.ts) e este
+    // módulo/filtro ficam inertes — não custa nada deixá-los sempre montados.
+    SentryModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
@@ -32,5 +37,6 @@ class HealthController {
     ContaModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_FILTER, useClass: SentryGlobalFilter }],
 })
 export class AppModule {}
