@@ -20,16 +20,22 @@
 --
 --   psql "$DATABASE_URL_ADMIN" -f backup-role.sql
 --
--- Depois, use na variável do cron job:
+-- A senha é GERADA na hora e impressa uma única vez (RAISE NOTICE) — copie
+-- na hora, ela não fica em lugar nenhum. Nada de senha comitada no repo:
+-- este arquivo é público e a role tem BYPASSRLS. Depois, no cron job:
 --   BACKUP_DATABASE_URL=postgresql://backup_ro:SENHA@host:5432/banco
+-- Para trocar a senha depois: ALTER ROLE backup_ro PASSWORD 'nova';
 
 DO $$
+DECLARE
+  senha text := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'backup_ro') THEN
-    -- Troque a senha antes de rodar.
-    CREATE ROLE backup_ro LOGIN PASSWORD 'TROQUE-ESTA-SENHA' BYPASSRLS;
+    EXECUTE format('CREATE ROLE backup_ro LOGIN BYPASSRLS PASSWORD %L', senha);
+    RAISE NOTICE 'Role backup_ro criada. SENHA (copie agora, não é recuperável): %', senha;
   ELSE
     ALTER ROLE backup_ro BYPASSRLS;
+    RAISE NOTICE 'Role backup_ro já existia (senha mantida). Para trocar: ALTER ROLE backup_ro PASSWORD ''nova'';';
   END IF;
 END $$;
 

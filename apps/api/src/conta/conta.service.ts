@@ -104,6 +104,8 @@ export class ContaService {
     });
     if (!usuario) throw new NotFoundException("Conta não encontrada");
 
+    // Fast-fail com a mensagem amigável; a checagem que VALE é a de dentro
+    // da transação, logo abaixo.
     const bloqueio = await this.motivoDeBloqueioDaEquipe(usuarioId);
     if (bloqueio) throw new ConflictException(bloqueio);
 
@@ -114,27 +116,49 @@ export class ContaService {
       }),
     );
 
-    await this.prisma.$transaction([
-      this.prisma.vinculo.updateMany({
-        where: { aprovadoPorId: usuarioId },
-        data: { aprovadoPorId: null },
-      }),
-      this.prisma.usuario.update({
-        where: { id: usuarioId },
-        data: {
-          nome: "Usuário removido",
-          // O telefone é UNIQUE e é a chave do login. O placeholder não é
-          // numérico de propósito: nenhum telefone real (o schema só aceita
-          // dígitos) colide com ele, então a conta fica inalcançável mesmo
-          // que alguém reative a flag por engano.
-          telefone: `removido:${randomUUID()}`,
-          ativo: false,
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          // Recontagem DENTRO da transação serializável: os dois últimos
+          // gestores se excluindo ao mesmo tempo passariam ambos na checagem
+          // externa (TOCTOU) e deixariam o condomínio sem administrador.
+          const aindaBloqueado = await this.motivoDeBloqueioDaEquipe(
+            usuarioId,
+            tx,
+          );
+          if (aindaBloqueado) throw new ConflictException(aindaBloqueado);
+
+          await tx.vinculo.updateMany({
+            where: { aprovadoPorId: usuarioId },
+            data: { aprovadoPorId: null },
+          });
+          await tx.usuario.update({
+            where: { id: usuarioId },
+            data: {
+              nome: "Usuário removido",
+              // O telefone é UNIQUE e é a chave do login. O placeholder não é
+              // numérico de propósito: nenhum telefone real (o schema só
+              // aceita dígitos) colide com ele, então a conta fica
+              // inalcançável mesmo que alguém reative a flag por engano.
+              telefone: `removido:${randomUUID()}`,
+              ativo: false,
+            },
+          });
+          await tx.otpChallenge.deleteMany({
+            where: { telefone: usuario.telefone },
+          });
         },
-      }),
-      this.prisma.otpChallenge.deleteMany({
-        where: { telefone: usuario.telefone },
-      }),
-    ]);
+        { isolationLevel: "Serializable" },
+      );
+    } catch (e) {
+      // Conflito de serialização (P2034): outra exclusão concorrente venceu.
+      if ((e as { code?: string }).code === "P2034") {
+        throw new ConflictException(
+          "Outra alteração na equipe aconteceu ao mesmo tempo. Tente de novo.",
+        );
+      }
+      throw e;
+    }
 
     return { excluido: true };
   }
@@ -144,14 +168,17 @@ export class ContaService {
    * aprova vínculo ou administra nada, e não há tela para consertar isso.
    * Melhor barrar a saída do último gestor do que deixar o condomínio travado.
    */
-  private async motivoDeBloqueioDaEquipe(usuarioId: string) {
-    const usuario = await this.prisma.usuario.findUnique({
+  private async motivoDeBloqueioDaEquipe(
+    usuarioId: string,
+    db: Pick<PrismaService, "usuario"> = this.prisma,
+  ) {
+    const usuario = await db.usuario.findUnique({
       where: { id: usuarioId },
     });
     if (!usuario) return null;
     if (usuario.papel !== "SINDICO" && usuario.papel !== "ADMIN") return null;
 
-    const outrosGestores = await this.prisma.usuario.count({
+    const outrosGestores = await db.usuario.count({
       where: {
         condominioId: usuario.condominioId,
         papel: { in: ["SINDICO", "ADMIN"] },
