@@ -43,7 +43,17 @@ vira o D-U-N-S.
 - [ ] `DEMO_TELEFONES` e `DEMO_CODIGO` (ver abaixo)
 - [ ] **Rotacionar** o Auth Token do Twilio e a chave do Google Vision — foram
       colados no chat durante o setup
-- [ ] Backup do Postgres: plano com backup + `pg_dump` periódico para o R2
+- [ ] Backup do Postgres — o cron job já existe no `render.yaml`, mas precisa
+      de dois passos manuais antes de ligar:
+      1. rodar `apps/api/prisma/sql/backup-role.sql` (precisa de superusuário;
+         use o PSQL Command no painel do banco) para criar a role `backup_ro`
+      2. preencher `BACKUP_DATABASE_URL` + as variáveis `R2_*` no cron job
+
+      ⚠️ Sem a role dedicada **não há backup nenhum**: as tabelas usam FORCE
+      RLS e o `pg_dump` aborta. E não resolva dando `BYPASSRLS` à role da API
+      — verificado que isso derruba o isolamento entre condomínios.
+      Confirme a primeira execução no log do cron (o upload ao R2 ainda não
+      foi exercitado com credencial real).
 
 ## Conta de demonstração para o review
 

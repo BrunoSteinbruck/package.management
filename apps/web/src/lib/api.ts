@@ -27,9 +27,12 @@ export function limparSessao() {
 
 export async function apiFetch<T>(
   path: string,
-  options: { method?: string; body?: unknown } = {},
+  options: { method?: string; body?: unknown; token?: string } = {},
 ): Promise<T> {
-  const token = localStorage.getItem(TOKEN_KEY);
+  // `token` explícito serve a fluxos que NÃO são a sessão do painel — hoje a
+  // página pública de exclusão de conta, que não pode gravar (nem derrubar) a
+  // sessão do síndico no localStorage.
+  const token = options.token ?? localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_URL}${path}`, {
     method: options.method ?? "GET",
     headers: {
