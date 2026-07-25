@@ -16,6 +16,7 @@ import type { JwtPayload } from "@pacotes/shared";
 import { ApiError, apiFetch } from "../api/client";
 import { salvarSessao } from "../api/session";
 import { registrarPush } from "../api/push";
+import { abrir, temLinksLegais, URL_PRIVACIDADE, URL_TERMOS } from "../legal";
 import { Botao, BotaoCta, Rotulo } from "../components/ui";
 import { theme } from "../theme";
 
@@ -164,8 +165,24 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
               estilo={{ marginTop: 16 }}
             />
             <Text style={styles.legal}>
-              Ao continuar, você concorda com os termos de uso e o aviso de
-              privacidade do seu condomínio.
+              Ao continuar, você concorda com os{" "}
+              {temLinksLegais ? (
+                <>
+                  <Text style={styles.legalLink} onPress={() => abrir(URL_TERMOS)}>
+                    termos de uso
+                  </Text>
+                  {" e a "}
+                  <Text
+                    style={styles.legalLink}
+                    onPress={() => abrir(URL_PRIVACIDADE)}
+                  >
+                    política de privacidade
+                  </Text>
+                  .
+                </>
+              ) : (
+                "termos de uso e a política de privacidade."
+              )}
             </Text>
           </View>
         ) : fase === 1 ? (
@@ -284,6 +301,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 14,
     lineHeight: 18,
+  },
+  // O texto legal fica no sheet BRANCO, não no gradiente: verde escuro.
+  legalLink: {
+    color: theme.colors.ok,
+    textDecorationLine: "underline",
   },
   campoCodigo: {
     backgroundColor: theme.colors.surface,
