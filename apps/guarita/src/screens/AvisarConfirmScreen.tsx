@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -124,12 +125,23 @@ export function AvisarConfirmScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
-      <HeaderTela titulo="Avisar morador" aoVoltar={() => navigation.replace("AvisarCamera")} />
+      <HeaderTela
+        titulo="Avisar morador"
+        // Voltar sai do fluxo. Antes reabria a câmera, e como a câmera também
+        // é a tela anterior, não havia saída óbvia: quem quer refazer a foto
+        // toca nela.
+        aoVoltar={() => navigation.popToTop()}
+      />
       <ScrollView
         contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        {fotoUri && <Image source={{ uri: fotoUri }} style={styles.foto} />}
+        <Pressable onPress={() => navigation.replace("AvisarCamera")}>
+          {fotoUri && <Image source={{ uri: fotoUri }} style={styles.foto} />}
+          <Text style={styles.trocarFoto}>
+            {fotoUri ? "Trocar foto" : "Adicionar foto"}
+          </Text>
+        </Pressable>
 
         <View style={styles.cardUnidade}>
           <Kicker cor={theme.colors.ok}>Unidade</Kicker>
@@ -199,7 +211,13 @@ export function AvisarConfirmScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   tela: { flex: 1, backgroundColor: theme.colors.bg },
-  foto: { width: "100%", height: 200, borderRadius: theme.radius.card, marginBottom: 14 },
+  foto: { width: "100%", height: 200, borderRadius: theme.radius.card, marginBottom: 8 },
+  trocarFoto: {
+    textAlign: "center",
+    color: theme.colors.marca,
+    fontWeight: "600",
+    marginBottom: 14,
+  },
   cardUnidade: {
     backgroundColor: theme.colors.unidadeBg,
     borderRadius: theme.radius.card,

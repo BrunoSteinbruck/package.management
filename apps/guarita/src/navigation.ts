@@ -17,12 +17,18 @@ export type PortariaStackParamList = {
 /**
  * Pilha do síndico.
  *
- * Inclui as rotas da portaria porque síndico de condomínio pequeno opera a
- * portaria de vez em quando, e ele já tinha essas telas quando caía na pilha
- * do porteiro: tirá-las agora seria regressão. O que muda é a home, que passa
- * a ser de gestão, com a portaria como prateleira secundária.
+ * Inclui as rotas de retirada da portaria porque síndico de condomínio pequeno
+ * entrega encomenda de vez em quando, e ele já tinha essas telas quando caía
+ * na pilha do porteiro: tirá-las seria regressão.
+ *
+ * Registrar entrada de pacote fica de fora: é trabalho de quem está na
+ * portaria recebendo o entregador, não do síndico. Sai do tipo, e não só do
+ * manifesto, para que declarar essa rota para o síndico não compile.
  */
-export type SindicoStackParamList = PortariaStackParamList & {
+export type SindicoStackParamList = Omit<
+  PortariaStackParamList,
+  "EntradaCamera" | "EntradaConfirm"
+> & {
   Ocorrencias: undefined;
   OcorrenciaDetalhe: { avisoId: string };
   Aprovacoes: undefined;

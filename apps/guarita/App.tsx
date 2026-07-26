@@ -83,12 +83,10 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
           component={OcorrenciaDetalheScreen}
         />
         <Sindico.Screen name="Aprovacoes" component={AprovacoesScreen} />
-        {/* Telas da portaria: o síndico opera a portaria de vez em quando e
-            já as tinha antes de ganhar pilha própria. */}
+        {/* Portaria: só o lado de entrega. Registrar entrada de pacote é de
+            quem recebe o entregador, não do síndico. */}
         <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
         <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
-        <Sindico.Screen name="EntradaCamera" component={EntradaCameraScreen} />
-        <Sindico.Screen name="EntradaConfirm" component={EntradaConfirmScreen} />
         <Sindico.Screen name="Retirada" component={RetiradaScreen} />
         <Sindico.Screen name="QrScan" component={QrScanScreen} />
         <Sindico.Screen name="SaidaCamera" component={SaidaCameraScreen} />

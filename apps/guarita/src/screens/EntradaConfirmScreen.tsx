@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -176,7 +177,10 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <HeaderTela
         titulo="Confirmar entrada"
-        aoVoltar={() => navigation.replace("EntradaCamera")}
+        // Voltar sai do fluxo. Antes reabria a câmera, e como a câmera também
+        // é a tela anterior, não havia saída óbvia: quem quer refazer a foto
+        // toca na miniatura.
+        aoVoltar={() => navigation.popToTop()}
         direita={<Text style={styles.passo}>2 de 2</Text>}
       />
       <ScrollView
@@ -185,13 +189,21 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.cardFoto}>
-          {fotoUri ? (
-            <Image source={{ uri: fotoUri }} style={styles.thumb} />
-          ) : (
-            <View style={[styles.thumb, styles.thumbVazia]}>
-              <Icone nome="camera" tamanho={22} cor={theme.colors.textFaint} />
-            </View>
-          )}
+          <Pressable
+            onPress={() => navigation.replace("EntradaCamera")}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+          >
+            {fotoUri ? (
+              <Image source={{ uri: fotoUri }} style={styles.thumb} />
+            ) : (
+              <View style={[styles.thumb, styles.thumbVazia]}>
+                <Icone nome="camera" tamanho={22} cor={theme.colors.textFaint} />
+              </View>
+            )}
+            <Text style={styles.trocarFoto}>
+              {fotoUri ? "Trocar" : "Tirar foto"}
+            </Text>
+          </Pressable>
           <View style={{ flex: 1, gap: 10 }}>
             <View>
               <Kicker>Transportadora</Kicker>
@@ -304,6 +316,13 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   thumb: { width: 92, height: 92, borderRadius: theme.radius.foto },
+  trocarFoto: {
+    textAlign: "center",
+    color: theme.colors.marca,
+    fontWeight: "600",
+    fontSize: 13,
+    marginTop: 6,
+  },
   thumbVazia: {
     backgroundColor: theme.colors.placeholder,
     borderWidth: 1,

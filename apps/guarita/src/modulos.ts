@@ -85,13 +85,6 @@ export const MODULOS_SINDICO: readonly Modulo<
     perfis: ["sindico"],
     slot: "secundario",
   },
-  {
-    id: "EntradaCamera",
-    titulo: "Registrar entrada",
-    icone: "camera",
-    perfis: ["sindico"],
-    slot: "secundario",
-  },
 ];
 
 export const MODULOS_MORADOR: readonly Modulo<
