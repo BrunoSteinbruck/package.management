@@ -14,7 +14,9 @@ export type NomeIcone =
   | "mais"
   | "escudo"
   | "casa"
-  | "lista";
+  | "lista"
+  | "pacote"
+  | "pessoa";
 
 const DESENHOS: Record<NomeIcone, React.ReactNode> = {
   camera: (
@@ -60,6 +62,19 @@ const DESENHOS: Record<NomeIcone, React.ReactNode> = {
     <>
       <Path d="M8 6h13M8 12h13M8 18h13" />
       <Path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </>
+  ),
+  pacote: (
+    <>
+      <Path d="M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z" />
+      <Path d="M3.3 7L12 12l8.7-5" />
+      <Path d="M12 22V12" />
+    </>
+  ),
+  pessoa: (
+    <>
+      <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <Circle cx={12} cy={7} r={4} />
     </>
   ),
 };

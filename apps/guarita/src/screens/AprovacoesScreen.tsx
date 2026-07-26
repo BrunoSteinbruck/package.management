@@ -78,7 +78,7 @@ export function AprovacoesScreen({ navigation }: Props) {
             sub={`${rotuloUnidade(item.unidade)} · ${item.morador.telefone}`}
             detalhe={dataCurta(item.criadoEm)}
             media={{
-              icone: "casa",
+              icone: "pessoa",
               corFundo: theme.colors.unidadeBg,
               corIcone: theme.colors.marca,
             }}

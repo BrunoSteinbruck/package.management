@@ -10,8 +10,9 @@ export type PortariaStackParamList = {
   Retirada: { unidadeInicial?: Unidade } | undefined;
   QrScan: undefined;
   SaidaCamera: { pacoteIds: string[]; unidadeLabel: string };
-  AvisarCamera: undefined;
-  AvisarConfirm: { fotoUri: string | null };
+  // Sem parâmetro: a foto é um campo opcional dentro do formulário, com a
+  // câmera embutida, e não um passo anterior a ele.
+  Avisar: undefined;
 };
 
 /**

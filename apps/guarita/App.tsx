@@ -17,8 +17,7 @@ import { OcorrenciaDetalheScreen } from "./src/screens/OcorrenciaDetalheScreen";
 import { OcorrenciasScreen } from "./src/screens/OcorrenciasScreen";
 import { SindicoHomeScreen } from "./src/screens/SindicoHomeScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
-import { AvisarCameraScreen } from "./src/screens/AvisarCameraScreen";
-import { AvisarConfirmScreen } from "./src/screens/AvisarConfirmScreen";
+import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
 import { DetalheScreen } from "./src/screens/DetalheScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
@@ -70,8 +69,7 @@ function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
         <Portaria.Screen name="Retirada" component={RetiradaScreen} />
         <Portaria.Screen name="QrScan" component={QrScanScreen} />
         <Portaria.Screen name="SaidaCamera" component={SaidaCameraScreen} />
-        <Portaria.Screen name="AvisarCamera" component={AvisarCameraScreen} />
-        <Portaria.Screen name="AvisarConfirm" component={AvisarConfirmScreen} />
+        <Portaria.Screen name="Avisar" component={AvisarScreen} />
       </Portaria.Navigator>
     </NavigationContainer>
   );
@@ -97,8 +95,7 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
             leva a lugar nenhum. O síndico acompanha, não movimenta. */}
         <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
         <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
-        <Sindico.Screen name="AvisarCamera" component={AvisarCameraScreen} />
-        <Sindico.Screen name="AvisarConfirm" component={AvisarConfirmScreen} />
+        <Sindico.Screen name="Avisar" component={AvisarScreen} />
       </Sindico.Navigator>
     </NavigationContainer>
   );

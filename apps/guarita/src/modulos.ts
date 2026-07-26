@@ -53,7 +53,7 @@ export const MODULOS_PORTARIA: readonly Modulo<
   RotaDeEntrada<PortariaStackParamList>
 >[] = [
   {
-    id: "AvisarCamera",
+    id: "Avisar",
     titulo: "Avisar morador",
     icone: "sino",
     perfis: ["porteiro", "sindico"],
@@ -64,22 +64,24 @@ export const MODULOS_PORTARIA: readonly Modulo<
 export const MODULOS_SINDICO: readonly Modulo<
   RotaDeEntrada<SindicoStackParamList>
 >[] = [
+  // O ícone acompanha o destino, não a ação: os stat cards da home levam a
+  // estas mesmas telas e precisam falar a mesma língua.
   {
     id: "Aprovacoes",
     titulo: "Aprovar moradores",
-    icone: "casa",
+    icone: "pessoa",
     perfis: ["sindico"],
     slot: "secundario",
   },
   {
     id: "Armazenados",
     titulo: "Encomendas na portaria",
-    icone: "qr",
+    icone: "pacote",
     perfis: ["sindico"],
     slot: "secundario",
   },
   {
-    id: "AvisarCamera",
+    id: "Avisar",
     titulo: "Avisar morador",
     icone: "sino",
     perfis: ["sindico"],

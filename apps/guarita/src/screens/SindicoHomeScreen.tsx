@@ -156,7 +156,17 @@ export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
               { transform: [{ scale: pressed ? 0.98 : 1 }] },
             ]}
           >
-            <Text style={styles.statNumero}>{resumo?.naPortaria ?? "-"}</Text>
+            <View style={styles.statLinhaNumero}>
+              <Text style={styles.statNumero}>{resumo?.naPortaria ?? "-"}</Text>
+              <View style={styles.statIcone}>
+                <Icone
+                  nome="pacote"
+                  tamanho={19}
+                  cor={theme.colors.marca}
+                  traco={2}
+                />
+              </View>
+            </View>
             <View style={styles.statLinhaRotulo}>
               <Text style={styles.statRotulo}>na portaria</Text>
               <Icone nome="chevron" tamanho={16} cor={theme.colors.textFaint} />
@@ -169,7 +179,17 @@ export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
               { transform: [{ scale: pressed ? 0.98 : 1 }] },
             ]}
           >
-            <Text style={styles.statNumero}>{pendentes ?? "-"}</Text>
+            <View style={styles.statLinhaNumero}>
+              <Text style={styles.statNumero}>{pendentes ?? "-"}</Text>
+              <View style={styles.statIcone}>
+                <Icone
+                  nome="pessoa"
+                  tamanho={19}
+                  cor={theme.colors.marca}
+                  traco={2}
+                />
+              </View>
+            </View>
             <View style={styles.statLinhaRotulo}>
               <Text style={styles.statRotulo}>a aprovar</Text>
               <Icone nome="chevron" tamanho={16} cor={theme.colors.textFaint} />
@@ -264,10 +284,25 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     padding: 16,
   },
+  // O número sozinho não diz o que conta. O ícone ao lado resolve isso antes
+  // da leitura do rótulo.
+  statLinhaNumero: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   statNumero: {
     fontSize: theme.font.hero,
     fontWeight: "700",
     color: theme.colors.text,
+  },
+  statIcone: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.unidadeBg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   statRotulo: {
     fontSize: 13.5,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch, NetworkError, uploadFoto } from "../api/client";
@@ -27,11 +28,17 @@ import type { PortariaStackParamList } from "../navigation";
 
 let cacheUnidades: Unidade[] | null = null;
 
-type Props = NativeStackScreenProps<PortariaStackParamList, "AvisarConfirm">;
+type Props = NativeStackScreenProps<PortariaStackParamList, "Avisar">;
 
-export function AvisarConfirmScreen({ navigation, route }: Props) {
+export function AvisarScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { fotoUri } = route.params;
+  // A foto é um campo do formulário, não a porta de entrada: quem abre o
+  // aviso já cai no preenchimento e fotografa só se quiser.
+  const [fase, setFase] = useState<"form" | "camera">("form");
+  const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [permissao, pedirPermissao] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const capturando = useRef(false);
   const [unidades, setUnidades] = useState<Unidade[]>(cacheUnidades ?? []);
   const [busca, setBusca] = useState("");
   const [unidade, setUnidade] = useState<Unidade | null>(null);
@@ -39,6 +46,26 @@ export function AvisarConfirmScreen({ navigation, route }: Props) {
   const [motivo, setMotivo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  async function abrirCamera() {
+    if (!permissao?.granted) {
+      const r = await pedirPermissao();
+      if (!r.granted) return;
+    }
+    setFase("camera");
+  }
+
+  async function capturar() {
+    if (capturando.current) return;
+    capturando.current = true;
+    try {
+      const foto = await cameraRef.current?.takePictureAsync({ quality: 0.5 });
+      if (foto?.uri) setFotoUri(foto.uri);
+      setFase("form");
+    } finally {
+      capturando.current = false;
+    }
+  }
 
   useEffect(() => {
     if (!cacheUnidades) {
@@ -123,25 +150,46 @@ export function AvisarConfirmScreen({ navigation, route }: Props) {
     }
   }
 
+  if (fase === "camera") {
+    return (
+      <View style={styles.telaCamera}>
+        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+        <View style={[styles.topoCamera, { paddingTop: insets.top + 8 }]}>
+          <Pressable style={styles.botaoRedondo} onPress={() => setFase("form")}>
+            <Icone nome="fechar" tamanho={20} traco={2.2} />
+          </Pressable>
+        </View>
+        <View style={{ flex: 1 }} />
+        <View style={[styles.rodapeCamera, { paddingBottom: insets.bottom + 16 }]}>
+          <Text style={styles.dicaCamera}>
+            Fotografe a placa, a vaga ou a situação: o app tenta achar a unidade.
+          </Text>
+          <Pressable style={styles.shutterAnel} onPress={capturar}>
+            <View style={styles.shutter} />
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
-      <HeaderTela
-        titulo="Avisar morador"
-        // Voltar sai do fluxo. Antes reabria a câmera, e como a câmera também
-        // é a tela anterior, não havia saída óbvia: quem quer refazer a foto
-        // toca nela.
-        aoVoltar={() => navigation.popToTop()}
-      />
+      <HeaderTela titulo="Avisar morador" aoVoltar={() => navigation.popToTop()} />
       <ScrollView
         contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable onPress={() => navigation.replace("AvisarCamera")}>
-          {fotoUri && <Image source={{ uri: fotoUri }} style={styles.foto} />}
-          <Text style={styles.trocarFoto}>
-            {fotoUri ? "Trocar foto" : "Adicionar foto"}
-          </Text>
-        </Pressable>
+        {fotoUri ? (
+          <Pressable onPress={abrirCamera}>
+            <Image source={{ uri: fotoUri }} style={styles.foto} />
+            <Text style={styles.trocarFoto}>Trocar foto</Text>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.addFoto} onPress={abrirCamera}>
+            <Icone nome="camera" tamanho={22} cor={theme.colors.marca} />
+            <Text style={styles.addFotoTexto}>Adicionar foto</Text>
+          </Pressable>
+        )}
 
         <View style={styles.cardUnidade}>
           <Kicker cor={theme.colors.ok}>Unidade</Kicker>
@@ -218,6 +266,50 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 14,
   },
+  addFoto: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    minHeight: 54,
+    borderRadius: theme.radius.card,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: theme.colors.chipBorder,
+    marginBottom: 14,
+  },
+  addFotoTexto: { fontSize: 15, fontWeight: "600", color: theme.colors.marca },
+  telaCamera: { flex: 1, backgroundColor: theme.colors.cameraBg },
+  topoCamera: { flexDirection: "row", paddingHorizontal: theme.spacing.md },
+  botaoRedondo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rodapeCamera: {
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  dicaCamera: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 13.5,
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  shutterAnel: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    borderWidth: 5,
+    borderColor: "rgba(255,255,255,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shutter: { width: 58, height: 58, borderRadius: 29, backgroundColor: "#FFF" },
   cardUnidade: {
     backgroundColor: theme.colors.unidadeBg,
     borderRadius: theme.radius.card,
