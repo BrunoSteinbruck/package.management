@@ -8,6 +8,16 @@ export const TelefoneSchema = z
   .string()
   .regex(/^\+?\d{10,14}$/, "Telefone inválido (use DDD + número, só dígitos)");
 
+/**
+ * Key de foto como o upload emite (uuid + extensão de imagem). Espelha o
+ * KEY_FOTO_SEGURA que a API usa ao servir: validar também na entrada impede
+ * gravar lixo ou caminho no lugar de uma key.
+ */
+export const FotoKeySchema = z
+  .string()
+  .max(120)
+  .regex(/^[\w-]+\.(jpg|jpeg|png|webp)$/i, "Key de foto inválida");
+
 export const RequestOtpSchema = z.object({
   telefone: TelefoneSchema,
 });
@@ -33,14 +43,14 @@ export const RegistrarPacoteSchema = z.object({
   transportadora: z.string().max(120).optional(),
   codigoRastreio: z.string().max(120).optional(),
   notaFiscal: z.string().max(120).optional(),
-  fotoEntradaKey: z.string().max(500).optional(),
+  fotoEntradaKey: FotoKeySchema.optional(),
   localArmazenamento: z.string().max(120).optional(),
 });
 export type RegistrarPacoteDto = z.infer<typeof RegistrarPacoteSchema>;
 
 export const RegistrarRetiradaSchema = z.object({
   pacoteIds: z.array(z.string().uuid()).min(1),
-  fotoSaidaKey: z.string().max(500).optional(),
+  fotoSaidaKey: FotoKeySchema.optional(),
 });
 export type RegistrarRetiradaDto = z.infer<typeof RegistrarRetiradaSchema>;
 
@@ -144,7 +154,7 @@ export const CriarAvisoSchema = z.object({
   unidadeId: z.string().uuid(),
   motivo: z.string().min(1).max(120),
   descricao: z.string().max(500).optional(),
-  fotoKey: z.string().max(500).optional(),
+  fotoKey: FotoKeySchema.optional(),
 });
 export type CriarAvisoDto = z.infer<typeof CriarAvisoSchema>;
 
@@ -153,7 +163,7 @@ export const CriarOcorrenciaSchema = z.object({
   unidadeId: z.string().uuid(),
   categoria: z.string().min(1).max(120),
   descricao: z.string().max(500).optional(),
-  fotoKey: z.string().max(500).optional(),
+  fotoKey: FotoKeySchema.optional(),
 });
 export type CriarOcorrenciaDto = z.infer<typeof CriarOcorrenciaSchema>;
 
@@ -177,7 +187,7 @@ export const RegistrarLeituraSchema = z.object({
   tipo: z.enum(TIPOS_MEDIDOR),
   competencia: CompetenciaSchema,
   valor: z.number().min(0).max(999_999_999),
-  fotoKey: z.string().max(500).optional(),
+  fotoKey: FotoKeySchema.optional(),
 });
 export type RegistrarLeituraDto = z.infer<typeof RegistrarLeituraSchema>;
 

@@ -118,6 +118,9 @@ export class LeiturasController {
     const { buffer, filename, mime } = await this.leituras.gerarExport(payload);
     res.setHeader("Content-Type", mime);
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    // Relatório com consumo por unidade e URL com token: nada de cache em
+    // proxy ou disco compartilhado.
+    res.setHeader("Cache-Control", "private, no-store");
     res.send(buffer);
   }
 }

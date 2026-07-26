@@ -1,5 +1,53 @@
 # Revisão de segurança: Guarita
 
+## Revisão 3 (2026-07-26): leituras de medidores (água/gás)
+
+Escopo: módulo `/leituras` (registro por porteiro/apoio, painel de consumos
+do gestor, tarifas, export xlsx/pdf por token), telas novas do app e do
+painel, tabelas `leituras_medidor` e `tarifas_consumo`.
+
+### Verificado e correto
+
+- Autorização por papel em toda rota: registrar exige PORTEIRO/APOIO (síndico
+  recebe 403, testado); consumos/histórico/tarifas/export-token exigem
+  gestor; morador não alcança nada do módulo.
+- Isolamento de tenant: todas as queries em `withTenant` + RLS; teste
+  cross-tenant real (usuário de outro condomínio: lista vazia e POST em
+  unidade alheia → 400). RLS das tabelas novas versionado em migração
+  (`20260726190000_rls_leituras`), não só no rls.sql de dev: mesma lição do
+  achado 11 da Revisão 1.
+- Export segue o modelo do foto-token: JWT dedicado de 10 min com
+  `{tipo:"export", condominioId, params}`; o endpoint de download rejeita
+  qualquer outro tipo de token (sessão testada → 401) e o AuthGuard rejeita
+  o export-token como sessão. JWT de sessão continua nunca indo em URL.
+- Filename do `Content-Disposition` montado só com valores de enum/regex
+  validados: sem injeção de header.
+- Injeção de fórmula em Excel não se aplica: exceljs grava célula string,
+  nunca fórmula; PDF é texto plano.
+- Corpo e query validados (Zod + enum/regex/caps); nenhuma query raw nova.
+
+### Corrigido nesta revisão
+
+| Sev. | Achado | Correção |
+|---|---|---|
+| Média | `backup-role.sql` prometia SELECT automático para tabelas futuras, mas `ALTER DEFAULT PRIVILEGES` sem `FOR ROLE` só vale para objetos do superusuário que rodou o script; tabelas criadas pelas migrations (role da API) ficariam fora e o pg_dump passaria a **falhar por inteiro** | Bloco adicional com `FOR ROLE <dono das tabelas>`; **rodar o script de novo** no banco onde ele já tiver sido executado |
+| Baixa | Campos de key de foto (leituras e também pacote/retirada/aviso/ocorrência) aceitavam string arbitrária de até 500 chars; a key só era validada na hora de servir | `FotoKeySchema` no shared (espelho do `KEY_FOTO_SEGURA`) aplicado aos 5 campos na borda |
+| Baixa | Download do export sem `Cache-Control` | `private, no-store` (relatório tem consumo por unidade e a URL carrega token) |
+
+### Superfície aceita
+
+- Export-token na query string: mesmo modelo auditado do foto-token (curto,
+  preso aos parâmetros, um único uso prático). No app a URL abre no navegador
+  do sistema e fica no histórico por 10 min de validade.
+- Reenvio de leitura sobrescreve valor e foto sem histórico de versões
+  (`lidoPorId`/`atualizadoEm` registram só o último). Se auditoria por
+  leitura virar requisito, criar tabela de revisões.
+- Dado de consumo por unidade é dado pessoal de hábito: exposto apenas a
+  gestor (painel/exports) e à equipe da portaria (progresso, necessário à
+  operação); morador não vê nada no v1.
+
+---
+
 ## Revisão 2 (2026-07-19): delta desde a Revisão 1
 
 Escopo: tudo que entrou depois da revisão 1, gestão de equipe, app único,

@@ -51,5 +51,25 @@ END $$;
 
 GRANT USAGE ON SCHEMA public TO backup_ro;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO backup_ro;
--- Tabelas criadas por migrations futuras entram automaticamente.
+
+-- Tabelas de migrations futuras: ALTER DEFAULT PRIVILEGES sem FOR ROLE só
+-- vale para tabelas criadas pela role que executa ESTE script (o
+-- superusuário). As migrations rodam com a role da API, então o default que
+-- importa é o DELA: sem o bloco abaixo, cada tabela nova nasceria sem SELECT
+-- para backup_ro e o pg_dump inteiro passaria a FALHAR no mês seguinte.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO backup_ro;
+DO $$
+DECLARE
+  dono text;
+BEGIN
+  SELECT tableowner INTO dono
+  FROM pg_tables
+  WHERE schemaname = 'public'
+  LIMIT 1;
+  IF dono IS NOT NULL THEN
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT ON TABLES TO backup_ro',
+      dono
+    );
+  END IF;
+END $$;
