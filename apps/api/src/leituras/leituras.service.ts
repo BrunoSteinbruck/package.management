@@ -297,8 +297,14 @@ export class LeiturasService {
         }),
       );
 
+      // Consumo negativo é erro a conferir (medidor trocado, leitura errada):
+      // fica na linha com alerta, mas fora de TODO total. Sem isso o total de
+      // m³ encolheria enquanto o de R$ (que já ignora negativos) não.
       const consumoTotal = r3(
-        linhas.reduce((soma, l) => soma + (l.consumo ?? 0), 0),
+        linhas.reduce(
+          (soma, l) => soma + (l.consumo !== null && l.consumo >= 0 ? l.consumo : 0),
+          0,
+        ),
       );
       return {
         competencia: compStr,
@@ -347,7 +353,10 @@ export class LeiturasService {
         const anterior = leituras[i - 1];
         if (anterior && anterior.unidadeId === atual.unidadeId) {
           const consumo = Number(atual.valor.minus(anterior.valor));
-          consumoPorMes.set(chave, (consumoPorMes.get(chave) ?? 0) + consumo);
+          // Negativo é erro a conferir: fora dos totais, como em consumos().
+          if (consumo >= 0) {
+            consumoPorMes.set(chave, (consumoPorMes.get(chave) ?? 0) + consumo);
+          }
         }
       }
 
@@ -446,6 +455,9 @@ export class LeiturasService {
           payload.escopo === "mes"
             ? [payload.competencia]
             : [...new Set(leituras.map((l) => dataParaCompetencia(l.competencia)))];
+        // Sem nenhuma leitura, o "geral" ainda precisa de uma aba/página: um
+        // xlsx sem aba nenhuma é arquivo inválido para o Excel.
+        if (competencias.length === 0) competencias.push(payload.competencia);
 
         const meses: MesExport[] = competencias.map((compStr) => {
           const compData = competenciaParaData(compStr);
@@ -472,7 +484,11 @@ export class LeiturasService {
             };
           });
           const consumoTotal = r3(
-            linhas.reduce((soma, l) => soma + (l.consumo ?? 0), 0),
+            linhas.reduce(
+              (soma, l) =>
+                soma + (l.consumo !== null && l.consumo >= 0 ? l.consumo : 0),
+              0,
+            ),
           );
           return {
             competencia: compStr,

@@ -31,6 +31,17 @@ let ultimoTipo: TipoMedidor = "AGUA";
 
 const NOMES: Record<TipoMedidor, string> = { AGUA: "Água", GAS: "Gás" };
 
+const MESES_CURTOS = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+
+/** "2026-06" vira "jun/2026" para olho humano. */
+function mesCurto(competencia: string): string {
+  const [ano, mes] = competencia.split("-").map(Number);
+  return `${MESES_CURTOS[mes - 1]}/${ano}`;
+}
+
 type Props = NativeStackScreenProps<PortariaStackParamList, "LeituraConfirm">;
 
 export function LeituraConfirmScreen({ navigation, route }: Props) {
@@ -243,7 +254,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
         {infoUnidade?.anterior && (
           <View style={styles.cardAnterior}>
             <Text style={styles.anteriorTexto}>
-              Anterior ({infoUnidade.anterior.competencia}):{" "}
+              Anterior ({mesCurto(infoUnidade.anterior.competencia)}):{" "}
               {infoUnidade.anterior.valor.toLocaleString("pt-BR")}
             </Text>
             {consumoPrevisto !== null && (

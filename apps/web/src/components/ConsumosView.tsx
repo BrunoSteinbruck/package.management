@@ -401,7 +401,12 @@ function TarifasSection({ aoSalvar }: { aoSalvar: () => void }) {
       for (const tipo of ["AGUA", "GAS"] as const) {
         const texto = valores[tipo].trim();
         if (!texto) continue;
-        const valor = Number(texto.replace(/\./g, "").replace(",", "."));
+        // Com vírgula, ponto é milhar ("1.234,56"). Sem vírgula, ponto é
+        // decimal ("8.65"): tratar como milhar viraria 865.
+        const normalizado = texto.includes(",")
+          ? texto.replace(/\./g, "").replace(",", ".")
+          : texto;
+        const valor = Number(normalizado);
         if (!Number.isFinite(valor) || valor < 0) {
           throw new Error(`Tarifa de ${NOMES[tipo].toLowerCase()} inválida`);
         }
