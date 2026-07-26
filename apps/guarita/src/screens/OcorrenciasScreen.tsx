@@ -96,7 +96,13 @@ export function OcorrenciasScreen({ navigation }: Props) {
         renderItem={({ item }) => (
           <ItemLista
             titulo={item.categoria}
-            sub={`${rotuloUnidade(item.unidade)} · ${item.autor}`}
+            sub={
+              // A API devolve "-" quando o autor sumiu; melhor omitir do que
+              // mostrar um travessão solto depois da unidade.
+              item.autor && item.autor !== "-"
+                ? `${rotuloUnidade(item.unidade)} · ${item.autor}`
+                : rotuloUnidade(item.unidade)
+            }
             detalhe={dataCurta(item.criadoEm)}
             media={{
               icone: "escudo",

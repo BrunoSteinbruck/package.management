@@ -33,8 +33,7 @@ function deQuem(p: Pacote | null): string {
 }
 
 function rotuloStatus(s: string): string {
-  if (s === "ABERTO") return "aberto";
-  return s === "EM_ANDAMENTO" ? "em andamento" : "resolvido";
+  return s === "ABERTO" ? "aberto" : "resolvido";
 }
 
 const NUNCA = () => "";

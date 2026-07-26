@@ -230,8 +230,7 @@ export function Selo(props: { texto: string; tom?: TomSelo }) {
 }
 
 export function tomDoStatus(s: StatusAviso): TomSelo {
-  if (s === "RESOLVIDO") return "ok";
-  return s === "EM_ANDAMENTO" ? "marca" : "alerta";
+  return s === "RESOLVIDO" ? "ok" : "alerta";
 }
 
 /** Miniatura do item: foto real ou ícone em círculo colorido. */

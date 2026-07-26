@@ -57,5 +57,5 @@ export function dataCurta(iso: string): string {
 }
 
 export function rotuloStatusAviso(s: StatusAviso | string): string {
-  return s === "ABERTO" ? "Aberto" : s === "EM_ANDAMENTO" ? "Em andamento" : "Resolvido";
+  return s === "ABERTO" ? "Aberto" : "Resolvido";
 }

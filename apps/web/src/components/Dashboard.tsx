@@ -42,7 +42,6 @@ const STATUS_OCORRENCIA: Record<
   { rotulo: string; selo: string }
 > = {
   ABERTO: { rotulo: "aberta", selo: "alerta" },
-  EM_ANDAMENTO: { rotulo: "em andamento", selo: "info" },
   RESOLVIDO: { rotulo: "resolvida", selo: "ok" },
 };
 
@@ -745,7 +744,6 @@ function OcorrenciasView() {
   const filtros: { valor: string; rotulo: string }[] = [
     { valor: "", rotulo: "Todas" },
     { valor: "ABERTO", rotulo: "Abertas" },
-    { valor: "EM_ANDAMENTO", rotulo: "Em andamento" },
     { valor: "RESOLVIDO", rotulo: "Resolvidas" },
   ];
 
@@ -831,27 +829,17 @@ function OcorrenciasView() {
                     <span className={`selo ${s.selo}`}>{s.rotulo}</span>
                   </td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    {o.status === "ABERTO" && (
-                      <button
-                        className="outline"
-                        onClick={() => mudarStatus(o.id, "EM_ANDAMENTO")}
-                      >
-                        Em andamento
-                      </button>
-                    )}
-                    {o.status !== "RESOLVIDO" && (
+                    {o.status === "ABERTO" ? (
                       <button
                         className="acao"
-                        style={{ marginLeft: 8 }}
                         onClick={() => mudarStatus(o.id, "RESOLVIDO")}
                       >
                         Resolver
                       </button>
-                    )}
-                    {o.status === "RESOLVIDO" && (
+                    ) : (
                       <button
                         className="outline"
-                        onClick={() => mudarStatus(o.id, "EM_ANDAMENTO")}
+                        onClick={() => mudarStatus(o.id, "ABERTO")}
                       >
                         Reabrir
                       </button>

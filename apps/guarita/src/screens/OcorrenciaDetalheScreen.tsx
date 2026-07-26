@@ -110,21 +110,22 @@ export function OcorrenciaDetalheScreen({ navigation, route }: Props) {
               <Image source={{ uri: urlFoto(item.foto) }} style={styles.foto} />
             )}
 
+            {/* Com dois estados, sobra sempre uma ação: a oposta à atual. */}
             <View>
-              <Kicker>Mudar status</Kicker>
-              <View style={styles.acoes}>
-                {STATUS_AVISO.filter((s) => s !== item.status).map((s) => (
-                  <Botao
-                    key={s}
-                    titulo={rotuloStatusAviso(s)}
-                    variante={s === "RESOLVIDO" ? "marca" : "outline"}
-                    carregando={salvando === s}
-                    desabilitado={salvando !== null}
-                    onPress={() => mudarStatus(s)}
-                    estilo={{ flex: 1 }}
-                  />
-                ))}
-              </View>
+              <Botao
+                titulo={
+                  item.status === "ABERTO"
+                    ? "Marcar como resolvido"
+                    : "Reabrir relato"
+                }
+                icone={item.status === "ABERTO" ? "check" : undefined}
+                variante={item.status === "ABERTO" ? "marca" : "outline"}
+                carregando={salvando !== null}
+                desabilitado={salvando !== null}
+                onPress={() =>
+                  mudarStatus(item.status === "ABERTO" ? "RESOLVIDO" : "ABERTO")
+                }
+              />
               <Text style={styles.nota}>
                 O morador que abriu recebe a mudança no aparelho dele.
               </Text>

@@ -5,7 +5,8 @@
 export const PAPEIS_USUARIO = ["PORTEIRO", "APOIO", "SINDICO", "ADMIN"] as const;
 export type PapelUsuario = (typeof PAPEIS_USUARIO)[number];
 
-export const STATUS_AVISO = ["ABERTO", "EM_ANDAMENTO", "RESOLVIDO"] as const;
+/** Ou está aberto, ou está resolvido. Não há meio-termo útil para quem lê. */
+export const STATUS_AVISO = ["ABERTO", "RESOLVIDO"] as const;
 export type StatusAviso = (typeof STATUS_AVISO)[number];
 
 export const STATUS_PACOTE = ["ARMAZENADO", "ENTREGUE", "EXTRAVIADO"] as const;

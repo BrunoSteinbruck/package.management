@@ -55,7 +55,6 @@ enum ViaAviso {
 
 enum StatusAviso {
   ABERTO
-  EM_ANDAMENTO
   RESOLVIDO
 }
 
