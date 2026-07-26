@@ -1,18 +1,10 @@
 import React, { useCallback, useState } from "react";
-import {
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FlatList, RefreshControl, StyleSheet, Text } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch } from "../api/client";
 import { rotuloUnidade, type ListaPacotes, type PacoteArmazenado } from "../api/types";
-import { HeaderTela } from "../components/ui";
-import { Icone } from "../components/icones";
+import { HeaderTela, ItemLista, Tela, Vazio } from "../components/ui";
 import { theme } from "../theme";
 import type { PortariaStackParamList } from "../navigation";
 
@@ -26,7 +18,6 @@ function hora(iso: string): string {
 type Props = NativeStackScreenProps<PortariaStackParamList, "RetiradasHoje">;
 
 export function RetiradasHojeScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
   const [itens, setItens] = useState<PacoteArmazenado[]>([]);
   const [total, setTotal] = useState(0);
   const [carregando, setCarregando] = useState(false);
@@ -53,7 +44,7 @@ export function RetiradasHojeScreen({ navigation }: Props) {
   );
 
   return (
-    <View style={[styles.tela, { paddingTop: insets.top }]}>
+    <Tela comInsetTop>
       <HeaderTela
         titulo={`Retiradas hoje (${total})`}
         aoVoltar={() => navigation.goBack()}
@@ -71,53 +62,32 @@ export function RetiradasHojeScreen({ navigation }: Props) {
         }
         ListEmptyComponent={
           !carregando ? (
-            <Text style={styles.vazio}>Nenhuma saída registrada hoje.</Text>
+            <Vazio titulo="Nenhuma saída registrada hoje." />
           ) : null
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.checkCirculo}>
-              <Icone nome="check" tamanho={16} cor={theme.colors.ok} traco={2.6} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.unidade}>{rotuloUnidade(item.unidade)}</Text>
-              <Text style={styles.sub}>
-                {item.transportadora ?? "Sem transportadora"}
-                {item.codigoRastreio ? ` · ${item.codigoRastreio}` : ""}
+          <ItemLista
+            titulo={rotuloUnidade(item.unidade)}
+            sub={`${item.transportadora ?? "Sem transportadora"}${
+              item.codigoRastreio ? ` · ${item.codigoRastreio}` : ""
+            }`}
+            media={{
+              icone: "check",
+              corFundo: theme.colors.okBg,
+              corIcone: theme.colors.ok,
+            }}
+            direita={
+              <Text style={styles.hora}>
+                {item.retirada ? hora(item.retirada.retiradoEm) : "-"}
               </Text>
-            </View>
-            <Text style={styles.hora}>
-              {item.retirada ? hora(item.retirada.retiradoEm) : "-"}
-            </Text>
-          </View>
+            }
+          />
         )}
       />
-    </View>
+    </Tela>
   );
 }
 
 const styles = StyleSheet.create({
-  tela: { flex: 1, backgroundColor: theme.colors.bg },
-  vazio: { color: theme.colors.textSecondary, fontSize: theme.font.corpo, marginTop: 8 },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.card,
-    padding: 14,
-  },
-  checkCirculo: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.okBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  unidade: { fontSize: 16.5, fontWeight: "700", color: theme.colors.text },
-  sub: { fontSize: 13, color: theme.colors.textSecondary, fontWeight: "500", marginTop: 2 },
   hora: { fontSize: 14, fontWeight: "600", color: theme.colors.textSecondary },
 });

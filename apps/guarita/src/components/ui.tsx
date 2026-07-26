@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -9,6 +10,8 @@ import {
   ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { StatusAviso } from "@pacotes/shared";
 import { theme } from "../theme";
 import { Icone, NomeIcone } from "./icones";
 
@@ -184,6 +187,159 @@ export function HeaderTela(props: {
   );
 }
 
+/** Fundo de tela. O par `flex:1 + backgroundColor` se repetia em toda tela. */
+export function Tela(props: {
+  children: React.ReactNode;
+  variante?: "clara" | "camera";
+  comInsetTop?: boolean;
+  estilo?: ViewStyle;
+}) {
+  const insets = useSafeAreaInsets();
+  const fundo =
+    props.variante === "camera" ? theme.colors.cameraBg : theme.colors.bg;
+  return (
+    <View
+      style={[
+        { flex: 1, backgroundColor: fundo },
+        props.comInsetTop ? { paddingTop: insets.top } : null,
+        props.estilo,
+      ]}
+    >
+      {props.children}
+    </View>
+  );
+}
+
+export type TomSelo = "ok" | "alerta" | "neutro" | "marca";
+
+const TONS: Record<TomSelo, { bg: string; fg: string }> = {
+  ok: { bg: theme.colors.okBg, fg: theme.colors.ok },
+  alerta: { bg: theme.colors.alertaBg, fg: theme.colors.alerta },
+  neutro: { bg: theme.colors.divisor, fg: theme.colors.textSecondary },
+  marca: { bg: theme.colors.unidadeBg, fg: theme.colors.marca },
+};
+
+/** Pill de status. Único lugar que decide cor de estado. */
+export function Selo(props: { texto: string; tom?: TomSelo }) {
+  const cor = TONS[props.tom ?? "neutro"];
+  return (
+    <View style={[styles.selo, { backgroundColor: cor.bg }]}>
+      <Text style={[styles.seloTexto, { color: cor.fg }]}>{props.texto}</Text>
+    </View>
+  );
+}
+
+export function tomDoStatus(s: StatusAviso): TomSelo {
+  if (s === "RESOLVIDO") return "ok";
+  return s === "EM_ANDAMENTO" ? "marca" : "alerta";
+}
+
+/** Miniatura do item: foto real ou ícone em círculo colorido. */
+export type MediaItem =
+  | { fotoUri: string }
+  | { icone: NomeIcone; corFundo: string; corIcone: string };
+
+/**
+ * A linha de lista do produto: miniatura, título, apoio e um espaço à direita
+ * para selo ou hora. Era reescrita em cada tela que mostra lista.
+ */
+export function ItemLista(props: {
+  titulo: string;
+  sub?: string;
+  /** Texto secundário em monoespaçada, para código de rastreio. */
+  detalhe?: string;
+  media?: MediaItem;
+  direita?: React.ReactNode;
+  chevron?: boolean;
+  onPress?: () => void;
+}) {
+  const conteudo = (
+    <>
+      {props.media &&
+        ("fotoUri" in props.media ? (
+          <Image source={{ uri: props.media.fotoUri }} style={styles.itemFoto} />
+        ) : (
+          <View
+            style={[
+              styles.itemCirculo,
+              { backgroundColor: props.media.corFundo },
+            ]}
+          >
+            <Icone
+              nome={props.media.icone}
+              tamanho={18}
+              cor={props.media.corIcone}
+              traco={2.2}
+            />
+          </View>
+        ))}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.itemTitulo}>{props.titulo}</Text>
+        {props.sub ? <Text style={styles.itemSub}>{props.sub}</Text> : null}
+        {props.detalhe ? (
+          <Text style={styles.itemDetalhe} numberOfLines={1}>
+            {props.detalhe}
+          </Text>
+        ) : null}
+      </View>
+      {props.direita}
+      {props.chevron && (
+        <Icone nome="chevron" tamanho={20} cor={theme.colors.textFaint} />
+      )}
+    </>
+  );
+
+  if (!props.onPress) {
+    return <View style={styles.item}>{conteudo}</View>;
+  }
+  return (
+    <Pressable
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        styles.item,
+        { transform: [{ scale: pressed ? 0.98 : 1 }] },
+      ]}
+    >
+      {conteudo}
+    </Pressable>
+  );
+}
+
+/**
+ * Estado vazio. `linha` é a frase discreta no fim de uma lista; `hero` é o
+ * bloco centrado de quando a tela inteira não tem o que mostrar.
+ */
+export function Vazio(props: {
+  titulo: string;
+  texto?: string;
+  icone?: NomeIcone;
+  variante?: "linha" | "hero";
+}) {
+  if (props.variante !== "hero") {
+    return (
+      <Text style={styles.vazioLinha}>
+        {props.texto ? `${props.titulo} ${props.texto}` : props.titulo}
+      </Text>
+    );
+  }
+  return (
+    <View style={styles.vazioHero}>
+      {props.icone && (
+        <View style={styles.vazioIcone}>
+          <Icone
+            nome={props.icone}
+            tamanho={30}
+            cor={theme.colors.textFaint}
+            traco={1.8}
+          />
+        </View>
+      )}
+      <Text style={styles.vazioTitulo}>{props.titulo}</Text>
+      {props.texto ? <Text style={styles.vazioTexto}>{props.texto}</Text> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   cta: {
     borderRadius: theme.radius.tile,
@@ -239,4 +395,68 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitulo: { flex: 1, fontSize: theme.font.titulo, fontWeight: "700" },
+  selo: {
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  seloTexto: { fontSize: 12.5, fontWeight: "600" },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.card,
+    padding: 14,
+  },
+  itemFoto: { width: 48, height: 48, borderRadius: theme.radius.foto },
+  itemCirculo: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemTitulo: { fontSize: 17, fontWeight: "700", color: theme.colors.text },
+  itemSub: {
+    fontSize: 13.5,
+    color: theme.colors.textSecondary,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  itemDetalhe: {
+    fontFamily: "monospace",
+    fontSize: 11.5,
+    color: theme.colors.textMuted,
+    marginTop: 3,
+  },
+  vazioLinha: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.font.corpo,
+    marginTop: 8,
+    lineHeight: 22,
+  },
+  vazioHero: { alignItems: "center", paddingVertical: 36, gap: 6 },
+  vazioIcone: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: theme.colors.placeholder,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  vazioTitulo: {
+    fontSize: theme.font.subtitulo,
+    fontWeight: "700",
+    color: theme.colors.text,
+  },
+  vazioTexto: {
+    fontSize: theme.font.corpo,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+  },
 });
