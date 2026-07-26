@@ -9,6 +9,7 @@ import { JwtService } from "@nestjs/jwt";
 import type {
   CriarAvisoDto,
   CriarOcorrenciaDto,
+  ItemFeed,
   JwtPayload,
   StatusAviso,
 } from "@pacotes/shared";
@@ -214,7 +215,121 @@ export class AvisosService {
 
   // ---------- Morador ----------
 
-  /** Avisos direcionados às unidades do morador (Via 1). */
+  /**
+   * A caixa de entrada do morador numa resposta só: avisos que a portaria
+   * mandou, relatos que ele abriu e o que aconteceu com as encomendas dele.
+   *
+   * Substitui a tripla /morador/avisos + /morador/ocorrencias +
+   * /morador/notificacoes, que devolvia três formatos para a mesma tela.
+   *
+   * Percorre condomínios, não vínculos: um morador com duas unidades no mesmo
+   * condomínio veria cada relato seu duas vezes, porque a consulta de Via 2
+   * filtra por autor e não por unidade.
+   */
+  async meuFeed(user: JwtPayload): Promise<ItemFeed[]> {
+    const moradorId = this.exigirMorador(user);
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { moradorId, status: "ATIVO" },
+      select: { condominioId: true, unidadeId: true },
+    });
+
+    const unidadesPorCondominio = new Map<string, string[]>();
+    for (const v of vinculos) {
+      const atual = unidadesPorCondominio.get(v.condominioId) ?? [];
+      atual.push(v.unidadeId);
+      unidadesPorCondominio.set(v.condominioId, atual);
+    }
+
+    const itens: ItemFeed[] = [];
+    for (const [condominioId, unidadeIds] of unidadesPorCondominio) {
+      const { avisos, notificacoes } = await this.prisma.withTenant(
+        condominioId,
+        async (tx) => ({
+          avisos: await tx.aviso.findMany({
+            where: {
+              OR: [
+                { via: "DIRECIONADO", unidadeId: { in: unidadeIds } },
+                { via: "OCORRENCIA", criadoPorMoradorId: moradorId },
+              ],
+            },
+            orderBy: { criadoEm: "desc" },
+            take: 40,
+          }),
+          // As notificações de AVISO e OCORRENCIA são recibos de entrega do
+          // push; a linha de Aviso acima já é a fonte, com o status atual.
+          notificacoes: await tx.notificacao.findMany({
+            where: {
+              tipo: { in: ["ENTRADA", "RETIRADA", "LEMBRETE"] },
+              pacote: { unidadeId: { in: unidadeIds } },
+            },
+            include: { pacote: true },
+            orderBy: { criadoEm: "desc" },
+            take: 40,
+          }),
+        }),
+      );
+
+      for (const a of avisos) {
+        const base = {
+          id: a.id,
+          em: a.criadoEm.toISOString(),
+          avisoId: a.id,
+          descricao: a.descricao,
+          status: a.status,
+          foto: await this.fotoAssinada(a.fotoKey),
+        };
+        itens.push(
+          a.via === "DIRECIONADO"
+            ? {
+                ...base,
+                tipo: "AVISO",
+                motivo: a.motivo,
+                // Quem recebeu o aviso é quem diz que está resolvido.
+                podeResolver: a.status !== "RESOLVIDO",
+              }
+            : { ...base, tipo: "OCORRENCIA", categoria: a.motivo },
+        );
+      }
+
+      for (const n of notificacoes) {
+        if (!n.pacote || !n.pacoteId) continue;
+        const em = n.criadoEm.toISOString();
+        if (n.tipo === "LEMBRETE") {
+          itens.push({
+            tipo: "LEMBRETE",
+            id: n.id,
+            em,
+            pacoteId: n.pacoteId,
+            dias: Math.max(
+              0,
+              Math.floor(
+                (Date.now() - n.pacote.recebidoEm.getTime()) / 86_400_000,
+              ),
+            ),
+          });
+        } else {
+          itens.push({
+            tipo: n.tipo === "ENTRADA" ? "ENTRADA" : "RETIRADA",
+            id: n.id,
+            em,
+            pacoteId: n.pacoteId,
+            transportadora: n.pacote.transportadora,
+          });
+        }
+      }
+    }
+
+    return itens
+      .sort((x, y) => new Date(y.em).getTime() - new Date(x.em).getTime())
+      .slice(0, 60);
+  }
+
+  /**
+   * Avisos direcionados às unidades do morador (Via 1).
+   *
+   * @deprecated Use `meuFeed`. Mantido enquanto houver app instalado na versão
+   * anterior; remover só depois que a nova estiver nas lojas.
+   */
   async meusAvisos(user: JwtPayload) {
     const moradorId = this.exigirMorador(user);
     const vinculos = await this.prisma.vinculo.findMany({
@@ -245,7 +360,12 @@ export class AvisosService {
     );
   }
 
-  /** Ocorrências que o morador reportou (Via 2), com status. */
+  /**
+   * Ocorrências que o morador reportou (Via 2), com status.
+   *
+   * @deprecated Use `meuFeed`. Mantido enquanto houver app instalado na versão
+   * anterior; remover só depois que a nova estiver nas lojas.
+   */
   async minhasOcorrencias(user: JwtPayload) {
     const moradorId = this.exigirMorador(user);
     const vinculos = await this.prisma.vinculo.findMany({

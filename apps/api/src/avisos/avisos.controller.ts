@@ -65,6 +65,12 @@ export class AvisosController {
     return this.avisos.mudarStatus(user, id, dto.status);
   }
 
+  // Morador: a caixa de entrada inteira em uma resposta.
+  @Get("morador/feed")
+  meuFeed(@CurrentUser() user: JwtPayload) {
+    return this.avisos.meuFeed(user);
+  }
+
   // Morador (Via 2 reporte + Via 1 recebe)
   @Post("morador/ocorrencias")
   criarOcorrencia(
@@ -74,11 +80,13 @@ export class AvisosController {
     return this.avisos.criarOcorrencia(user, dto);
   }
 
+  /** @deprecated Substituído por GET morador/feed. Ver AvisosService. */
   @Get("morador/ocorrencias")
   minhasOcorrencias(@CurrentUser() user: JwtPayload) {
     return this.avisos.minhasOcorrencias(user);
   }
 
+  /** @deprecated Substituído por GET morador/feed. Ver AvisosService. */
   @Get("morador/avisos")
   meusAvisos(@CurrentUser() user: JwtPayload) {
     return this.avisos.meusAvisos(user);
