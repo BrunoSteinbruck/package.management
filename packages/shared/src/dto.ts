@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { STATUS_AVISO } from "./enums";
+import { STATUS_AVISO, TIPOS_MEDIDOR } from "./enums";
 
 // Corpos de request validados na borda da API. O que a API devolve fica em
 // api.ts.
@@ -161,3 +161,37 @@ export const MudarStatusAvisoSchema = z.object({
   status: z.enum(STATUS_AVISO),
 });
 export type MudarStatusAvisoDto = z.infer<typeof MudarStatusAvisoSchema>;
+
+// ----- Módulo Leituras de medidores -----
+
+/**
+ * Competência sempre trafega como "YYYY-MM". Vira data (dia 1, UTC) só dentro
+ * da API; cliente nunca constrói Date de competência (fuso deslocaria o dia).
+ */
+export const CompetenciaSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Competência inválida (use YYYY-MM)");
+
+export const RegistrarLeituraSchema = z.object({
+  unidadeId: z.string().uuid(),
+  tipo: z.enum(TIPOS_MEDIDOR),
+  competencia: CompetenciaSchema,
+  valor: z.number().min(0).max(999_999_999),
+  fotoKey: z.string().max(500).optional(),
+});
+export type RegistrarLeituraDto = z.infer<typeof RegistrarLeituraSchema>;
+
+export const SalvarTarifaSchema = z.object({
+  tipo: z.enum(TIPOS_MEDIDOR),
+  valorPorM3: z.number().min(0).max(99_999),
+});
+export type SalvarTarifaDto = z.infer<typeof SalvarTarifaSchema>;
+
+export const ExportLeiturasSchema = z.object({
+  formato: z.enum(["xlsx", "pdf"]),
+  // "mes": só a competência pedida. "geral": todo o histórico.
+  escopo: z.enum(["mes", "geral"]),
+  tipo: z.enum(TIPOS_MEDIDOR),
+  competencia: CompetenciaSchema,
+});
+export type ExportLeiturasDto = z.infer<typeof ExportLeiturasSchema>;

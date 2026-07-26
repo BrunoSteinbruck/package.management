@@ -22,6 +22,10 @@ import { AvisosScreen } from "./src/screens/AvisosScreen";
 import { DetalheScreen } from "./src/screens/DetalheScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
 import { EntradaConfirmScreen } from "./src/screens/EntradaConfirmScreen";
+import { ConsumosScreen } from "./src/screens/ConsumosScreen";
+import { LeituraCameraScreen } from "./src/screens/LeituraCameraScreen";
+import { LeituraConfirmScreen } from "./src/screens/LeituraConfirmScreen";
+import { LeiturasScreen } from "./src/screens/LeiturasScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { MinhaUnidadeScreen } from "./src/screens/MinhaUnidadeScreen";
 import { MoradorHomeScreen } from "./src/screens/MoradorHomeScreen";
@@ -70,6 +74,9 @@ function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
         <Portaria.Screen name="QrScan" component={QrScanScreen} />
         <Portaria.Screen name="SaidaCamera" component={SaidaCameraScreen} />
         <Portaria.Screen name="Avisar" component={AvisarScreen} />
+        <Portaria.Screen name="Leituras" component={LeiturasScreen} />
+        <Portaria.Screen name="LeituraCamera" component={LeituraCameraScreen} />
+        <Portaria.Screen name="LeituraConfirm" component={LeituraConfirmScreen} />
       </Portaria.Navigator>
     </NavigationContainer>
   );
@@ -96,6 +103,9 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
         <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
         <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
         <Sindico.Screen name="Avisar" component={AvisarScreen} />
+        {/* Consumos em modo leitura: registrar leitura é rota da portaria e
+            nem compila nesta pilha. */}
+        <Sindico.Screen name="Consumos" component={ConsumosScreen} />
       </Sindico.Navigator>
     </NavigationContainer>
   );

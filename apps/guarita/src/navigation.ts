@@ -13,6 +13,11 @@ export type PortariaStackParamList = {
   // Sem parâmetro: a foto é um campo opcional dentro do formulário, com a
   // câmera embutida, e não um passo anterior a ele.
   Avisar: undefined;
+  // Leitura de medidores (água/gás): câmera primeiro, o zelador diz de qual
+  // apartamento é na confirmação. `sugestao` é o número lido pelo OCR local.
+  Leituras: undefined;
+  LeituraCamera: undefined;
+  LeituraConfirm: { fotoUri: string | null; sugestao: number | null };
 };
 
 /**
@@ -28,11 +33,20 @@ export type PortariaStackParamList = {
  */
 export type SindicoStackParamList = Omit<
   PortariaStackParamList,
-  "EntradaCamera" | "EntradaConfirm" | "Retirada" | "QrScan" | "SaidaCamera"
+  | "EntradaCamera"
+  | "EntradaConfirm"
+  | "Retirada"
+  | "QrScan"
+  | "SaidaCamera"
+  | "Leituras"
+  | "LeituraCamera"
+  | "LeituraConfirm"
 > & {
   Ocorrencias: undefined;
   OcorrenciaDetalhe: { avisoId: string };
   Aprovacoes: undefined;
+  // Painel de consumos: o síndico acompanha e exporta, não registra leitura.
+  Consumos: undefined;
 };
 
 /** Pilha do morador (perfil.tipo === "morador"). */

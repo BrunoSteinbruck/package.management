@@ -19,12 +19,14 @@ import {
   type VinculoPendente,
 } from "@pacotes/shared";
 import { apiFetch, API_URL, limparSessao } from "@/lib/api";
+import { ConsumosView } from "./ConsumosView";
 import { Importar } from "./Importar";
 
 type Visao =
   | "visao-geral"
   | "pacotes"
   | "relatorios"
+  | "consumos"
   | "moradores"
   | "ocorrencias";
 
@@ -102,6 +104,14 @@ export function Dashboard({
           </button>
           {gestor && (
             <button
+              className={`item ${visao === "consumos" ? "ativo" : ""}`}
+              onClick={() => setVisao("consumos")}
+            >
+              Consumos
+            </button>
+          )}
+          {gestor && (
+            <button
               className={`item ${visao === "ocorrencias" ? "ativo" : ""}`}
               onClick={() => setVisao("ocorrencias")}
             >
@@ -148,6 +158,7 @@ export function Dashboard({
         )}
         {visao === "pacotes" && <PacotesView />}
         {visao === "relatorios" && <RelatoriosView />}
+        {visao === "consumos" && gestor && <ConsumosView />}
         {visao === "ocorrencias" && gestor && <OcorrenciasView />}
         {visao === "moradores" && gestor && <MoradoresView />}
       </main>

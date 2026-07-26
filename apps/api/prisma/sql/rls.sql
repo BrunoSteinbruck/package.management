@@ -25,7 +25,7 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
   END LOOP;
 
-  FOREACH t IN ARRAY ARRAY['unidades','pacotes','retiradas','notificacoes','vagas','veiculos','avisos']
+  FOREACH t IN ARRAY ARRAY['unidades','pacotes','retiradas','notificacoes','vagas','veiculos','avisos','leituras_medidor','tarifas_consumo']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

@@ -1,4 +1,9 @@
-import type { PapelUsuario, StatusAviso, StatusPacote } from "./enums";
+import type {
+  PapelUsuario,
+  StatusAviso,
+  StatusPacote,
+  TipoMedidor,
+} from "./enums";
 
 /**
  * Contrato das respostas da API: o formato do fio, já serializado em JSON.
@@ -216,4 +221,83 @@ export interface MembroEquipe {
   telefone: string;
   papel: PapelUsuario | string;
   ativo: boolean;
+}
+
+// ----- Leituras de medidores -----
+
+/** Sinal visual no painel; não bloqueia nada. */
+export type AlertaConsumo = "NEGATIVO" | "ACIMA_MEDIA" | null;
+
+/** Uma linha da tabela de consumos (unidade × competência × tipo). */
+export interface ConsumoLinha {
+  unidadeId: string;
+  bloco: string | null;
+  identificacao: string;
+  /** Leitura mais recente ANTERIOR à competência (não obrigatoriamente mês-1). */
+  anterior: { competencia: string; valor: number } | null;
+  atual: {
+    valor: number;
+    lidoEm: string;
+    lidoPor: string;
+    fotoRef: FotoRef | null;
+  } | null;
+  /** atual − anterior; null sem par de leituras. */
+  consumo: number | null;
+  /** consumo × tarifa; null sem tarifa ou sem consumo. */
+  valorReais: number | null;
+  alerta: AlertaConsumo;
+}
+
+export interface ConsumosResposta {
+  competencia: string;
+  tipo: TipoMedidor;
+  /** Tarifa vigente por m³; null enquanto o síndico não cadastrar. */
+  tarifa: number | null;
+  linhas: ConsumoLinha[];
+  totais: {
+    lidas: number;
+    totalUnidades: number;
+    consumo: number;
+    valorReais: number | null;
+  };
+}
+
+/**
+ * Estado do mês para o app do porteiro: progresso + leitura anterior por
+ * unidade, num fetch só (cacheável para a confirmação funcionar offline).
+ */
+export interface EstadoLeituras {
+  competencia: string;
+  tipo: TipoMedidor;
+  total: number;
+  lidas: number;
+  unidades: {
+    unidadeId: string;
+    bloco: string | null;
+    identificacao: string;
+    anterior: { competencia: string; valor: number } | null;
+    atual: number | null;
+  }[];
+}
+
+/** Resposta do POST /leituras: feedback imediato na tela de confirmação. */
+export interface LeituraRegistrada {
+  anterior: { competencia: string; valor: number } | null;
+  consumo: number | null;
+  alerta: AlertaConsumo;
+}
+
+export interface TarifaLinha {
+  tipo: TipoMedidor;
+  valorPorM3: number;
+  atualizadoEm: string;
+}
+
+/** Um mês do histórico agregado do condomínio. */
+export interface HistoricoConsumoMes {
+  competencia: string;
+  consumoTotal: number;
+  /** Com a tarifa vigente; null sem tarifa. */
+  valorTotal: number | null;
+  unidadesLidas: number;
 }

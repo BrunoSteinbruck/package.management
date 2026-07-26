@@ -16,7 +16,10 @@ export type NomeIcone =
   | "casa"
   | "lista"
   | "pacote"
-  | "pessoa";
+  | "pessoa"
+  | "medidor"
+  | "gota"
+  | "chama";
 
 const DESENHOS: Record<NomeIcone, React.ReactNode> = {
   camera: (
@@ -76,6 +79,18 @@ const DESENHOS: Record<NomeIcone, React.ReactNode> = {
       <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
       <Circle cx={12} cy={7} r={4} />
     </>
+  ),
+  // Mostrador de medidor: aro + ponteiro.
+  medidor: (
+    <>
+      <Circle cx={12} cy={13} r={9} />
+      <Path d="M12 13l4-4" />
+      <Path d="M12 4v2M5 6.5l1.4 1.4M19 6.5l-1.4 1.4" />
+    </>
+  ),
+  gota: <Path d="M12 2.5s6.5 7.6 6.5 12a6.5 6.5 0 0 1-13 0c0-4.4 6.5-12 6.5-12z" />,
+  chama: (
+    <Path d="M12 2s6 5.5 6 11a6 6 0 0 1-12 0c0-2.5 1.2-4.6 2.5-6 .3 1.8 1.2 3 2.5 3.5C10 7.5 11 4.5 12 2z" />
   ),
 };
 

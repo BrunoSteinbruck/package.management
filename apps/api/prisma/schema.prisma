@@ -77,6 +77,11 @@ enum CanalConvite {
   MORADOR
 }
 
+enum TipoMedidor {
+  AGUA
+  GAS
+}
+
 model Condominio {
   id       String   @id @default(uuid()) @db.Uuid
   nome     String
@@ -93,6 +98,8 @@ model Condominio {
   vagas        Vaga[]
   veiculos     Veiculo[]
   avisos       Aviso[]
+  leituras     LeituraMedidor[]
+  tarifas      TarifaConsumo[]
 
   @@map("condominios")
 }
@@ -110,6 +117,7 @@ model Unidade {
   vagas      Vaga[]
   veiculos   Veiculo[]
   avisos     Aviso[]
+  leituras   LeituraMedidor[]
 
   @@unique([condominioId, bloco, identificacao])
   @@index([condominioId])
@@ -162,10 +170,11 @@ model Usuario {
 
   condominio         Condominio @relation(fields: [condominioId], references: [id])
   pacotesRecebidos   Pacote[]   @relation("recebidoPor")
-  retiradasEntregues Retirada[] @relation("entreguePor")
+  retiradasEntregues Retirada[]       @relation("entreguePor")
   vinculosAprovados  Vinculo[]
-  avisosCriados      Aviso[]    @relation("avisoCriadoPorUsuario")
+  avisosCriados      Aviso[]          @relation("avisoCriadoPorUsuario")
   devices            Device[]
+  leiturasFeitas     LeituraMedidor[]
 
   @@index([condominioId])
   @@map("usuarios")
@@ -304,6 +313,46 @@ model Veiculo {
   @@unique([condominioId, placa])
   @@index([condominioId])
   @@map("veiculos")
+}
+
+// Leitura mensal de um medidor (água ou gás) de uma unidade, com a foto como
+// evidência. O consumo NUNCA é persistido: deriva no read comparando com a
+// leitura anterior, então lançamento retroativo se corrige sozinho.
+model LeituraMedidor {
+  id           String      @id @default(uuid()) @db.Uuid
+  condominioId String      @map("condominio_id") @db.Uuid
+  unidadeId    String      @map("unidade_id") @db.Uuid
+  tipo         TipoMedidor
+  // Sempre o dia 1 do mês (UTC). Nas bordas da API trafega como "YYYY-MM".
+  competencia  DateTime    @db.Date
+  valor        Decimal     @db.Decimal(12, 3)
+  fotoKey      String?     @map("foto_key")
+  lidoPorId    String      @map("lido_por_id") @db.Uuid
+  lidoEm       DateTime    @default(now()) @map("lido_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  unidade    Unidade    @relation(fields: [unidadeId], references: [id])
+  lidoPor    Usuario    @relation(fields: [lidoPorId], references: [id])
+
+  @@unique([unidadeId, tipo, competencia])
+  @@index([condominioId, competencia])
+  @@map("leituras_medidor")
+}
+
+// Tarifa vigente por m³ (uma linha por tipo). Sem histórico de tarifa no v1:
+// o valor em R$ do painel usa sempre a tarifa atual.
+model TarifaConsumo {
+  id           String      @id @default(uuid()) @db.Uuid
+  condominioId String      @map("condominio_id") @db.Uuid
+  tipo         TipoMedidor
+  valorPorM3   Decimal     @map("valor_por_m3") @db.Decimal(10, 2)
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+
+  @@unique([condominioId, tipo])
+  @@map("tarifas_consumo")
 }
 
 // Aviso direcionado (Via 1) OU ocorrência reportada pelo morador (Via 2).

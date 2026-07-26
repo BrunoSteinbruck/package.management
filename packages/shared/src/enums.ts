@@ -12,6 +12,10 @@ export type StatusAviso = (typeof STATUS_AVISO)[number];
 export const STATUS_PACOTE = ["ARMAZENADO", "ENTREGUE", "EXTRAVIADO"] as const;
 export type StatusPacote = (typeof STATUS_PACOTE)[number];
 
+/** Medidores individuais lidos pelo zelador (leitura por foto). */
+export const TIPOS_MEDIDOR = ["AGUA", "GAS"] as const;
+export type TipoMedidor = (typeof TIPOS_MEDIDOR)[number];
+
 /** Motivos sugeridos na Via 1 (equipe avisa a unidade). */
 export const MOTIVOS_AVISO = [
   "Luz acesa",

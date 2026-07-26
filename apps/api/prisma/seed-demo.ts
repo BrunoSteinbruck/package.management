@@ -163,6 +163,69 @@ async function main() {
     }
   });
 
+  // Leituras de medidores: 4 meses fechados + mês atual pela metade (mostra
+  // progresso do zelador e histórico no painel). Consumos estáveis por
+  // unidade, com um salto anômalo em A-202 no mês passado (acende o alerta,
+  // que precisa de pelo menos 2 consumos de base antes do salto).
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+    await tx.tarifaConsumo.upsert({
+      where: { condominioId_tipo: { condominioId: cid, tipo: "AGUA" } },
+      update: {},
+      create: { condominioId: cid, tipo: "AGUA", valorPorM3: 8.65 },
+    });
+    await tx.tarifaConsumo.upsert({
+      where: { condominioId_tipo: { condominioId: cid, tipo: "GAS" } },
+      update: {},
+      create: { condominioId: cid, tipo: "GAS", valorPorM3: 12.5 },
+    });
+  });
+
+  const agora = new Date();
+  const competencia = (mesesAtras: number) =>
+    new Date(Date.UTC(agora.getFullYear(), agora.getMonth() - mesesAtras, 1));
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+    const jaTem = await tx.leituraMedidor.count();
+    if (jaTem > 0) {
+      console.log("Leituras já existem, pulando criação para não duplicar.");
+      return;
+    }
+    for (const [i, u] of unidades.entries()) {
+      // Acumulados iniciais e consumos mensais variando por unidade.
+      const baseAgua = 400 + i * 37;
+      const baseGas = 80 + i * 11;
+      const consumoAgua = 9 + (i % 5); // 9 a 13 m³/mês
+      const consumoGas = 3 + (i % 3); // 3 a 5 m³/mês
+      let acumAgua = baseAgua;
+      let acumGas = baseGas;
+      for (let m = 4; m >= 0; m--) {
+        // Mês atual: só ~70% das unidades já lidas.
+        if (m === 0 && i % 10 >= 7) continue;
+        const anomalia = m === 1 && u.bloco === "A" && u.identificacao === "202" ? 28 : 0;
+        acumAgua += consumoAgua + (m % 2) + anomalia;
+        acumGas += consumoGas + (m % 2 === 0 ? 1 : 0);
+        for (const [tipo, valor] of [
+          ["AGUA", acumAgua],
+          ["GAS", acumGas],
+        ] as const) {
+          await tx.leituraMedidor.create({
+            data: {
+              condominioId: cid,
+              unidadeId: u.id,
+              tipo,
+              competencia: competencia(m),
+              valor,
+              lidoPorId: porteiro.id,
+              lidoEm: new Date(Date.UTC(agora.getFullYear(), agora.getMonth() - m, 6, 13)),
+            },
+          });
+        }
+      }
+    }
+  });
+
   const totais = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
     return {
@@ -175,6 +238,7 @@ async function main() {
   console.log(`  Condomínio: ${condominio.nome}`);
   console.log(`  Unidades: ${unidades.length} | Moradores: ${moradores.length} (7 com app ≈ 70% adoção)`);
   console.log(`  Pacotes: ${totais.naPortaria} na portaria (3 parados 3+ dias) | ${totais.entregues} entregues`);
+  console.log("  Leituras: 4 meses fechados + mês atual ~70% lido (água e gás), tarifas definidas");
   console.log(`  Síndico: ${SINDICO_TELEFONE} | Porteiro: ${PORTEIRO_TELEFONE} | Morador demo: ${MORADOR_DEMO_TELEFONE}`);
 }
 

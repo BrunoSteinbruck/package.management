@@ -59,6 +59,13 @@ export const MODULOS_PORTARIA: readonly Modulo<
     perfis: ["porteiro", "sindico"],
     slot: "secundario",
   },
+  {
+    id: "Leituras",
+    titulo: "Leituras de água e gás",
+    icone: "medidor",
+    perfis: ["porteiro"],
+    slot: "secundario",
+  },
 ];
 
 export const MODULOS_SINDICO: readonly Modulo<
@@ -84,6 +91,13 @@ export const MODULOS_SINDICO: readonly Modulo<
     id: "Avisar",
     titulo: "Avisar morador",
     icone: "sino",
+    perfis: ["sindico"],
+    slot: "secundario",
+  },
+  {
+    id: "Consumos",
+    titulo: "Consumos de água e gás",
+    icone: "medidor",
     perfis: ["sindico"],
     slot: "secundario",
   },

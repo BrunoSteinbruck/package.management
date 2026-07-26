@@ -11,6 +11,7 @@ import { MoradorModule } from "./morador/morador.module";
 import { NotificacoesModule } from "./notificacoes/notificacoes.module";
 import { AvisosModule } from "./avisos/avisos.module";
 import { ContaModule } from "./conta/conta.module";
+import { LeiturasModule } from "./leituras/leituras.module";
 
 @Controller("health")
 class HealthController {
@@ -35,6 +36,7 @@ class HealthController {
     NotificacoesModule,
     AvisosModule,
     ContaModule,
+    LeiturasModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_FILTER, useClass: SentryGlobalFilter }],
