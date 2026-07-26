@@ -137,7 +137,7 @@ export function EntradaCameraScreen({ navigation }: Props) {
           <Animated.View style={[styles.dotLeitor, { opacity: pulso }]} />
           <Text style={styles.piloLeitorTexto}>Leitor de código ativo</Text>
         </View>
-        <Text style={styles.hint}>Aponte para a etiqueta — o código é lido sozinho</Text>
+        <Text style={styles.hint}>Aponte para a etiqueta: o código é lido sozinho</Text>
       </View>
 
       <View style={[styles.rodape, { paddingBottom: insets.bottom + 16 }]}>

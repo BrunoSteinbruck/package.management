@@ -8,19 +8,19 @@
 --
 -- POR QUE É UMA ROLE SEPARADA (e não BYPASSRLS na role da API): BYPASSRLS
 -- vale para TODAS as conexões daquela role. Concedida à role que a API usa,
--- o isolamento por condomínio morre — a API passa a enxergar todos os
+-- o isolamento por condomínio morre: a API passa a enxergar todos os
 -- tenants mesmo sem definir app.condominio_id. Verificado na prática: com
 -- BYPASSRLS, um SELECT sem tenant devolveu os pacotes de todo mundo.
 --
 -- Portanto: a API continua com RLS aplicado; só esta role, usada
--- exclusivamente pelo cron de backup, enxerga tudo — e só para leitura.
+-- exclusivamente pelo cron de backup, enxerga tudo: e só para leitura.
 --
 -- Exige superusuário para rodar. No Render: painel do banco → PSQL Command
 -- (o usuário de lá tem permissão para criar roles).
 --
 --   psql "$DATABASE_URL_ADMIN" -f backup-role.sql
 --
--- A senha é GERADA na hora e impressa uma única vez (RAISE NOTICE) — copie
+-- A senha é GERADA na hora e impressa uma única vez (RAISE NOTICE): copie
 -- na hora, ela não fica em lugar nenhum. Nada de senha comitada no repo:
 -- este arquivo é público e a role tem BYPASSRLS. Depois, no cron job:
 --   BACKUP_DATABASE_URL=postgresql://backup_ro:SENHA@host:5432/banco

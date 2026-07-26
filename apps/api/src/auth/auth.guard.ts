@@ -28,7 +28,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException("Token inválido ou expirado");
     }
     // Só tokens de SESSÃO abrem rotas. Foto-tokens e QR-tokens são assinados
-    // com o mesmo segredo, mas não têm tipo de sessão — barrados aqui.
+    // com o mesmo segredo, mas não têm tipo de sessão: barrados aqui.
     if (payload.tipo !== "usuario" && payload.tipo !== "morador") {
       throw new UnauthorizedException("Token não é de sessão");
     }

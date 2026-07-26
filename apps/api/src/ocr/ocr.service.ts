@@ -27,11 +27,11 @@ export class OcrService {
   /**
    * Analisa a foto da etiqueta: salva o arquivo (evita segundo upload),
    * extrai texto via provider e sugere unidades do condomínio do operador.
-   * Nunca lança por falha de OCR — sem sugestão, o fluxo manual segue.
+   * Nunca lança por falha de OCR: sem sugestão, o fluxo manual segue.
    */
   /**
    * OCR feito NO APARELHO (ML Kit, dev build): o app manda só o texto
-   * reconhecido; aqui rodam o parser e o match de unidades — grátis e offline
+   * reconhecido; aqui rodam o parser e o match de unidades: grátis e offline
    * do lado do celular, sem provider de nuvem.
    */
   async analisarTexto(user: JwtPayload, texto: string) {
@@ -56,7 +56,7 @@ export class OcrService {
       throw new ForbiddenException("Apenas operadores do condomínio");
     }
 
-    // Extensão SEMPRE do mimetype — nome original é controlado pelo cliente
+    // Extensão SEMPRE do mimetype: nome original é controlado pelo cliente
     // e permitia path traversal na escrita.
     const ext = extPorMime(mimeType);
     if (!ext) throw new BadRequestException("Apenas imagens JPEG/PNG/WebP");

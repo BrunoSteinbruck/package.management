@@ -13,7 +13,7 @@ import { AuthService } from "./auth.service";
         const secret = process.env.JWT_SECRET;
         if (!secret && process.env.NODE_ENV === "production") {
           throw new Error(
-            "JWT_SECRET é obrigatório em produção — a API não sobe sem ele.",
+            "JWT_SECRET é obrigatório em produção. A API não sobe sem ele.",
           );
         }
         return {

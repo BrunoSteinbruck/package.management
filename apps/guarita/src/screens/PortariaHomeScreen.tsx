@@ -140,7 +140,7 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
           <View style={styles.avisoFila}>
             <View style={[styles.dot, { backgroundColor: theme.colors.aviso }]} />
             <Text style={styles.avisoFilaTexto}>
-              {fila} registro(s) offline — enviam quando a conexão voltar
+              {fila} registro(s) offline: enviam quando a conexão voltar
             </Text>
           </View>
         )}
@@ -195,7 +195,7 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
               { transform: [{ scale: pressed ? 0.98 : 1 }] },
             ]}
           >
-            <Text style={styles.statNumero}>{resumo?.naPortaria ?? "—"}</Text>
+            <Text style={styles.statNumero}>{resumo?.naPortaria ?? "-"}</Text>
             <View style={styles.statLinhaRotulo}>
               <Text style={styles.statRotulo}>na portaria agora</Text>
               <Icone nome="chevron" tamanho={16} cor={theme.colors.textFaint} />
@@ -208,7 +208,7 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
               { transform: [{ scale: pressed ? 0.98 : 1 }] },
             ]}
           >
-            <Text style={styles.statNumero}>{resumo?.retiradasHoje ?? "—"}</Text>
+            <Text style={styles.statNumero}>{resumo?.retiradasHoje ?? "-"}</Text>
             <View style={styles.statLinhaRotulo}>
               <Text style={styles.statRotulo}>retiradas hoje</Text>
               <Icone nome="chevron" tamanho={16} cor={theme.colors.textFaint} />

@@ -12,10 +12,10 @@ const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const INTERVALO_MS = 15_000;
 // Convite de adoção: no máximo 1 SMS por unidade a cada 14 dias, disparado
 // quando chega encomenda para unidade SEM app. Decisão de produto: quem não
-// tem o app NÃO recebe aviso de pacote — recebe o convite para instalar.
+// tem o app NÃO recebe aviso de pacote: recebe o convite para instalar.
 const CONVITE_SMS_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 // Lembrete de pacote parado: pacote ARMAZENADO há 3+ dias gera 1 push por
-// unidade (agrupado). Decisão de produto: SÓ push, SÓ para quem tem o app —
+// unidade (agrupado). Decisão de produto: SÓ push, SÓ para quem tem o app,
 // não-adotante não recebe nada (segue só o convite SMS de 14 dias na entrada).
 const LEMBRETE_DIAS = 3;
 const LEMBRETE_INTERVALO_MS = 20 * 60 * 60 * 1000; // roda no máx. 1x/~dia
@@ -91,7 +91,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       if (notif.pacote) {
         const tokensValidos = await this.tokensDaUnidade(notif.pacote.unidadeId);
         if (tokensValidos.length === 0) {
-          // Unidade sem app: aviso de pacote não vai (decisão de produto) —
+          // Unidade sem app: aviso de pacote não vai (decisão de produto),
           // vai o convite de adoção, com teto de 1 SMS/unidade a cada 14 dias.
           providerMsgId =
             notif.tipo === "ENTRADA"
@@ -186,7 +186,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
   /**
    * Lembrete de pacotes parados há 3+ dias: 1 push por unidade (agrupando os
    * pacotes), só para quem tem app. Dedup: cada pacote lembrado ganha uma
-   * Notificacao LEMBRETE — sem novo lembrete enquanto ele existir. Unidade sem
+   * Notificacao LEMBRETE: sem novo lembrete enquanto ele existir. Unidade sem
    * app não é marcada, então se o morador instalar depois, recebe no próximo dia.
    */
   private async lembretesDoCondominio(condominioId: string) {
@@ -299,7 +299,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       : "";
     try {
       // Sem acentos de propósito: mantém o SMS em codificação GSM-7
-      // (160 chars/segmento em vez de 70) — metade do custo por envio.
+      // (160 chars/segmento em vez de 70): metade do custo por envio.
       await this.sms.enviar(
         titular.morador.telefone,
         `Guarita: um pacote chegou para ${rotulo} na portaria do ${condominio.nome}! Baixe o app Guarita e receba estes avisos na hora, sempre que chegar encomenda.${link}`,
@@ -326,7 +326,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     data: Record<string, unknown>,
   ): Promise<{ ok: boolean; ticketId?: string; erro?: string }> {
     // DEV ONLY: simula entrega bem-sucedida (loga em vez de enviar), para
-    // testar o pipeline completo — marcadores, dedup, agrupamento — sem um
+    // testar o pipeline completo (marcadores, dedup, agrupamento) sem um
     // aparelho real com token Expo. Nunca ligar em produção.
     if (process.env.PUSH_DEV_SIMULAR === "1") {
       this.logger.log(`[push simulado] "${title}" → ${tokens.length} device(s): ${body}`);

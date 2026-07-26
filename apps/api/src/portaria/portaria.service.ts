@@ -131,7 +131,7 @@ export class PortariaService {
     try {
       payload = await this.jwt.verifyAsync<QrPayload>(dto.qrToken);
     } catch {
-      throw new BadRequestException("QR inválido ou expirado — peça para atualizar a tela");
+      throw new BadRequestException("QR inválido ou expirado. Peça para atualizar a tela");
     }
     if (payload.tipo !== "qr-retirada" || payload.condominioId !== condominioId) {
       throw new BadRequestException("QR não pertence a este condomínio");

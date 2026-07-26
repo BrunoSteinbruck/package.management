@@ -5,12 +5,12 @@
 --   SELECT set_config('app.condominio_id', '<uuid>', true);
 -- FORCE garante que até o dono da tabela passa pelas policies.
 -- NULLIF: em conexão de pool, current_setting fora de transação com tenant
--- retorna '' (não NULL) — sem o NULLIF o cast ::uuid explode a query.
+-- retorna '' (não NULL): sem o NULLIF o cast ::uuid explode a query.
 --
 -- Tabelas globais (sem RLS): condominios, usuarios, moradores, vinculos,
 -- devices, otp_challenges, convites.
 --   usuarios: o login (OTP) localiza pelo telefone antes de existir tenant.
---   convites: o resgate acontece no onboarding, antes da autenticação —
+--   convites: o resgate acontece no onboarding, antes da autenticação,
 --     protegido por código único não-adivinhável, expiração e uso único.
 --   Isolamento dessas tabelas é responsabilidade da API.
 

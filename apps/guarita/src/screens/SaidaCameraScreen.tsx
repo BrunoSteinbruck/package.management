@@ -67,7 +67,7 @@ export function SaidaCameraScreen({ navigation, route }: Props) {
     return (
       <View style={[styles.tela, styles.centro]}>
         <Text style={styles.aviso}>
-          Fotografe os pacotes na entrega — é o comprovante da retirada.
+          Fotografe os pacotes na entrega: é o comprovante da retirada.
         </Text>
         <Botao titulo="Permitir câmera" onPress={pedirPermissao} />
         <Botao

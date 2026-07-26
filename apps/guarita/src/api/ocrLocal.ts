@@ -1,6 +1,6 @@
 /**
  * OCR no aparelho via ML Kit (Google, gratuito, offline).
- * Módulo NATIVO: existe só em development/production build — no Expo Go o
+ * Módulo NATIVO: existe só em development/production build, no Expo Go o
  * require falha e caímos no fluxo de servidor. Por isso o require defensivo.
  */
 interface ModuloTextRecognition {

@@ -58,7 +58,7 @@ export function AvisarCameraScreen({ navigation }: Props) {
       <View style={{ flex: 1 }} />
       <View style={[styles.rodape, { paddingBottom: insets.bottom + 16 }]}>
         <Text style={styles.dica}>
-          Fotografe a placa, a vaga ou a situação — o app tenta achar a unidade.
+          Fotografe a placa, a vaga ou a situação: o app tenta achar a unidade.
         </Text>
         <View style={styles.linhaAcoes}>
           <Pressable

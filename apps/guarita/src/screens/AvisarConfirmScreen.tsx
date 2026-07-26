@@ -110,7 +110,7 @@ export function AvisarConfirmScreen({ navigation, route }: Props) {
         Alert.alert(
           temApp ? "Aviso enviado" : "Unidade sem app",
           temApp
-            ? `${rotuloUnidade(unidade)} — morador notificado.`
+            ? `${rotuloUnidade(unidade)}: morador notificado.`
             : `${rotuloUnidade(unidade)} não tem o app. Avise pelo interfone.`,
           [{ text: "OK", onPress: () => navigation.popToTop() }],
         );

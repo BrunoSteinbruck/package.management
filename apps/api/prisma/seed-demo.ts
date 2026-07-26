@@ -13,7 +13,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // Números reais (do síndico/porteiro/morador da demo) são passados por ENV na
-// hora de semear — NUNCA hardcoded (repo público). Defaults são placeholders.
+// hora de semear: NUNCA hardcoded (repo público). Defaults são placeholders.
 const SINDICO_NOME = process.env.SINDICO_NOME ?? "Síndico Demo";
 const SINDICO_TELEFONE = (process.env.SINDICO_TELEFONE ?? "51900000001").replace(/\D/g, "");
 const PORTEIRO_TELEFONE = (process.env.PORTEIRO_TELEFONE ?? "51900000002").replace(/\D/g, "");
@@ -133,7 +133,7 @@ async function main() {
     await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
     const jaTem = await tx.pacote.count();
     if (jaTem > 0) {
-      console.log("Pacotes já existem — pulando criação para não duplicar.");
+      console.log("Pacotes já existem, pulando criação para não duplicar.");
       return;
     }
     let seq = 100000;

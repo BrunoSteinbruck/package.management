@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-// Sem caracteres ambíguos (0/O, 1/I/L) — o código é digitado por humanos.
+// Sem caracteres ambíguos (0/O, 1/I/L): o código é digitado por humanos.
 const ALFABETO_CONVITE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 export function gerarCodigoConvite(): string {

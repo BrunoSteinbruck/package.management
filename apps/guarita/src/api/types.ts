@@ -9,7 +9,7 @@ export interface Unidade {
 export function rotuloUnidade(
   u: { bloco: string | null; identificacao: string } | undefined,
 ): string {
-  if (!u) return "—";
+  if (!u) return "-";
   return u.bloco ? `${u.identificacao} · Bloco ${u.bloco}` : u.identificacao;
 }
 

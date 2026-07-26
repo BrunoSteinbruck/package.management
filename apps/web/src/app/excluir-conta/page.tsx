@@ -5,13 +5,13 @@ import type { JwtPayload } from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
 
 /**
- * Exclusão de conta pela web — exigência do Google Play, que pede um caminho
+ * Exclusão de conta pela web: exigência do Google Play, que pede um caminho
  * fora do aplicativo (a Apple se satisfaz com o botão dentro do app, que
  * também existe).
  *
  * Fluxo próprio, deliberadamente separado do login do painel: aqui entram
  * MORADORES também (o painel só aceita equipe), e o token fica em memória, sem
- * tocar no localStorage — senão abrir esta página derrubaria a sessão do
+ * tocar no localStorage: senão abrir esta página derrubaria a sessão do
  * síndico no mesmo navegador.
  */
 type Previa =

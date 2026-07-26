@@ -47,7 +47,7 @@ export function Importar({ aoImportar }: { aoImportar: () => void }) {
     <section className="card">
       <h2>Importar moradores</h2>
       <p className="aviso" style={{ marginBottom: 10 }}>
-        Uma linha por morador: nome; telefone; bloco; unidade — separados por
+        Uma linha por morador: nome; telefone; bloco; unidade, separados por
         ponto e vírgula, vírgula ou tab (cole direto da planilha).
       </p>
       <textarea

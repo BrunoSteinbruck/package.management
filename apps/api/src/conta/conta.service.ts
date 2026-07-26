@@ -8,20 +8,20 @@ import { randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
- * Exclusão de conta — exigida pela App Store (desde 2022) e pelo Google Play
+ * Exclusão de conta: exigida pela App Store (desde 2022) e pelo Google Play
  * para todo app que permite criar conta.
  *
  * A regra de ouro aqui é a divisão de papéis da LGPD: o CONDOMÍNIO é o
  * controlador dos registros de portaria (quem recebeu qual pacote, quando),
  * nós somos operadores. Apagar a conta de uma pessoa não pode apagar o
- * registro operacional do condomínio — mas tem que apagar a identidade dela.
+ * registro operacional do condomínio, mas tem que apagar a identidade dela.
  *
  * Daí os dois caminhos:
  *  - MORADOR: some de verdade (não é autor de registro de custódia). Pacotes
  *    pertencem à UNIDADE, não ao morador, então o histórico do condomínio
  *    continua intacto.
  *  - EQUIPE: anonimiza e desativa. Pacote.recebidoPorId e Retirada.entreguePorId
- *    são obrigatórios (NOT NULL) e são a cadeia de custódia — o produto inteiro
+ *    são obrigatórios (NOT NULL) e são a cadeia de custódia: o produto inteiro
  *    se apoia neles. Apagar a linha destruiria o histórico do condomínio; então
  *    a linha fica, sem nome e sem telefone, e ninguém mais loga nela.
  */
@@ -41,7 +41,7 @@ export class ContaService {
         efeitos: [
           "Seu cadastro, seus vínculos com a unidade e este aparelho são apagados.",
           "Você para de receber avisos de encomenda.",
-          "O histórico de encomendas da unidade continua com o condomínio — ele é do condomínio, não seu.",
+          "O histórico de encomendas da unidade continua com o condomínio: ele é do condomínio, não seu.",
           "Para voltar depois, é preciso um novo convite de alguém da unidade.",
         ],
       };
@@ -53,7 +53,7 @@ export class ContaService {
       bloqueio,
       efeitos: [
         "Seu nome e telefone são removidos e você perde o acesso ao app.",
-        "Os registros de portaria que você fez continuam com o condomínio, sem o seu nome — eles são o comprovante das entregas.",
+        "Os registros de portaria que você fez continuam com o condomínio, sem o seu nome: eles são o comprovante das entregas.",
         "Para voltar, o síndico precisa cadastrar você de novo.",
       ],
     };
@@ -74,7 +74,7 @@ export class ContaService {
 
     // Avisos ficam (a ocorrência aberta é problema real do condomínio), mas
     // perdem o autor. `avisos` tem RLS, então precisa de uma transação por
-    // tenant — um morador pode ter vínculo em mais de um condomínio.
+    // tenant: um morador pode ter vínculo em mais de um condomínio.
     const condominios = new Set(morador.vinculos.map((v) => v.condominioId));
     for (const condominioId of condominios) {
       await this.prisma.withTenant(condominioId, (tx) =>

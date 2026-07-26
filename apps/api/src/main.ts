@@ -10,7 +10,7 @@ async function bootstrap() {
   app.setGlobalPrefix("v1");
 
   // CORS: aberto em dev; em produção só as origens explicitamente listadas
-  // (apps nativos não enviam Origin — isto afeta apenas navegadores/painel).
+  // (apps nativos não enviam Origin: isto afeta apenas navegadores/painel).
   const origins = (process.env.CORS_ORIGINS ?? "")
     .split(",")
     .map((o) => o.trim())

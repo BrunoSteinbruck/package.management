@@ -162,7 +162,7 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
         resultado.queued ? "Salvo offline" : "Entrada registrada",
         resultado.queued
           ? "Será enviado quando a conexão voltar. Pronto para o próximo."
-          : `${rotuloUnidade(unidade)} — morador avisado. Pronto para o próximo.`,
+          : `${rotuloUnidade(unidade)}: morador avisado. Pronto para o próximo.`,
         [{ text: "Próximo pacote", onPress: () => navigation.replace("EntradaCamera") }],
       );
     } catch (e) {

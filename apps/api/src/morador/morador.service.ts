@@ -129,7 +129,7 @@ export class MoradorService {
   async registrarDevice(user: JwtPayload, dto: RegistrarDeviceDto) {
     const moradorId = this.exigirMorador(user);
     // Token de conta já excluída: a FK estouraria em 500. O app chama isto ao
-    // abrir, antes de qualquer tela — devolver 401 faz ele cair no login.
+    // abrir, antes de qualquer tela: devolver 401 faz ele cair no login.
     const existe = await this.prisma.morador.count({ where: { id: moradorId } });
     if (!existe) throw new UnauthorizedException("Conta não encontrada");
     await this.prisma.device.upsert({
@@ -154,7 +154,7 @@ export class MoradorService {
     const moradorId = this.exigirMorador(user);
     const vinculo = await this.exigirVinculoAtivo(moradorId, dto.unidadeId);
     // Cap de convites vivos por unidade: cada código é uma credencial de
-    // vínculo — sem teto, um morador poderia emitir infinitos.
+    // vínculo: sem teto, um morador poderia emitir infinitos.
     const ativos = await this.prisma.convite.count({
       where: {
         unidadeId: dto.unidadeId,
@@ -279,7 +279,7 @@ export class MoradorService {
       .slice(0, 30);
   }
 
-  /** Foto-token dedicado: curto (1h), preso à key — o JWT de sessão nunca vai em URL. */
+  /** Foto-token dedicado: curto (1h), preso à key. O JWT de sessão nunca vai em URL. */
   private async fotoAssinada(key: string | null) {
     if (!key) return null;
     const token = await this.jwt.signAsync(

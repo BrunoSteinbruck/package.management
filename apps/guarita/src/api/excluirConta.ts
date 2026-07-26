@@ -7,12 +7,12 @@ type Previa =
   | { tipo: "equipe"; bloqueio: string | null; efeitos: string[] };
 
 /**
- * Exclusão de conta pelo próprio usuário — exigência das duas lojas para
+ * Exclusão de conta pelo próprio usuário: exigência das duas lojas para
  * qualquer app com cadastro (Apple desde 2022, Play desde 2024).
  *
  * O fluxo pergunta duas vezes de propósito: é irreversível, e a primeira
  * tela existe para EXPLICAR o que some e o que fica (o histórico da unidade
- * continua com o condomínio) — não é só um "tem certeza?" a mais.
+ * continua com o condomínio): não é só um "tem certeza?" a mais.
  */
 export async function excluirConta(aoConcluir: () => void) {
   let previa: Previa;

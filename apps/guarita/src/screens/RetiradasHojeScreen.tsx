@@ -87,7 +87,7 @@ export function RetiradasHojeScreen({ navigation }: Props) {
               </Text>
             </View>
             <Text style={styles.hora}>
-              {item.retirada ? hora(item.retirada.retiradoEm) : "—"}
+              {item.retirada ? hora(item.retirada.retiradoEm) : "-"}
             </Text>
           </View>
         )}

@@ -1,16 +1,16 @@
-# Checklist do piloto — o que falta é só login seu
+# Checklist do piloto: o que falta é só login seu
 
 Todo o código e configuração dos 4 itens está pronto e commitado. O que
 resta em cada um é criar a conta (não dá pra fazer por você) e colar
 credenciais. Tempo estimado total: ~30–40 min.
 
-## 1. SMS real (Twilio) — ~10 min
+## 1. SMS real (Twilio): ~10 min
 
 O código já envia SMS quando as variáveis existem; sem elas, roda em stub.
 
 1. Crie a conta em twilio.com (trial gratuito, com créditos).
 2. No console: **verifique seu número de celular** (trial só envia para
-   números verificados — verifique também o do seu colega para a demo).
+   números verificados: verifique também o do seu colega para a demo).
 3. Pegue um número de envio (trial oferece um) e anote:
    `Account SID`, `Auth Token`, número (formato `+1...`).
 4. Cole no `apps/api/.env`:
@@ -19,11 +19,11 @@ O código já envia SMS quando as variáveis existem; sem elas, roda em stub.
    TWILIO_AUTH_TOKEN="..."
    TWILIO_FROM="+1..."
    ```
-5. Reinicie a API. Teste: peça o código no app com seu número real —
+5. Reinicie a API. Teste: peça o código no app com seu número real,
    o SMS chega no celular. (`OTP_DEV_ECHO=1` pode continuar em dev;
    em produção, não configure.)
 
-## 2. Hospedagem (Render) — ~10 min
+## 2. Hospedagem (Render): ~10 min
 
 O blueprint `render.yaml` na raiz cria API + PostgreSQL com HTTPS.
 
@@ -42,10 +42,10 @@ O blueprint `render.yaml` na raiz cria API + PostgreSQL com HTTPS.
 6. Cole também as variáveis do Twilio/Vision no dashboard (Environment).
 
 Notas: plano free hiberna após inatividade (primeira chamada demora ~30s)
-e o Postgres free expira em 30 dias — antes do piloto real, subir para o
+e o Postgres free expira em 30 dias: antes do piloto real, subir para o
 plano pago (~US$7/mês cada).
 
-## 3. Development build com push (EAS) — ~15 min (maioria é fila do build)
+## 3. Development build com push (EAS): ~15 min (maioria é fila do build)
 
 `eas.json` pronto, `expo-dev-client` instalado, push token já lê o
 projectId. O EAS CLI já está instalado na máquina.
@@ -68,7 +68,7 @@ projectId. O EAS CLI já está instalado na máquina.
 
 Para Android é igual com `--platform android` (gera um APK instalável).
 
-## 4. OCR real (Google Vision) — ~10 min
+## 4. OCR real (Google Vision): ~10 min
 
 Provider pronto; basta a chave.
 
@@ -85,7 +85,7 @@ Provider pronto; basta a chave.
    ```
    Deve imprimir o texto lido e os campos extraídos (transportadora,
    rastreio, bloco/unidade se houver).
-5. Reinicie a API — a partir daí a entrada no app pré-preenche
+5. Reinicie a API: a partir daí a entrada no app pré-preenche
    transportadora e sugere a unidade pela etiqueta.
 
 ## Ordem sugerida do teste conjunto

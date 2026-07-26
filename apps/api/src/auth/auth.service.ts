@@ -14,7 +14,7 @@ import { SmsService } from "../sms/sms.service";
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_TENTATIVAS = 5;
 // Rate limit de ENVIO: protege contra SMS pumping (abuso vira conta de SMS).
-// Em memória por processo — TODO(produção multi-instância): mover para Redis.
+// Em memória por processo. TODO(produção multi-instância): mover para Redis.
 const JANELA_ENVIO_MS = 60 * 60 * 1000;
 const MAX_ENVIOS_POR_TELEFONE = 3;
 const MAX_ENVIOS_POR_IP = 10;
@@ -29,7 +29,7 @@ function hash(codigo: string) {
 }
 
 // Contas de demonstração para o review das lojas: a Apple exige credenciais
-// que funcionem sem o aparelho do dono, e nosso login é OTP por SMS — o
+// que funcionem sem o aparelho do dono, e nosso login é OTP por SMS: o
 // revisor não recebe o código. Estes telefones usam um código FIXO (vai nas
 // notas de review) e não disparam SMS.
 //
@@ -37,7 +37,7 @@ function hash(codigo: string) {
 // login de portaria E um de morador para ver o app inteiro.
 //
 // Por que não reaproveitar OTP_DEV_ECHO: aquele devolve o código de QUALQUER
-// telefone na resposta — em produção seria takeover de conta. Aqui o código
+// telefone na resposta: em produção seria takeover de conta. Aqui o código
 // nunca sai na resposta e o desvio vale só para os números listados.
 function contasDemo(): { telefones: Set<string>; codigo: string } | null {
   const telefones = new Set(
@@ -113,7 +113,7 @@ export class AuthService {
     });
 
     // Envio real quando o provedor está configurado (Twilio via env).
-    // Falha de envio vira erro visível — melhor que o usuário esperar um SMS
+    // Falha de envio vira erro visível: melhor que o usuário esperar um SMS
     // que nunca chega. A conta de demo não manda SMS: o número pode nem
     // existir, e o revisor já tem o código nas notas.
     if (this.sms.configurado && !ehDemo) {
@@ -127,7 +127,7 @@ export class AuthService {
         // não são verificados no trial do Twilio e o código sai no log.
         if (process.env.OTP_DEV_ECHO === "1") {
           console.warn(
-            `[dev] SMS falhou para ${telefone} (${(e as Error).message.slice(0, 80)}) — seguindo com echo`,
+            `[dev] SMS falhou para ${telefone} (${(e as Error).message.slice(0, 80)}), seguindo com echo`,
           );
         } else {
           throw new HttpException(
@@ -284,7 +284,7 @@ export class AuthService {
   async refresh(user: JwtPayload) {
     // Conta excluída (ou membro de equipe desativado) não renova. O token
     // continua assinado e válido por até 30 dias, então sem esta checagem o
-    // app de um SEGUNDO aparelho ficaria preso numa sessão fantasma —
+    // app de um SEGUNDO aparelho ficaria preso numa sessão fantasma,
     // mostrando telas vazias em vez de voltar para o login.
     const existe =
       user.tipo === "morador"

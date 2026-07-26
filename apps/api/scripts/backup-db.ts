@@ -9,10 +9,10 @@
  * conta e no mesmo fornecedor do banco. Um dump em outro provedor é o que
  * salva de conta suspensa, engano de operação ou apagão do fornecedor.
  *
- * ATENÇÃO — precisa de BACKUP_DATABASE_URL com a role `backup_ro`, criada por
+ * ATENÇÃO: precisa de BACKUP_DATABASE_URL com a role `backup_ro`, criada por
  * prisma/sql/backup-role.sql. Com a role normal da API o pg_dump FALHA: as
  * tabelas usam FORCE ROW LEVEL SECURITY e o dump roda com row_security=off.
- * Não dá para simplesmente dar BYPASSRLS à role da API — isso desliga o
+ * Não dá para simplesmente dar BYPASSRLS à role da API: isso desliga o
  * isolamento entre condomínios em todas as conexões dela. Ver o SQL.
  *
  * Uso manual (restaurar):
@@ -81,7 +81,7 @@ async function main() {
   try {
     await pgDump(databaseUrl, local);
     const { size } = await stat(local);
-    // Um dump vazio ou minúsculo é falha silenciosa — melhor gritar agora do
+    // Um dump vazio ou minúsculo é falha silenciosa: melhor gritar agora do
     // que descobrir na hora de restaurar.
     if (size < 1024) {
       throw new Error(`dump suspeito: apenas ${size} bytes`);
@@ -104,7 +104,7 @@ async function main() {
   }
 }
 
-/** Apaga backups mais velhos que a retenção — só depois de um envio bem-sucedido. */
+/** Apaga backups mais velhos que a retenção: só depois de um envio bem-sucedido. */
 async function limpar(s3: S3Client, bucket: string) {
   const limite = Date.now() - RETENCAO_DIAS * 24 * 60 * 60 * 1000;
   const lista = await s3.send(

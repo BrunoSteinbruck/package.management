@@ -94,7 +94,7 @@ export function AvisosScreen({ navigation }: Props) {
       >
         {vazio && !carregando && (
           <Text style={styles.vazio}>
-            Nada por aqui — você verá avisos da portaria e o status dos seus
+            Nada por aqui: você verá avisos da portaria e o status dos seus
             reportes.
           </Text>
         )}

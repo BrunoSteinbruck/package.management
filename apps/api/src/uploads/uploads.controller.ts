@@ -60,7 +60,7 @@ export class UploadsController {
       throw new ForbiddenException("Sessão inválida para upload");
     }
     if (!file) throw new BadRequestException("Arquivo ausente (campo 'file')");
-    // Nome SEMPRE derivado do mimetype validado — nunca do nome original,
+    // Nome SEMPRE derivado do mimetype validado: nunca do nome original,
     // que é controlado pelo cliente.
     const ext = extPorMime(file.mimetype);
     if (!ext) throw new BadRequestException("Apenas imagens JPEG/PNG/WebP");
@@ -71,7 +71,7 @@ export class UploadsController {
 
   /**
    * Serve a foto para os apps. Exige um FOTO-TOKEN dedicado (curto, preso à
-   * key, emitido pela API junto do recurso) — nunca o JWT de sessão, que não
+   * key, emitido pela API junto do recurso): nunca o JWT de sessão, que não
    * pode aparecer em URLs (logs, proxies, histórico).
    */
   @Get(":key")

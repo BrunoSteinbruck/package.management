@@ -16,7 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-/** Erro de rede (sem resposta do servidor) — candidato à fila offline. */
+/** Erro de rede (sem resposta do servidor): candidato à fila offline. */
 export class NetworkError extends Error {}
 
 export async function apiFetch<T>(
@@ -55,7 +55,7 @@ export async function apiFetch<T>(
  * Chamado ao abrir o app.
  *
  * Retorna `false` quando o servidor recusa a sessão (conta excluída em outro
- * aparelho, ou membro de equipe desativado pelo síndico) — aí o app volta
+ * aparelho, ou membro de equipe desativado pelo síndico): aí o app volta
  * para o login em vez de ficar preso numa sessão fantasma. Falha de REDE não
  * desloga ninguém: o token atual segue valendo offline.
  */

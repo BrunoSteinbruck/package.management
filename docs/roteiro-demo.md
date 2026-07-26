@@ -2,7 +2,7 @@
 
 Objetivo: em 4 minutos, o síndico enxergar que (1) a portaria ganha velocidade,
 (2) o morador para de encher o saco, (3) ele (síndico) ganha controle e prova.
-Falar de **tempo, erro e comprovante** — não de tecnologia.
+Falar de **tempo, erro e comprovante**: não de tecnologia.
 
 ## Preparação (antes da reunião)
 
@@ -14,7 +14,7 @@ Falar de **tempo, erro e comprovante** — não de tecnologia.
 - Seed de demonstração já rodado no Render (dados vivos: pacotes parados,
   histórico, adoção 70%).
 
-## A dor (30s) — abrir sem o app
+## A dor (30s): abrir sem o app
 
 "Hoje chegam ~300 encomendas por dia. O porteiro anota num caderno, o morador
 não sabe que chegou, e quando some um pacote ninguém tem prova de nada. É esse
@@ -35,7 +35,7 @@ o problema."
 - **Retirar na portaria** → aparece o **QR**. "Ele mostra isso na portaria."
 - (Se der, bipar o QR no app do porteiro → puxa os pendentes da unidade.)
 
-## 3. A prova (40s) — o argumento que fecha
+## 3. A prova (40s): o argumento que fecha
 
 - No app do morador, abrir uma encomenda **entregue** → mostrar a **timeline com
   as duas fotos** (entrada e saída) e os horários.
@@ -65,4 +65,4 @@ por [X] dias sem custo, pra você ver funcionando de verdade?"
   o operador. (Termos e política de privacidade formais entram antes do
   lançamento público.)
 - **Funciona sem internet na portaria?** Registra offline e sincroniza quando
-  volta — inclusive as fotos.
+  volta: inclusive as fotos.

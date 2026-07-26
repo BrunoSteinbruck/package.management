@@ -11,7 +11,7 @@ import { join } from "node:path";
 /**
  * Armazenamento das fotos (comprovante de entrada/retirada e de ocorrência).
  *
- * Em produção precisa ser objeto remoto: o disco do Render é EFÊMERO — cada
+ * Em produção precisa ser objeto remoto: o disco do Render é EFÊMERO, cada
  * deploy recria a máquina e levaria junto todo o comprovante já registrado,
  * que é a promessa central do produto.
  *
@@ -22,7 +22,7 @@ import { join } from "node:path";
  * As fotos continuam sendo servidas PELA API (`GET /uploads/:key?t=token`),
  * não por URL pública do bucket: o foto-token curto e preso à key já é o
  * modelo auditado, e o bucket fica totalmente privado. Trocar por URL
- * assinada direto do R2 é otimização de banda para depois — hoje o volume
+ * assinada direto do R2 é otimização de banda para depois: hoje o volume
  * (algumas centenas de fotos/dia) não justifica mexer no contrato do app.
  */
 @Injectable()
@@ -36,7 +36,7 @@ export class StorageService {
     if (!this.s3) {
       mkdirSync(this.dir, { recursive: true });
       this.log.warn(
-        "Fotos em disco local. Em produção configure R2_* — o disco do Render é efêmero e as fotos somem a cada deploy.",
+        "Fotos em disco local. Em produção configure R2_*: o disco do Render é efêmero e as fotos somem a cada deploy.",
       );
     }
   }

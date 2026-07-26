@@ -81,7 +81,7 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
       if (res.perfil.tipo === "morador") await registrarPush();
       props.aoEntrar(res.perfil);
     } catch (e) {
-      // Telefone desconhecido: passo 3 — vincular por convite.
+      // Telefone desconhecido: passo 3, vincular por convite.
       if (!comConvite && e instanceof ApiError && e.status === 404) {
         setFase(2);
         return;
@@ -155,7 +155,7 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
                 placeholderTextColor={theme.colors.textFaint}
               />
             </View>
-            <Text style={styles.hint}>Sem senha e sem cadastro longo — só o número.</Text>
+            <Text style={styles.hint}>Sem senha e sem cadastro longo, só o número.</Text>
             <BotaoCta
               titulo="Receber código por SMS"
               altura={64}
@@ -216,7 +216,7 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
             <Text style={styles.tituloConvite}>Vincule-se à sua unidade</Text>
             <Text style={styles.subConvite}>
               Seu telefone ainda não está no cadastro. Use o código de convite
-              de um morador da sua unidade — ou peça um à administração.
+              de um morador da sua unidade: ou peça um à administração.
             </Text>
             <Rotulo>Seu nome</Rotulo>
             <TextInput

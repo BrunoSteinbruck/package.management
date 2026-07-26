@@ -1,6 +1,6 @@
 /**
  * Bootstrap de um condomínio novo em produção (banco recém-migrado):
- * cria o condomínio e o primeiro síndico — a partir daí tudo se faz
+ * cria o condomínio e o primeiro síndico: a partir daí tudo se faz
  * pelo painel (equipe, unidades, import de moradores).
  *
  * Uso:
@@ -35,7 +35,7 @@ async function main() {
     },
   });
   console.log(`Condomínio: ${condominio.nome} (${condominio.id})`);
-  console.log(`Síndico: ${sindico.nome} · ${sindico.telefone} — já pode logar no painel.`);
+  console.log(`Síndico: ${sindico.nome} · ${sindico.telefone}, já pode logar no painel.`);
   await prisma.$disconnect();
 }
 

@@ -1,5 +1,5 @@
 /**
- * Extensão SEMPRE derivada do mimetype declarado — nunca do nome original,
+ * Extensão SEMPRE derivada do mimetype declarado: nunca do nome original,
  * que é controlado pelo cliente (path traversal / extensão arbitrária).
  */
 const MIME_EXT: Record<string, string> = {

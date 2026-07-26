@@ -1,6 +1,6 @@
 # Termos de Uso
 
-> **RASCUNHO — precisa de revisão jurídica antes de publicar.**
+> **RASCUNHO: precisa de revisão jurídica antes de publicar.**
 > Campos entre `[[colchetes duplos]]` dependem de decisões pendentes.
 > Escrito a partir do funcionamento real do sistema, conferido em 2026-07-25.
 
@@ -21,7 +21,7 @@ app, você concorda com estes termos.
 - **Equipe da portaria e administração**, cadastrada pelo síndico.
 
 O acesso é pessoal e intransferível. O login usa um código enviado por SMS ao
-seu número — mantenha seu telefone seguro, porque quem tem acesso a ele tem
+seu número: mantenha seu telefone seguro, porque quem tem acesso a ele tem
 acesso à sua conta.
 
 ## 3. Como se entra e como se sai
@@ -36,7 +36,7 @@ acesso à sua conta.
   inicial). O condomínio também pode remover um vínculo quando a pessoa deixa
   de morar na unidade.
 
-## 4. O que o aplicativo faz — e o que ele não garante
+## 4. O que o aplicativo faz: e o que ele não garante
 
 **Faz:** registra a chegada de encomendas na portaria, avisa os moradores da
 unidade, registra a retirada com foto e permite avisos e ocorrências entre
@@ -50,7 +50,7 @@ moradores e administração.
 - **Aviso de encomenda é feito por notificação no aplicativo.** Quem não tem o
   app instalado não recebe aviso de encomenda. Notificação depende de
   internet, das configurações do seu aparelho e dos serviços da Apple e do
-  Google — pode atrasar ou falhar por motivos fora do nosso controle.
+  Google: pode atrasar ou falhar por motivos fora do nosso controle.
 - **A leitura automática da etiqueta é um auxílio**, não uma garantia. A
   conferência é sempre da portaria.
 - O serviço é fornecido "no estado em que se encontra". Não garantimos
@@ -62,7 +62,7 @@ moradores e administração.
 - Não usar o app para assediar, ofender ou difamar ninguém. As ocorrências e
   avisos são lidos por pessoas reais da administração.
 - Não fotografar pessoas sem necessidade. As fotos existem para registrar
-  pacotes, etiquetas e problemas — não pessoas.
+  pacotes, etiquetas e problemas: não pessoas.
 - Não tentar acessar dados de outra unidade ou de outro condomínio, nem
   interferir no funcionamento do sistema.
 - Há limite de [[10]] ocorrências por dia por morador, para evitar uso abusivo.
@@ -79,7 +79,7 @@ Você é responsável pelo que envia e declara ter o direito de enviá-lo.
 
 ## 7. Preço
 
-Para moradores e equipe da portaria, o uso do aplicativo é **gratuito** — quem
+Para moradores e equipe da portaria, o uso do aplicativo é **gratuito**: quem
 paga pelo serviço é o condomínio, conforme contrato próprio, que não faz parte
 destes termos.
 
@@ -87,7 +87,7 @@ destes termos.
 
 Você pode parar de usar e excluir sua conta quando quiser. Podemos suspender
 ou encerrar o acesso em caso de violação destes termos, de encerramento do
-contrato com o condomínio, ou de descontinuidade do serviço — neste último
+contrato com o condomínio, ou de descontinuidade do serviço: neste último
 caso, com aviso prévio de [[PRAZO]].
 
 ## 9. Privacidade
@@ -116,4 +116,4 @@ do consumidor de acionar o foro do seu domicílio.
 
 ## 13. Contato
 
-[[E-MAIL DE CONTATO]] — **[[RAZÃO SOCIAL]]**, CNPJ [[CNPJ]], [[ENDEREÇO]].
+[[E-MAIL DE CONTATO]]: **[[RAZÃO SOCIAL]]**, CNPJ [[CNPJ]], [[ENDEREÇO]].

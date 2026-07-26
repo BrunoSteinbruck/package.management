@@ -5,7 +5,7 @@
 
 databases:
   - name: guarita-db
-    plan: free # expira em 30 dias — trocar para 'basic-256mb' antes do piloto real
+    plan: free # expira em 30 dias, trocar para 'basic-256mb' antes do piloto real
     databaseName: guarita
     user: guarita
 
@@ -44,9 +44,9 @@ services:
   #
   # ANTES DE ATIVAR, dois passos manuais:
   #  1. Criar a role de backup rodando prisma/sql/backup-role.sql (precisa de
-  #     superusuário — use o PSQL Command no painel do banco). Sem ela o
+  #     superusuário: use o PSQL Command no painel do banco). Sem ela o
   #     pg_dump FALHA: as tabelas têm FORCE RLS. NÃO resolva dando BYPASSRLS
-  #     à role da API — isso derruba o isolamento entre condomínios.
+  #     à role da API: isso derruba o isolamento entre condomínios.
   #  2. Preencher BACKUP_DATABASE_URL no dashboard com a URL da role backup_ro.
   #
   # O `pg_dump` precisa existir na imagem e ser >= à versão do servidor. Se a

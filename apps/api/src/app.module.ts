@@ -23,7 +23,7 @@ class HealthController {
 @Module({
   imports: [
     // Sem SENTRY_DSN o SDK não foi inicializado (ver instrument.ts) e este
-    // módulo/filtro ficam inertes — não custa nada deixá-los sempre montados.
+    // módulo/filtro ficam inertes: não custa nada deixá-los sempre montados.
     SentryModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,

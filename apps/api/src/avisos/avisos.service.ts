@@ -18,7 +18,7 @@ import { PrismaService } from "../prisma/prisma.service";
 const PLACA_NO_TEXTO = /[A-Z]{3}\d[A-Z0-9]\d{2}/;
 
 // Rate limit de reportes: evita inundar a fila do síndico. Contagem no banco
-// (não em memória) — sobrevive a restart e vale em multi-instância.
+// (não em memória): sobrevive a restart e vale em multi-instância.
 const MAX_OCORRENCIAS_POR_DIA = 10;
 
 @Injectable()
@@ -48,7 +48,7 @@ export class AvisosService {
     return cid;
   }
 
-  /** Foto-token dedicado (1h, preso à key) — o JWT de sessão nunca vai em URL. */
+  /** Foto-token dedicado (1h, preso à key): o JWT de sessão nunca vai em URL. */
   private async fotoAssinada(key: string | null) {
     if (!key) return null;
     const token = await this.jwt.signAsync({ tipo: "foto", key }, { expiresIn: "1h" });
@@ -115,7 +115,7 @@ export class AvisosService {
     });
   }
 
-  /** Avisos direcionados (Via 1) — para equipe/painel. */
+  /** Avisos direcionados (Via 1): para equipe/painel. */
   listarAvisosEquipe(user: JwtPayload, status?: string) {
     const cid = this.tenantEquipe(user);
     return this.prisma.withTenant(cid, (tx) =>
@@ -184,7 +184,7 @@ export class AvisosService {
         status: a.status,
         criadoEm: a.criadoEm,
         unidade: { bloco: a.unidade.bloco, identificacao: a.unidade.identificacao },
-        autor: a.criadoPorMorador?.nome ?? "—",
+        autor: a.criadoPorMorador?.nome ?? "-",
         foto: await this.fotoAssinada(a.fotoKey),
       })),
     );

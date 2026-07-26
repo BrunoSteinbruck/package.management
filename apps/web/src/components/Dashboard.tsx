@@ -92,7 +92,7 @@ type Visao =
   | "ocorrencias";
 
 function rotulo(u?: { bloco: string | null; identificacao: string }) {
-  if (!u) return "—";
+  if (!u) return "-";
   return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
 }
 
@@ -264,18 +264,18 @@ function VisaoGeral({
 
       <div className="metricas">
         <div className="metrica">
-          <div className="valor">{resumo?.naPortaria ?? "—"}</div>
+          <div className="valor">{resumo?.naPortaria ?? "-"}</div>
           <div className="rotulo">na portaria agora</div>
           {(resumo?.paradas3Dias ?? 0) > 0 && (
             <div className="sub ambar">{resumo!.paradas3Dias} há 3+ dias</div>
           )}
         </div>
         <div className="metrica">
-          <div className="valor">{resumo?.retiradasHoje ?? "—"}</div>
+          <div className="valor">{resumo?.retiradasHoje ?? "-"}</div>
           <div className="rotulo">retiradas hoje</div>
         </div>
         <div className="metrica">
-          <div className="valor verde">{adocao ? `${adocao.percentual}%` : "—"}</div>
+          <div className="valor verde">{adocao ? `${adocao.percentual}%` : "-"}</div>
           <div className="rotulo">adoção do app</div>
           <div className="sub">
             {adocao?.unidadesComApp ?? 0} de {adocao?.totalUnidades ?? 0} unidades
@@ -298,7 +298,7 @@ function VisaoGeral({
 
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 16 }}>
         <section className="card">
-          <h2>Entradas x retiradas — 14 dias</h2>
+          <h2>Entradas x retiradas: 14 dias</h2>
           <div className="grafico-pareado">
             {serie.map((d) => (
               <div className="dia" key={d.dia} title={`${dataCurta(d.dia)}: ${d.entradas} entradas, ${d.retiradas} retiradas`}>
@@ -520,9 +520,9 @@ function PacotesView() {
               return (
                 <tr key={p.id}>
                   <td className="unidade">{rotulo(p.unidade)}</td>
-                  <td>{p.transportadora ?? "—"}</td>
-                  <td className="mono">{p.codigoRastreio ?? "—"}</td>
-                  <td>{p.localArmazenamento ?? "—"}</td>
+                  <td>{p.transportadora ?? "-"}</td>
+                  <td className="mono">{p.codigoRastreio ?? "-"}</td>
+                  <td>{p.localArmazenamento ?? "-"}</td>
                   <td>{new Date(p.recebidoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
                   <td style={atrasado ? { color: "var(--alerta)", fontWeight: 600 } : undefined}>
                     {dias === 0 ? "hoje" : `${dias} dia${dias > 1 ? "s" : ""}`}
@@ -592,16 +592,16 @@ function RelatoriosView() {
       <div className="metricas">
         <div className="metrica">
           <div className="valor">
-            {dados ? `${dados.tempoMedioDias.toLocaleString("pt-BR")} dia${dados.tempoMedioDias === 1 ? "" : "s"}` : "—"}
+            {dados ? `${dados.tempoMedioDias.toLocaleString("pt-BR")} dia${dados.tempoMedioDias === 1 ? "" : "s"}` : "-"}
           </div>
           <div className="rotulo">tempo médio até retirada</div>
         </div>
         <div className="metrica">
-          <div className="valor">{dados?.volume.toLocaleString("pt-BR") ?? "—"}</div>
+          <div className="valor">{dados?.volume.toLocaleString("pt-BR") ?? "-"}</div>
           <div className="rotulo">encomendas no período</div>
         </div>
         <div className="metrica">
-          <div className="valor verde">{dados ? `${dados.notificacoesPct}%` : "—"}</div>
+          <div className="valor verde">{dados ? `${dados.notificacoesPct}%` : "-"}</div>
           <div className="rotulo">notificações entregues</div>
           <div className="sub">push · WhatsApp fallback em breve</div>
         </div>
@@ -824,7 +824,7 @@ function OcorrenciasView() {
     <>
       <h1>Ocorrências</h1>
       <p className="aviso">
-        Problemas do condomínio reportados pelos moradores. Atualize o status —
+        Problemas do condomínio reportados pelos moradores. Atualize o status,
         o morador é avisado a cada mudança.
       </p>
 
@@ -877,7 +877,7 @@ function OcorrenciasView() {
                         }}
                       />
                     ) : (
-                      <span className="aviso">—</span>
+                      <span className="aviso">-</span>
                     )}
                   </td>
                   <td>
@@ -1030,7 +1030,7 @@ function VagasSection({ aoImportar }: { aoImportar: () => void }) {
     <section className="card">
       <h2>Vagas de garagem</h2>
       <p className="aviso" style={{ marginBottom: 10 }}>
-        Uma linha por vaga: vaga; bloco; unidade — separados por ponto e vírgula,
+        Uma linha por vaga: vaga; bloco; unidade, separados por ponto e vírgula,
         vírgula ou tab. A vaga liga a portaria ao morador (ex.: &quot;carro na vaga 42
         com luz acesa&quot;).
       </p>

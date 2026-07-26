@@ -14,7 +14,7 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Registra o Expo push token na API. Silencioso em caso de falha —
+ * Registra o Expo push token na API. Silencioso em caso de falha,
  * push remoto não funciona no Expo Go (Android); exige development build.
  */
 export async function registrarPush(): Promise<void> {

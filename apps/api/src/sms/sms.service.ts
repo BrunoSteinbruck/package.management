@@ -13,7 +13,7 @@ class StubSmsProvider implements SmsProvider {
 }
 
 /**
- * Twilio via REST (sem SDK). Conta trial envia só para números verificados —
+ * Twilio via REST (sem SDK). Conta trial envia só para números verificados,
  * suficiente para o piloto começar; produção remove essa limitação.
  */
 class TwilioProvider implements SmsProvider {

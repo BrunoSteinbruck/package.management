@@ -266,7 +266,7 @@ model OtpChallenge {
   @@map("otp_challenges")
 }
 
-// Vaga de garagem ligada a uma unidade — resolve o dono na Via 1.
+// Vaga de garagem ligada a uma unidade: resolve o dono na Via 1.
 model Vaga {
   id            String @id @default(uuid()) @db.Uuid
   condominioId  String @map("condominio_id") @db.Uuid
@@ -281,7 +281,7 @@ model Vaga {
   @@map("vagas")
 }
 
-// Veículo do morador (placa normalizada UPPER sem hífen) — resolve o dono
+// Veículo do morador (placa normalizada UPPER sem hífen): resolve o dono
 // por OCR de placa na Via 1.
 model Veiculo {
   id           String  @id @default(uuid()) @db.Uuid

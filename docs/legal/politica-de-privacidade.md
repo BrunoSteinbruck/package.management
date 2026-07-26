@@ -1,10 +1,10 @@
 # Política de Privacidade
 
-> **RASCUNHO — precisa de revisão jurídica antes de publicar.**
+> **RASCUNHO: precisa de revisão jurídica antes de publicar.**
 > Os campos entre `[[colchetes duplos]]` dependem de decisões pendentes
 > (nome do produto, razão social, CNPJ, domínio, e-mail do encarregado).
 > Escrito a partir do que o sistema realmente faz, conferido no código em
-> 2026-07-25 — se o produto mudar, este texto muda junto.
+> 2026-07-25: se o produto mudar, este texto muda junto.
 
 **Última atualização:** [[DATA DE PUBLICAÇÃO]]
 
@@ -50,7 +50,7 @@ de QR code.
 
 **Não há senha.** O acesso é por código de 6 dígitos enviado por SMS.
 
-## 3. Por que podemos tratar esses dados (bases legais — LGPD art. 7º)
+## 3. Por que podemos tratar esses dados (bases legais: LGPD art. 7º)
 
 - **Execução de contrato / legítimo interesse do condomínio**: registrar
   encomendas, avisar o morador e comprovar a entrega. É a razão de existir do
@@ -75,9 +75,9 @@ serviço funcionar:
 
 | Fornecedor | Papel | Onde |
 |---|---|---|
-| [[PROVEDOR DE SMS — hoje Twilio]] | Envio do código de acesso e do convite | Estados Unidos |
+| [[PROVEDOR DE SMS: hoje Twilio]] | Envio do código de acesso e do convite | Estados Unidos |
 | Apple e Google | Entrega das notificações no aparelho | Estados Unidos |
-| [[PROVEDOR DE HOSPEDAGEM — hoje Render]] | Servidor e banco de dados | [[REGIÃO — confirmar no painel]] |
+| [[PROVEDOR DE HOSPEDAGEM: hoje Render]] | Servidor e banco de dados | [[REGIÃO, confirmar no painel]] |
 | Cloudflare R2 | Armazenamento das fotos | [[REGIÃO]] |
 
 **Transferência internacional:** parte da infraestrutura fica fora do Brasil.
@@ -93,7 +93,7 @@ serviço externo de reconhecimento para essa finalidade.
 
 - **Cadastro (nome, telefone, vínculo com a unidade):** enquanto você estiver
   vinculado a uma unidade. Se excluir a conta, é apagado (seção 7).
-- **Registros de encomenda e as fotos de comprovação:** [[PRAZO — sugerido 24
+- **Registros de encomenda e as fotos de comprovação:** [[PRAZO, sugerido 24
   meses, a confirmar com o condomínio]], por serem o comprovante de entrega do
   condomínio. Esses registros pertencem ao condomínio e sobrevivem à exclusão
   da sua conta, mas deixam de estar ligados ao seu nome.
@@ -105,7 +105,7 @@ serviço externo de reconhecimento para essa finalidade.
 
 - Todo o tráfego é criptografado (HTTPS/TLS).
 - Cada condomínio fica isolado no banco de dados por regra aplicada no próprio
-  banco (*row-level security*) — um condomínio não alcança dados de outro.
+  banco (*row-level security*): um condomínio não alcança dados de outro.
 - As fotos ficam em armazenamento privado; nenhuma tem link público. Cada
   exibição usa uma autorização temporária, presa àquela foto específica.
 - O código de acesso é guardado apenas em forma cifrada, expira em 5 minutos e
@@ -120,7 +120,7 @@ A LGPD (art. 18) garante a você: confirmação e acesso, correção, anonimiza�
 ou eliminação, portabilidade, informação sobre compartilhamento e revogação
 do consentimento.
 
-**Excluir sua conta — direto no app, sem falar com ninguém:**
+**Excluir sua conta: direto no app, sem falar com ninguém:**
 
 - **Morador:** *Minha unidade* → **Excluir minha conta**
 - **Equipe da portaria:** toque no seu avatar na tela inicial → **Excluir
@@ -129,14 +129,14 @@ do consentimento.
 O que acontece: seu cadastro, seus vínculos e o registro do seu aparelho são
 apagados; ocorrências que você tenha reportado continuam com a administração,
 mas sem o seu nome. O histórico de encomendas da unidade permanece com o
-condomínio, porque é registro dele — e ele deixa de apontar para você.
+condomínio, porque é registro dele: e ele deixa de apontar para você.
 
 Para quem faz parte da equipe da portaria, os registros de recebimento e
 entrega que você fez continuam existindo (são o comprovante das entregas),
 mas seu nome e telefone são removidos deles e o acesso é encerrado.
 
 Também é possível excluir a conta por [[URL DA PÁGINA WEB DE EXCLUSÃO]] ou
-escrevendo para [[E-MAIL DE CONTATO]] — o Google Play exige um caminho fora
+escrevendo para [[E-MAIL DE CONTATO]]: o Google Play exige um caminho fora
 do app.
 
 **Outros pedidos:** [[E-MAIL DO ENCARREGADO/DPO]]. Respondemos em até 15 dias.
@@ -156,5 +156,5 @@ mudança for relevante. A data no topo indica a versão vigente.
 
 ## 10. Contato
 
-**Encarregado pelo tratamento de dados (DPO):** [[NOME]] — [[E-MAIL]]
-**[[RAZÃO SOCIAL]]** — CNPJ [[CNPJ]] — [[ENDEREÇO]]
+**Encarregado pelo tratamento de dados (DPO):** [[NOME]], [[E-MAIL]]
+**[[RAZÃO SOCIAL]]**: CNPJ [[CNPJ]], [[ENDEREÇO]]

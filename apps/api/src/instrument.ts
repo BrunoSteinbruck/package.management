@@ -1,11 +1,11 @@
 /**
- * Sentry — precisa ser importado ANTES de qualquer outro módulo (é o que
+ * Sentry: precisa ser importado ANTES de qualquer outro módulo (é o que
  * permite instrumentar as bibliotecas na carga). Ver o import no topo do
  * main.ts.
  *
  * Sem SENTRY_DSN nada é inicializado: em dev e em qualquer deploy sem a
  * variável, o arquivo é inerte. Não confiamos no "init sem dsn é no-op"
- * porque isso não está documentado — melhor não chamar.
+ * porque isso não está documentado: melhor não chamar.
  */
 import * as Sentry from "@sentry/nestjs";
 
@@ -24,19 +24,19 @@ if (dsn) {
     // Lambdas: o 2º parâmetro do callback do Sentry é o `hint`, não a
     // profundidade da varredura.
     beforeSend: (evento) => limparDadosSensiveis(evento),
-    // Breadcrumb de HTTP guarda URL — passa pelo mesmo filtro.
+    // Breadcrumb de HTTP guarda URL: passa pelo mesmo filtro.
     beforeBreadcrumb: (breadcrumb) => limparDadosSensiveis(breadcrumb),
   });
 }
 
 /**
  * A URL de foto carrega o foto-token na query (`/uploads/<key>?t=<jwt>`).
- * Ele é curto e preso à key, mas ainda é credencial — não pode ficar
+ * Ele é curto e preso à key, mas ainda é credencial: não pode ficar
  * registrado num painel de erros.
  *
  * A varredura é recursiva de propósito: a mesma URL aparece em `request.url`,
  * em `contexts.request`, nos breadcrumbs de HTTP e em mensagens de erro.
- * Filtrar só o campo "oficial" deixa passar os outros — foi o que um teste
+ * Filtrar só o campo "oficial" deixa passar os outros: foi o que um teste
  * contra um ingest falso mostrou: `request` saía limpo e `contexts.request`
  * ia com o token inteiro.
  */

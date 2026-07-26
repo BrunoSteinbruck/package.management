@@ -4,7 +4,7 @@ export interface OcrProvider {
 
 /**
  * Provider de desenvolvimento: arquivos text/* são lidos como o "texto da
- * etiqueta" — permite testar o parser e o match sem OCR real nem credencial.
+ * etiqueta": permite testar o parser e o match sem OCR real nem credencial.
  * Imagens retornam vazio (sem sugestão, fluxo manual segue normal).
  */
 export class StubOcrProvider implements OcrProvider {
