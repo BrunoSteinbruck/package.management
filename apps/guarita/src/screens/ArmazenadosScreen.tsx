@@ -8,22 +8,35 @@ import {
   TextInput,
   View,
 } from "react-native";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch } from "../api/client";
 import {
   diasNaPortaria,
   rotuloUnidade,
   type ListaPacotes,
   type PacoteArmazenado,
+  type Unidade,
 } from "../api/types";
 import { HeaderTela, ItemLista, Selo, Tela, Vazio } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
-import type { PortariaStackParamList } from "../navigation";
 
-type Props = NativeStackScreenProps<PortariaStackParamList, "Armazenados">;
+/**
+ * A tela recebe as ações em vez de navegar sozinha, então não precisa saber
+ * em que pilha está nem o que é um perfil. Sem `aoTocarPacote` e `aoBiparQr`
+ * ela vira somente leitura, que é como o síndico a usa: ele acompanha o que
+ * está na portaria, mas não movimenta encomenda.
+ */
+interface Props {
+  navigation: { goBack: () => void };
+  aoTocarPacote?: (unidade: Unidade) => void;
+  aoBiparQr?: () => void;
+}
 
-export function ArmazenadosScreen({ navigation }: Props) {
+export function ArmazenadosScreen({
+  navigation,
+  aoTocarPacote,
+  aoBiparQr,
+}: Props) {
   const [busca, setBusca] = useState("");
   const [itens, setItens] = useState<PacoteArmazenado[]>([]);
   const [total, setTotal] = useState(0);
@@ -77,13 +90,12 @@ export function ArmazenadosScreen({ navigation }: Props) {
               onChangeText={setBusca}
             />
           </View>
-          <Pressable
-            style={styles.botaoQr}
-            onPress={() => navigation.navigate("QrScan")}
-          >
-            <Icone nome="qr" tamanho={20} traco={2} />
-            <Text style={styles.botaoQrTexto}>Bipar QR</Text>
-          </Pressable>
+          {aoBiparQr && (
+            <Pressable style={styles.botaoQr} onPress={aoBiparQr}>
+              <Icone nome="qr" tamanho={20} traco={2} />
+              <Text style={styles.botaoQrTexto}>Bipar QR</Text>
+            </Pressable>
+          )}
         </View>
 
         <FlatList
@@ -130,9 +142,9 @@ export function ArmazenadosScreen({ navigation }: Props) {
                     texto={dias === 0 ? "hoje" : `${dias} dia${dias > 1 ? "s" : ""}`}
                   />
                 }
-                chevron
-                onPress={() =>
-                  navigation.navigate("Retirada", { unidadeInicial: item.unidade })
+                chevron={!!aoTocarPacote}
+                onPress={
+                  aoTocarPacote ? () => aoTocarPacote(item.unidade) : undefined
                 }
               />
             );

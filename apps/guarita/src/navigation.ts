@@ -17,17 +17,17 @@ export type PortariaStackParamList = {
 /**
  * Pilha do síndico.
  *
- * Inclui as rotas de retirada da portaria porque síndico de condomínio pequeno
- * entrega encomenda de vez em quando, e ele já tinha essas telas quando caía
- * na pilha do porteiro: tirá-las seria regressão.
+ * O síndico não movimenta encomenda: nem registra entrada nem faz entrega.
+ * Ele acompanha, então fica só com as telas de leitura (`Armazenados` e
+ * `RetiradasHoje`) mais o que é dele, gestão e aviso.
  *
- * Registrar entrada de pacote fica de fora: é trabalho de quem está na
- * portaria recebendo o entregador, não do síndico. Sai do tipo, e não só do
- * manifesto, para que declarar essa rota para o síndico não compile.
+ * As rotas de movimentação saem do tipo, e não só do manifesto, para que
+ * declará-las para o síndico pare de compilar em vez de depender de
+ * disciplina.
  */
 export type SindicoStackParamList = Omit<
   PortariaStackParamList,
-  "EntradaCamera" | "EntradaConfirm"
+  "EntradaCamera" | "EntradaConfirm" | "Retirada" | "QrScan" | "SaidaCamera"
 > & {
   Ocorrencias: undefined;
   OcorrenciaDetalhe: { avisoId: string };

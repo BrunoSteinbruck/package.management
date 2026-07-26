@@ -53,7 +53,17 @@ function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
             <PortariaHomeScreen {...props} perfil={perfil} aoSair={aoSair} />
           )}
         </Portaria.Screen>
-        <Portaria.Screen name="Armazenados" component={ArmazenadosScreen} />
+        <Portaria.Screen name="Armazenados">
+          {(props) => (
+            <ArmazenadosScreen
+              {...props}
+              aoTocarPacote={(unidade) =>
+                props.navigation.navigate("Retirada", { unidadeInicial: unidade })
+              }
+              aoBiparQr={() => props.navigation.navigate("QrScan")}
+            />
+          )}
+        </Portaria.Screen>
         <Portaria.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
         <Portaria.Screen name="EntradaCamera" component={EntradaCameraScreen} />
         <Portaria.Screen name="EntradaConfirm" component={EntradaConfirmScreen} />
@@ -83,13 +93,10 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
           component={OcorrenciaDetalheScreen}
         />
         <Sindico.Screen name="Aprovacoes" component={AprovacoesScreen} />
-        {/* Portaria: só o lado de entrega. Registrar entrada de pacote é de
-            quem recebe o entregador, não do síndico. */}
+        {/* Portaria em modo leitura: sem as ações, a lista de encomendas não
+            leva a lugar nenhum. O síndico acompanha, não movimenta. */}
         <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
         <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
-        <Sindico.Screen name="Retirada" component={RetiradaScreen} />
-        <Sindico.Screen name="QrScan" component={QrScanScreen} />
-        <Sindico.Screen name="SaidaCamera" component={SaidaCameraScreen} />
         <Sindico.Screen name="AvisarCamera" component={AvisarCameraScreen} />
         <Sindico.Screen name="AvisarConfirm" component={AvisarConfirmScreen} />
       </Sindico.Navigator>
