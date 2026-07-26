@@ -28,6 +28,7 @@
     "typescript": "~5.9.3"
   },
   "scripts": {
+    "prestart": "pnpm --filter @pacotes/shared build",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",

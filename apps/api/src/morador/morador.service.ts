@@ -258,7 +258,13 @@ export class MoradorService {
     for (const vinculo of vinculos) {
       const notifs = await this.prisma.withTenant(vinculo.condominioId, (tx) =>
         tx.notificacao.findMany({
-          where: { pacote: { unidadeId: vinculo.unidadeId } },
+          // Só os tipos que o cliente sabe renderizar. LEMBRETE também tem
+          // pacoteId e, sem este filtro, vazava para o app como "Encomenda
+          // retirada" de um pacote que ainda está na portaria.
+          where: {
+            tipo: { in: ["ENTRADA", "RETIRADA"] },
+            pacote: { unidadeId: vinculo.unidadeId },
+          },
           include: { pacote: { select: { transportadora: true } } },
           orderBy: { criadoEm: "desc" },
           take: 30,

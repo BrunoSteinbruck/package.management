@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { JwtPayload } from "@pacotes/shared";
+import { perfilDe, type JwtPayload } from "@pacotes/shared";
 import { apiFetch, API_URL, limparSessao } from "@/lib/api";
 import { Importar } from "./Importar";
 
@@ -125,7 +125,7 @@ export function Dashboard({
   perfil: JwtPayload;
   aoSair: () => void;
 }) {
-  const gestor = perfil.papel === "SINDICO" || perfil.papel === "ADMIN";
+  const gestor = perfilDe(perfil) === "sindico";
   const [visao, setVisao] = useState<Visao>("visao-geral");
   const [pendentesAprovacao, setPendentesAprovacao] = useState(0);
   const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState(0);
