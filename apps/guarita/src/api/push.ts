@@ -14,8 +14,11 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Registra o Expo push token na API. Silencioso em caso de falha,
- * push remoto não funciona no Expo Go (Android); exige development build.
+ * Registra o Expo push token na API, para morador ou equipe: o servidor decide
+ * o dono pelo tipo da sessão. Silencioso em caso de falha, push remoto não
+ * funciona no Expo Go (Android); exige development build.
+ *
+ * A rota vive sob /morador por herança, de quando só morador tinha device.
  */
 export async function registrarPush(): Promise<void> {
   try {

@@ -75,10 +75,11 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
           },
         },
       );
-      // App único: o tipo devolvido pelo servidor decide a experiência
-      // (equipe da portaria ou morador). Push só interessa ao morador.
+      // App único: o perfil devolvido pelo servidor decide a experiência. Push
+      // interessa aos dois lados, porque a administração também é destinatária
+      // (uma ocorrência nova precisa chegar ao síndico).
       await salvarSessao(res);
-      if (res.perfil.tipo === "morador") await registrarPush();
+      await registrarPush();
       props.aoEntrar(res.perfil);
     } catch (e) {
       // Telefone desconhecido: passo 3, vincular por convite.

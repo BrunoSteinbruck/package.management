@@ -132,6 +132,9 @@ export class ContaService {
             where: { aprovadoPorId: usuarioId },
             data: { aprovadoPorId: null },
           });
+          // A saída da equipe é soft delete, então o device sobreviveria e o
+          // aparelho continuaria recebendo push de quem já saiu.
+          await tx.device.deleteMany({ where: { usuarioId } });
           await tx.usuario.update({
             where: { id: usuarioId },
             data: {

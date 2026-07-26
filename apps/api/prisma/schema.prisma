@@ -165,6 +165,7 @@ model Usuario {
   retiradasEntregues Retirada[] @relation("entreguePor")
   vinculosAprovados  Vinculo[]
   avisosCriados      Aviso[]    @relation("avisoCriadoPorUsuario")
+  devices            Device[]
 
   @@index([condominioId])
   @@map("usuarios")
@@ -244,14 +245,20 @@ model Convite {
 }
 
 model Device {
-  id         String     @id @default(uuid()) @db.Uuid
-  moradorId  String     @map("morador_id") @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
+  // Exatamente um dono: morador ou membro da equipe. O CHECK que garante isso
+  // vive na migração, porque o Prisma não modela a restrição. Enquanto o dono
+  // só podia ser morador, não havia caminho físico para notificar um síndico.
+  moradorId  String?    @map("morador_id") @db.Uuid
+  usuarioId  String?    @map("usuario_id") @db.Uuid
   pushToken  String     @unique @map("push_token")
   plataforma Plataforma
   ultimoUso  DateTime   @default(now()) @map("ultimo_uso")
 
-  morador Morador @relation(fields: [moradorId], references: [id])
+  morador Morador? @relation(fields: [moradorId], references: [id])
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
+  @@index([usuarioId])
   @@map("devices")
 }
 

@@ -126,16 +126,41 @@ export class MoradorService {
     throw new ForbiddenException("Veículo não encontrado");
   }
 
+  /**
+   * Registra o push token da sessão atual. Serve morador e equipe: o dono do
+   * device sai do tipo da sessão, e o upsert zera o outro dono porque o mesmo
+   * aparelho pode trocar de conta entre logins (o CHECK exige exatamente um).
+   *
+   * A rota vive sob /morador por herança, de quando só morador tinha device.
+   *
+   * Token de conta já excluída faria a FK estourar em 500. O app chama isto ao
+   * abrir, antes de qualquer tela: devolver 401 faz ele cair no login.
+   */
   async registrarDevice(user: JwtPayload, dto: RegistrarDeviceDto) {
+    if (user.tipo === "usuario") {
+      const ativo = await this.prisma.usuario.count({
+        where: { id: user.sub, ativo: true },
+      });
+      if (!ativo) throw new UnauthorizedException("Conta não encontrada");
+      await this.prisma.device.upsert({
+        where: { pushToken: dto.pushToken },
+        create: {
+          usuarioId: user.sub,
+          pushToken: dto.pushToken,
+          plataforma: dto.plataforma,
+        },
+        update: { usuarioId: user.sub, moradorId: null, ultimoUso: new Date() },
+      });
+      return { registrado: true };
+    }
+
     const moradorId = this.exigirMorador(user);
-    // Token de conta já excluída: a FK estouraria em 500. O app chama isto ao
-    // abrir, antes de qualquer tela: devolver 401 faz ele cair no login.
     const existe = await this.prisma.morador.count({ where: { id: moradorId } });
     if (!existe) throw new UnauthorizedException("Conta não encontrada");
     await this.prisma.device.upsert({
       where: { pushToken: dto.pushToken },
       create: { moradorId, pushToken: dto.pushToken, plataforma: dto.plataforma },
-      update: { moradorId, ultimoUso: new Date() },
+      update: { moradorId, usuarioId: null, ultimoUso: new Date() },
     });
     return { registrado: true };
   }
