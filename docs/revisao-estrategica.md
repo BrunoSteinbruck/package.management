@@ -51,3 +51,42 @@ o que manteríamos, o que faríamos diferente, e lacunas que a revisão expôs.
 - **Precificação** (R$399/899/1.790): margens melhoraram com ML Kit e
   push-only (~R$150/mês de custo por condomínio piloto). Sem razão para mexer
   antes de dados do piloto.
+
+## Adendo 2026-07-26: preparar o app para virar plataforma
+
+A pergunta era se a separação de interfaces por perfil aguentaria o roadmap,
+já que cada feature parecia exigir mexer em três telas.
+
+**A separação fica.** Medindo a feature Avisos & Ocorrências (28 arquivos,
+~1.900 linhas), o fanout de perfil custou 4 linhas. O custo estava em outros
+lugares, todos endereçados:
+
+| Antes | Agora |
+|---|---|
+| Tipo de resposta escrito 3 vezes (shared, app, painel) | `packages/shared` é fonte única: enums, dto, api, feed, perfil |
+| `Aviso` polimórfico no Postgres virava 4 endpoints e 3 blocos de JSX quase iguais | `ItemFeed` e `GET /morador/feed`; a tela caiu de 235 para 142 linhas e de 3 fetches para 1 |
+| Tipo novo de notificação caía num ramo final e sumia | `DESPACHOS` e `apresentar()` são exaustivos: tipo sem tratamento não compila |
+| Feature nova era enxertada na home (+49/-11 para caber um botão) | Manifesto de módulos alimenta os slots secundário e rodapé |
+| 7 primitivos contra 296 chaves de estilo locais | `Tela`, `ItemLista`, `Selo`, `Vazio`, `BotaoModulo`: tela de lista nova nasce com 0 a 7 chaves |
+
+**A premissa "app único com roteamento por papel" continua, com três perfis e
+não dois.** O mobile nunca lia `papel`, então síndico caía na interface do
+porteiro. Agora `perfilDe` projeta `tipo` e `papel` em porteiro, morador e
+síndico, e o síndico tem pilha própria: 80% do contato dele com o condomínio é
+pelo celular. Ele mantém as telas da portaria, que operava de fato.
+
+**Dois bugs saíram no caminho**, ambos do mesmo tipo (contrato implícito entre
+camadas): `LEMBRETE` chegava ao app como "Encomenda retirada" para pacote ainda
+na portaria, e `Reportar` recebia sempre `unidades[0]`, então morador com duas
+unidades não conseguia relatar pela segunda.
+
+**A lacuna #7 fica de pé.** Porteiro em 2 condomínios continua impedido pelo
+telefone único em `usuarios`, e nada aqui mexeu na resolução de identidade por
+tabela: síndico que também mora no prédio segue perdendo o lado morador. Isso é
+remodelagem de identidade, não ajuste de UI, e o gatilho continua sendo a
+entrada de administradoras.
+
+**Ainda sem testes automatizados.** A rede é `pnpm typecheck` nos 4 pacotes
+(que agora pega divergência de contrato), mais um smoke do feed comparando com
+os endpoints antigos. Esses endpoints seguem de pé, marcados deprecated: há app
+instalado em produção, e eles só saem quando a versão nova estiver nas lojas.
