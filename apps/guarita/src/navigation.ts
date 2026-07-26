@@ -21,5 +21,8 @@ export type MoradorStackParamList = {
   Detalhe: { pacoteId: string };
   MinhaUnidade: { unidadeId: string; rotulo: string; condominio: string };
   Avisos: undefined;
-  Reportar: { unidadeId: string; rotulo: string };
+  // Sem parâmetro de propósito: a tela carrega as unidades do morador e deixa
+  // escolher. Antes vinha a primeira unidade da home, e quem tinha duas não
+  // conseguia relatar pela segunda.
+  Reportar: undefined;
 };

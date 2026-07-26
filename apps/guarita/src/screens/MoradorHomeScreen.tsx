@@ -21,8 +21,9 @@ import {
   rotuloUnidade,
   type MinhaUnidade,
 } from "../api/types";
-import { BotaoCta, Card } from "../components/ui";
+import { BotaoCta, BotaoModulo, Card } from "../components/ui";
 import { Icone } from "../components/icones";
+import { MODULOS_MORADOR, modulosDe } from "../modulos";
 import { theme } from "../theme";
 import type { MoradorStackParamList } from "../navigation";
 
@@ -231,33 +232,25 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
       {primeira && (
         <View style={[styles.rodape, { paddingBottom: insets.bottom + 12 }]}>
           <View style={styles.linhaRodape}>
-            <Pressable
-              onPress={() =>
-                navigation.navigate("Reportar", {
-                  unidadeId: primeira.unidade.id,
-                  rotulo: rotuloUnidade(primeira.unidade),
-                })
-              }
-              style={({ pressed }) => [
-                styles.botaoRodape,
-                { transform: [{ scale: pressed ? 0.98 : 1 }] },
-              ]}
-            >
-              <Icone nome="camera" tamanho={19} cor={theme.colors.marca} traco={2.2} />
-              <Text style={styles.botaoHistoricoTexto}>Relatar desvio</Text>
-            </Pressable>
+            {/* Os módulos do rodapé vêm do manifesto; navegar fica aqui porque
+                só a home conhece a unidade carregada. */}
+            {modulosDe(MODULOS_MORADOR, "morador", "rodape").map((m) => (
+              <BotaoModulo
+                key={m.id}
+                variante="pill"
+                titulo={m.titulo}
+                icone={m.icone}
+                onPress={() => navigation.navigate(m.id)}
+              />
+            ))}
             {historico.length > 0 && (
-              <Pressable
+              <BotaoModulo
+                variante="pill"
+                titulo="Histórico"
+                icone="lista"
+                contagem={historico.length}
                 onPress={() => setHistoricoAberto(true)}
-                style={({ pressed }) => [
-                  styles.botaoRodape,
-                  { transform: [{ scale: pressed ? 0.98 : 1 }] },
-                ]}
-              >
-                <Icone nome="lista" tamanho={19} cor={theme.colors.marca} traco={2.2} />
-                <Text style={styles.botaoHistoricoTexto}>Histórico</Text>
-                <Text style={styles.botaoHistoricoContagem}>{historico.length}</Text>
-              </Pressable>
+              />
             )}
           </View>
         </View>

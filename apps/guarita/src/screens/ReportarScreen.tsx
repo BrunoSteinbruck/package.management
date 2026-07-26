@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,7 +13,11 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch, NetworkError, uploadFoto } from "../api/client";
-import { CATEGORIAS_OCORRENCIA } from "../api/types";
+import {
+  CATEGORIAS_OCORRENCIA,
+  rotuloUnidade,
+  type MinhaUnidade,
+} from "../api/types";
 import { BotaoCta, Chip, HeaderTela, Kicker } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
@@ -21,16 +25,31 @@ import type { MoradorStackParamList } from "../navigation";
 
 type Props = NativeStackScreenProps<MoradorStackParamList, "Reportar">;
 
-export function ReportarScreen({ navigation, route }: Props) {
+export function ReportarScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { unidadeId, rotulo } = route.params;
   const [fase, setFase] = useState<"form" | "camera">("form");
   const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [unidades, setUnidades] = useState<MinhaUnidade[]>([]);
+  const [unidadeId, setUnidadeId] = useState("");
   const [categoria, setCategoria] = useState("");
   const [descricao, setDescricao] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [permissao, pedirPermissao] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+
+  // A tela carrega o próprio contexto: é o que a deixa ser um ponto de entrada
+  // do manifesto, e o que permite relatar por qualquer unidade e não só pela
+  // primeira, que era o que a home mandava.
+  useEffect(() => {
+    apiFetch<MinhaUnidade[]>("/morador/pacotes")
+      .then((lista) => {
+        setUnidades(lista);
+        if (lista.length === 1) setUnidadeId(lista[0].unidade.id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const escolhida = unidades.find((u) => u.unidade.id === unidadeId);
 
   async function capturar() {
     const foto = await cameraRef.current?.takePictureAsync({ quality: 0.5 });
@@ -47,7 +66,7 @@ export function ReportarScreen({ navigation, route }: Props) {
   }
 
   async function enviar() {
-    if (!categoria) return;
+    if (!categoria || !unidadeId) return;
     setSalvando(true);
     try {
       let fotoKey: string | undefined;
@@ -94,7 +113,27 @@ export function ReportarScreen({ navigation, route }: Props) {
         contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.sub}>Um problema do condomínio em {rotulo}. Vai para a administração.</Text>
+        <Text style={styles.sub}>
+          {escolhida
+            ? `Um problema do condomínio em ${rotuloUnidade(escolhida.unidade)}. Vai para a administração.`
+            : "Um problema do condomínio. Vai para a administração."}
+        </Text>
+
+        {unidades.length > 1 && (
+          <>
+            <Kicker>Unidade</Kicker>
+            <View style={styles.grade}>
+              {unidades.map((u) => (
+                <Chip
+                  key={u.unidade.id}
+                  rotulo={rotuloUnidade(u.unidade)}
+                  ativo={unidadeId === u.unidade.id}
+                  onPress={() => setUnidadeId(u.unidade.id)}
+                />
+              ))}
+            </View>
+          </>
+        )}
 
         <Kicker>Categoria</Kicker>
         <View style={styles.grade}>
@@ -130,7 +169,7 @@ export function ReportarScreen({ navigation, route }: Props) {
           altura={66}
           onPress={enviar}
           carregando={salvando}
-          desabilitado={!categoria}
+          desabilitado={!categoria || !unidadeId}
           estilo={{ marginTop: 22 }}
         />
       </ScrollView>

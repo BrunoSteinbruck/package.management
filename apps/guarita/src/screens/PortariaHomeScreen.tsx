@@ -12,12 +12,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { JwtPayload } from "@pacotes/shared";
+import { perfilDe, type JwtPayload } from "@pacotes/shared";
 import { apiFetch, NetworkError } from "../api/client";
 import { drenarFila, tamanhoFila } from "../api/offlineQueue";
 import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
+import { BotaoModulo } from "../components/ui";
 import { Icone } from "../components/icones";
+import { MODULOS_PORTARIA, modulosDe } from "../modulos";
 import { theme } from "../theme";
 import type { PortariaStackParamList } from "../navigation";
 
@@ -176,16 +178,17 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
           <Text style={styles.tileRetiradaSub}>Toque no pacote ou bipe o QR</Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => navigation.navigate("AvisarCamera")}
-          style={({ pressed }) => [
-            styles.botaoAvisar,
-            { transform: [{ scale: pressed ? 0.98 : 1 }] },
-          ]}
-        >
-          <Icone nome="sino" tamanho={20} cor={theme.colors.marca} traco={2.2} />
-          <Text style={styles.botaoAvisarTexto}>Avisar morador</Text>
-        </Pressable>
+        {/* Prateleira dos módulos secundários: funcionalidade nova entra aqui
+            pelo manifesto, sem mexer no layout da tela. */}
+        {modulosDe(MODULOS_PORTARIA, perfilDe(perfil), "secundario").map((m) => (
+          <BotaoModulo
+            key={m.id}
+            titulo={m.titulo}
+            icone={m.icone}
+            onPress={() => navigation.navigate(m.id)}
+            estilo={{ marginTop: 14 }}
+          />
+        ))}
 
         <View style={styles.linhaStats}>
           <Pressable
@@ -307,19 +310,6 @@ const styles = StyleSheet.create({
   },
   tileRetiradaTitulo: { color: "#FFF", fontSize: 27, fontWeight: "700" },
   tileRetiradaSub: { color: "rgba(255,255,255,0.8)", fontSize: 13.5, fontWeight: "500" },
-  botaoAvisar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    minHeight: 56,
-    borderRadius: theme.radius.card,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginTop: 14,
-  },
-  botaoAvisarTexto: { fontSize: 16, fontWeight: "600", color: theme.colors.text },
   linhaStats: { flexDirection: "row", gap: 12, marginTop: 14 },
   statCard: {
     flex: 1,

@@ -306,6 +306,46 @@ export function ItemLista(props: {
 }
 
 /**
+ * Ponto de entrada secundário na home: ícone, rótulo e uma contagem opcional.
+ * É a prateleira onde funcionalidade nova entra sem cirurgia no layout.
+ *
+ * `card` é a linha larga do porteiro; `pill` é o botão do rodapé do morador,
+ * que divide a largura com os vizinhos.
+ */
+export function BotaoModulo(props: {
+  titulo: string;
+  icone: NomeIcone;
+  onPress: () => void;
+  variante?: "card" | "pill";
+  contagem?: number;
+  estilo?: ViewStyle;
+}) {
+  const pill = props.variante === "pill";
+  return (
+    <Pressable
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        styles.moduloBase,
+        pill ? styles.moduloPill : styles.moduloCard,
+        { transform: [{ scale: pressed ? 0.98 : 1 }] },
+        props.estilo,
+      ]}
+    >
+      <Icone
+        nome={props.icone}
+        tamanho={pill ? 19 : 20}
+        cor={theme.colors.marca}
+        traco={2.2}
+      />
+      <Text style={styles.moduloTexto}>{props.titulo}</Text>
+      {props.contagem !== undefined && (
+        <Text style={styles.moduloContagem}>{props.contagem}</Text>
+      )}
+    </Pressable>
+  );
+}
+
+/**
  * Estado vazio. `linha` é a frase discreta no fim de uma lista; `hero` é o
  * bloco centrado de quando a tela inteira não tem o que mostrar.
  */
@@ -431,6 +471,37 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: theme.colors.textMuted,
     marginTop: 3,
+  },
+  moduloBase: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    backgroundColor: theme.colors.surface,
+  },
+  moduloCard: {
+    minHeight: 56,
+    borderRadius: theme.radius.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  moduloPill: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1.5,
+    borderColor: theme.colors.chipBorder,
+  },
+  moduloTexto: { fontSize: 16, fontWeight: "600", color: theme.colors.text },
+  moduloContagem: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.ok,
+    backgroundColor: theme.colors.okBg,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+    overflow: "hidden",
   },
   vazioLinha: {
     color: theme.colors.textSecondary,
