@@ -10,7 +10,12 @@ import { carregarSessao, limparSessao } from "./src/api/session";
 import type {
   MoradorStackParamList,
   PortariaStackParamList,
+  SindicoStackParamList,
 } from "./src/navigation";
+import { AprovacoesScreen } from "./src/screens/AprovacoesScreen";
+import { OcorrenciaDetalheScreen } from "./src/screens/OcorrenciaDetalheScreen";
+import { OcorrenciasScreen } from "./src/screens/OcorrenciasScreen";
+import { SindicoHomeScreen } from "./src/screens/SindicoHomeScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { AvisarCameraScreen } from "./src/screens/AvisarCameraScreen";
 import { AvisarConfirmScreen } from "./src/screens/AvisarConfirmScreen";
@@ -30,6 +35,7 @@ import { RetiradasHojeScreen } from "./src/screens/RetiradasHojeScreen";
 import { SaidaCameraScreen } from "./src/screens/SaidaCameraScreen";
 
 const Portaria = createNativeStackNavigator<PortariaStackParamList>();
+const Sindico = createNativeStackNavigator<SindicoStackParamList>();
 const Morador = createNativeStackNavigator<MoradorStackParamList>();
 
 interface PropsPilha {
@@ -57,6 +63,38 @@ function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
         <Portaria.Screen name="AvisarCamera" component={AvisarCameraScreen} />
         <Portaria.Screen name="AvisarConfirm" component={AvisarConfirmScreen} />
       </Portaria.Navigator>
+    </NavigationContainer>
+  );
+}
+
+function PilhaSindico({ perfil, aoSair }: PropsPilha) {
+  return (
+    <NavigationContainer>
+      <StatusBar style="light" />
+      <Sindico.Navigator screenOptions={{ headerShown: false }}>
+        <Sindico.Screen name="Home">
+          {(props) => (
+            <SindicoHomeScreen {...props} perfil={perfil} aoSair={aoSair} />
+          )}
+        </Sindico.Screen>
+        <Sindico.Screen name="Ocorrencias" component={OcorrenciasScreen} />
+        <Sindico.Screen
+          name="OcorrenciaDetalhe"
+          component={OcorrenciaDetalheScreen}
+        />
+        <Sindico.Screen name="Aprovacoes" component={AprovacoesScreen} />
+        {/* Telas da portaria: o síndico opera a portaria de vez em quando e
+            já as tinha antes de ganhar pilha própria. */}
+        <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
+        <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
+        <Sindico.Screen name="EntradaCamera" component={EntradaCameraScreen} />
+        <Sindico.Screen name="EntradaConfirm" component={EntradaConfirmScreen} />
+        <Sindico.Screen name="Retirada" component={RetiradaScreen} />
+        <Sindico.Screen name="QrScan" component={QrScanScreen} />
+        <Sindico.Screen name="SaidaCamera" component={SaidaCameraScreen} />
+        <Sindico.Screen name="AvisarCamera" component={AvisarCameraScreen} />
+        <Sindico.Screen name="AvisarConfirm" component={AvisarConfirmScreen} />
+      </Sindico.Navigator>
     </NavigationContainer>
   );
 }
@@ -120,10 +158,12 @@ export default function App() {
   // login e `perfilDe` a projeta no vocabulário do produto. Cada perfil só
   // enxerga as suas telas.
   const sair = () => setPerfil(null);
-  if (perfilDe(perfil) === "morador") {
-    return <PilhaMorador perfil={perfil} aoSair={sair} />;
+  switch (perfilDe(perfil)) {
+    case "morador":
+      return <PilhaMorador perfil={perfil} aoSair={sair} />;
+    case "sindico":
+      return <PilhaSindico perfil={perfil} aoSair={sair} />;
+    case "porteiro":
+      return <PilhaPortaria perfil={perfil} aoSair={sair} />;
   }
-  // Porteiro e síndico dividem a pilha da portaria por enquanto. O síndico
-  // ganha pilha própria na F5; até lá, o comportamento é o de hoje.
-  return <PilhaPortaria perfil={perfil} aoSair={sair} />;
 }

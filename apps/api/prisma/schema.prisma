@@ -43,8 +43,9 @@ enum TipoNotificacao {
   RETIRADA
   CONVITE
   LEMBRETE
-  AVISO
+  AVISO // Via 2: status do relato mudou, avisa o morador que o abriu
   OCORRENCIA
+  OCORRENCIA_NOVA // Via 2: relato novo, avisa a administração
 }
 
 enum ViaAviso {

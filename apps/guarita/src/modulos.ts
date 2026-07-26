@@ -1,6 +1,10 @@
 import type { Perfil } from "@pacotes/shared";
 import type { NomeIcone } from "./components/icones";
-import type { PortariaStackParamList, MoradorStackParamList } from "./navigation";
+import type {
+  MoradorStackParamList,
+  PortariaStackParamList,
+  SindicoStackParamList,
+} from "./navigation";
 
 /**
  * Onde o módulo aparece na home.
@@ -53,6 +57,39 @@ export const MODULOS_PORTARIA: readonly Modulo<
     titulo: "Avisar morador",
     icone: "sino",
     perfis: ["porteiro", "sindico"],
+    slot: "secundario",
+  },
+];
+
+export const MODULOS_SINDICO: readonly Modulo<
+  RotaDeEntrada<SindicoStackParamList>
+>[] = [
+  {
+    id: "Aprovacoes",
+    titulo: "Aprovar moradores",
+    icone: "casa",
+    perfis: ["sindico"],
+    slot: "secundario",
+  },
+  {
+    id: "Armazenados",
+    titulo: "Encomendas na portaria",
+    icone: "qr",
+    perfis: ["sindico"],
+    slot: "secundario",
+  },
+  {
+    id: "AvisarCamera",
+    titulo: "Avisar morador",
+    icone: "sino",
+    perfis: ["sindico"],
+    slot: "secundario",
+  },
+  {
+    id: "EntradaCamera",
+    titulo: "Registrar entrada",
+    icone: "camera",
+    perfis: ["sindico"],
     slot: "secundario",
   },
 ];

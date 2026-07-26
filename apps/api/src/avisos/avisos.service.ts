@@ -152,7 +152,7 @@ export class AvisosService {
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
-      return tx.aviso.create({
+      const aviso = await tx.aviso.create({
         data: {
           condominioId: vinculo.condominioId,
           via: "OCORRENCIA",
@@ -163,6 +163,17 @@ export class AvisosService {
           criadoPorMoradorId: moradorId,
         },
       });
+      // Avisa a administração da chegada. Antes o relato só existia no painel
+      // e dependia de alguém abrir para descobrir.
+      await tx.notificacao.create({
+        data: {
+          condominioId: vinculo.condominioId,
+          avisoId: aviso.id,
+          canal: "PUSH",
+          tipo: "OCORRENCIA_NOVA",
+        },
+      });
+      return aviso;
     });
   }
 

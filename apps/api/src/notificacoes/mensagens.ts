@@ -86,6 +86,17 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     semApp: "ignorar",
     marcadorSemApp: "autor-sem-app",
   },
+  OCORRENCIA_NOVA: {
+    // Via 2 na ida: chegou relato novo, a administração precisa saber sem
+    // depender de alguém abrir o painel. Só é entregável desde que Device
+    // deixou de ser exclusivo de morador.
+    audiencia: "gestoresDoCondominio",
+    titulo: () => "Novo relato de morador",
+    corpo: (n) => n.aviso?.motivo ?? "Um morador relatou um problema.",
+    data: (n) => ({ avisoId: n.avisoId }),
+    semApp: "ignorar",
+    marcadorSemApp: "gestor-sem-app",
+  },
   LEMBRETE: {
     // O push de lembrete sai agrupado por unidade no passo diário; a linha de
     // Notificacao existe só como marcador de dedup, já em ENVIADA.
