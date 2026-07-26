@@ -1,88 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { perfilDe, type JwtPayload } from "@pacotes/shared";
+import {
+  perfilDe,
+  type Adocao,
+  type DiaSerie,
+  type FotoRef,
+  type JwtPayload,
+  type ListaPacotes,
+  type MembroEquipe,
+  type OcorrenciaGestor as Ocorrencia,
+  type PacoteLinha,
+  type Pendencia,
+  type Relatorios,
+  type Resumo,
+  type UnidadeRotulo,
+  type VagaLinha,
+  type VinculoPendente,
+} from "@pacotes/shared";
 import { apiFetch, API_URL, limparSessao } from "@/lib/api";
 import { Importar } from "./Importar";
-
-interface Pendencia {
-  unidade?: { id: string; bloco: string | null; identificacao: string };
-  pendentes: number;
-  maisAntigoEm: string | null;
-}
-
-interface Resumo {
-  naPortaria: number;
-  retiradasHoje: number;
-  paradas3Dias: number;
-}
-
-interface Adocao {
-  totalUnidades: number;
-  unidadesComApp: number;
-  percentual: number;
-}
-
-interface VinculoPendente {
-  id: string;
-  criadoEm: string;
-  morador: { nome: string; telefone: string };
-  unidade: { bloco: string | null; identificacao: string };
-}
-
-interface DiaSerie {
-  dia: string;
-  entradas: number;
-  retiradas: number;
-}
-
-interface PacoteLinha {
-  id: string;
-  status: "ARMAZENADO" | "ENTREGUE" | "EXTRAVIADO";
-  transportadora: string | null;
-  codigoRastreio: string | null;
-  localArmazenamento: string | null;
-  recebidoEm: string;
-  unidade: { bloco: string | null; identificacao: string };
-  retirada: { retiradoEm: string } | null;
-}
-
-interface ListaPacotes {
-  total: number;
-  pagina: number;
-  porPagina: number;
-  itens: PacoteLinha[];
-}
-
-interface Relatorios {
-  tempoMedioDias: number;
-  volume: number;
-  notificacoesPct: number;
-  porTransportadora: { nome: string; qtd: number; pct: number }[];
-  porHorario: { faixa: string; qtd: number; pct: number }[];
-}
-
-interface FotoRef {
-  key: string;
-  token: string;
-}
-
-interface Ocorrencia {
-  id: string;
-  categoria: string;
-  descricao: string | null;
-  status: "ABERTO" | "EM_ANDAMENTO" | "RESOLVIDO";
-  criadoEm: string;
-  unidade: { bloco: string | null; identificacao: string };
-  autor: string;
-  foto: FotoRef | null;
-}
-
-interface VagaLinha {
-  id: string;
-  identificacao: string;
-  unidade: { bloco: string | null; identificacao: string };
-}
 
 type Visao =
   | "visao-geral"
@@ -91,7 +28,7 @@ type Visao =
   | "moradores"
   | "ocorrencias";
 
-function rotulo(u?: { bloco: string | null; identificacao: string }) {
+function rotulo(u?: UnidadeRotulo) {
   if (!u) return "-";
   return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
 }
@@ -646,14 +583,6 @@ function RelatoriosView() {
       </div>
     </>
   );
-}
-
-interface MembroEquipe {
-  id: string;
-  nome: string;
-  telefone: string;
-  papel: string;
-  ativo: boolean;
 }
 
 function EquipeSection() {

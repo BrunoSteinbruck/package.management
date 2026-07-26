@@ -1,14 +1,36 @@
-// ----- Comum -----
+// O contrato com a API mora em @pacotes/shared, junto com o painel e a própria
+// API. Aqui ficam só os nomes que as telas usam e os formatadores de
+// apresentação, que são decisão de UI e não de contrato.
 
-export interface Unidade {
-  id: string;
-  bloco: string | null;
-  identificacao: string;
-}
+export type {
+  AlvoIdentificado,
+  AvisoMorador,
+  DetalhePacote,
+  FotoRef,
+  ListaPacotes,
+  MinhaUnidade,
+  OcorrenciaMorador,
+  Pacote,
+  PacoteMorador,
+  Pendencia,
+  RespostaOcr,
+  ResultadoRetirada,
+  Unidade,
+  UnidadeRotulo,
+  Veiculo,
+  Vinculado,
+} from "@pacotes/shared";
 
-export function rotuloUnidade(
-  u: { bloco: string | null; identificacao: string } | undefined,
-): string {
+export { CATEGORIAS_OCORRENCIA, MOTIVOS_AVISO } from "@pacotes/shared";
+
+import type { PacoteLinha, StatusAviso, UnidadeRotulo } from "@pacotes/shared";
+
+/** Como a portaria chama a linha de `/portaria/pacotes`. */
+export type PacoteArmazenado = PacoteLinha;
+
+// ----- Apresentação -----
+
+export function rotuloUnidade(u: UnidadeRotulo | undefined): string {
   if (!u) return "-";
   return u.bloco ? `${u.identificacao} · Bloco ${u.bloco}` : u.identificacao;
 }
@@ -34,158 +56,6 @@ export function dataCurta(iso: string): string {
   });
 }
 
-// ----- Portaria (equipe) -----
-
-export interface Pacote {
-  id: string;
-  unidadeId: string;
-  transportadora: string | null;
-  codigoRastreio: string | null;
-  notaFiscal: string | null;
-  localArmazenamento: string | null;
-  status: "ARMAZENADO" | "ENTREGUE" | "EXTRAVIADO";
-  recebidoEm: string;
-}
-
-export interface Pendencia {
-  unidade: Unidade | undefined;
-  pendentes: number;
-  maisAntigoEm: string | null;
-}
-
-export interface ResultadoRetirada {
-  retiradas: unknown[];
-  pendentesRestantes: number;
-}
-
-export interface PacoteArmazenado extends Pacote {
-  unidade: Unidade;
-  retirada?: { retiradoEm: string } | null;
-}
-
-export interface ListaPacotes {
-  total: number;
-  pagina: number;
-  porPagina: number;
-  itens: PacoteArmazenado[];
-}
-
-export interface RespostaOcr {
-  fotoKey: string;
-  extraido: {
-    rastreio?: string;
-    transportadora?: string;
-    bloco?: string;
-    identificacao?: string;
-  };
-  sugestoes: Array<{
-    id: string;
-    bloco: string | null;
-    identificacao: string;
-    score: number;
-  }>;
-}
-
-// ----- Morador -----
-
-export interface PacoteMorador {
-  id: string;
-  transportadora: string | null;
-  codigoRastreio: string | null;
-  status: "ARMAZENADO" | "ENTREGUE" | "EXTRAVIADO";
-  recebidoEm: string;
-  retirada: { retiradoEm: string } | null;
-}
-
-export interface MinhaUnidade {
-  unidade: {
-    id: string;
-    bloco: string | null;
-    identificacao: string;
-    condominio: string;
-  };
-  pendentes: PacoteMorador[];
-  historico: PacoteMorador[];
-}
-
-export interface FotoAssinada {
-  key: string;
-  token: string;
-}
-
-export interface DetalhePacote {
-  id: string;
-  transportadora: string | null;
-  codigoRastreio: string | null;
-  status: "ARMAZENADO" | "ENTREGUE" | "EXTRAVIADO";
-  localArmazenamento: string | null;
-  recebidoEm: string;
-  recebidoPorNome: string;
-  notificadoEm: string | null;
-  fotoEntrada: FotoAssinada | null;
-  fotoSaida: FotoAssinada | null;
-  retiradoEm: string | null;
-  entreguePorNome: string | null;
-}
-
-export interface Vinculado {
-  nome: string;
-  telefone: string;
-  titular: boolean;
-  voce: boolean;
-}
-
-// ----- Avisos & Ocorrências -----
-
-export interface Veiculo {
-  id: string;
-  placa: string;
-  modelo: string | null;
-  cor: string | null;
-}
-
-export interface AlvoIdentificado {
-  origem: "placa" | "vaga" | null;
-  valor: string;
-  unidade: Unidade | null;
-}
-
-export interface AvisoMorador {
-  id: string;
-  motivo: string;
-  descricao: string | null;
-  status: "ABERTO" | "EM_ANDAMENTO" | "RESOLVIDO";
-  criadoEm: string;
-  foto: FotoAssinada | null;
-}
-
-export interface OcorrenciaMorador {
-  id: string;
-  categoria: string;
-  descricao: string | null;
-  status: "ABERTO" | "EM_ANDAMENTO" | "RESOLVIDO";
-  criadoEm: string;
-  foto: FotoAssinada | null;
-}
-
-export const MOTIVOS_AVISO = [
-  "Luz acesa",
-  "Alarme disparado",
-  "Vidro aberto",
-  "Mal estacionado",
-  "Vazamento",
-  "Janela aberta",
-] as const;
-
-export const CATEGORIAS_OCORRENCIA = [
-  "Segurança",
-  "Iluminação",
-  "Limpeza",
-  "Vazamento",
-  "Elevador",
-  "Portão",
-] as const;
-
-export function rotuloStatusAviso(s: string): string {
+export function rotuloStatusAviso(s: StatusAviso | string): string {
   return s === "ABERTO" ? "Aberto" : s === "EM_ANDAMENTO" ? "Em andamento" : "Resolvido";
 }
