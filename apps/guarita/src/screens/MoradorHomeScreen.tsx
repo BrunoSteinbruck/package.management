@@ -197,12 +197,9 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
                           {p.transportadora ?? "Encomenda"}
                         </Text>
                         {atrasada ? (
-                          <View style={styles.linhaAtraso}>
-                            <Text style={styles.pacoteSub}>Há {dias} dias</Text>
-                            <View style={styles.badgeAtraso}>
-                              <Text style={styles.badgeAtrasoTexto}>retire logo</Text>
-                            </View>
-                          </View>
+                          <Text style={[styles.pacoteSub, styles.pacoteSubAtraso]}>
+                            Há {dias} dias
+                          </Text>
                         ) : (
                           <Text style={styles.pacoteSub}>
                             Chegou {dataCurta(p.recebidoEm)}
@@ -247,7 +244,7 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
               ]}
             >
               <Icone nome="camera" tamanho={19} cor={theme.colors.marca} traco={2.2} />
-              <Text style={styles.botaoHistoricoTexto}>Reportar</Text>
+              <Text style={styles.botaoHistoricoTexto}>Relatar desvio</Text>
             </Pressable>
             {historico.length > 0 && (
               <Pressable
@@ -399,14 +396,9 @@ const styles = StyleSheet.create({
   },
   pacoteTitulo: { fontSize: 17, fontWeight: "700", color: theme.colors.text },
   pacoteSub: { fontSize: 13.5, color: theme.colors.textSecondary, fontWeight: "500", marginTop: 2 },
-  linhaAtraso: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
-  badgeAtraso: {
-    backgroundColor: theme.colors.alertaBg,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-  },
-  badgeAtrasoTexto: { fontSize: 12, fontWeight: "600", color: theme.colors.alerta },
+  // A partir de 3 dias a própria data fica âmbar. Sem selo e sem texto de
+  // cobrança: a cor já sinaliza, sem soar agressiva.
+  pacoteSubAtraso: { color: theme.colors.alerta, fontWeight: "600" },
   vazioTitulo: { fontSize: 16, fontWeight: "700", color: theme.colors.text },
   vazioTexto: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 2 },
   rodape: {

@@ -291,7 +291,7 @@ function VisaoGeral({
               {ocorrenciasAbertas}
             </div>
             <div className="rotulo">ocorrências abertas</div>
-            <div className="sub">reportadas pelos moradores</div>
+            <div className="sub">relatadas pelos moradores</div>
           </div>
         )}
       </div>
@@ -824,7 +824,7 @@ function OcorrenciasView() {
     <>
       <h1>Ocorrências</h1>
       <p className="aviso">
-        Problemas do condomínio reportados pelos moradores. Atualize o status,
+        Problemas do condomínio relatados pelos moradores. Atualize o status,
         o morador é avisado a cada mudança.
       </p>
 
@@ -934,7 +934,7 @@ function OcorrenciasView() {
             {ocorrencias.length === 0 && !erro && (
               <tr>
                 <td colSpan={7} className="aviso">
-                  Nenhuma ocorrência {filtro ? "com esse status" : "reportada"} até agora.
+                  Nenhuma ocorrência {filtro ? "com esse status" : "relatada"} até agora.
                 </td>
               </tr>
             )}

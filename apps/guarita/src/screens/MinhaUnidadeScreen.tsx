@@ -106,7 +106,14 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <HeaderTela titulo="Minha unidade" aoVoltar={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: theme.spacing.lg,
+          paddingTop: 6,
+          // Sem o inset o último cartão encosta no indicador de home.
+          paddingBottom: insets.bottom + 40,
+        }}
+      >
         <LinearGradient
           colors={theme.gradiente.marca}
           start={{ x: 0, y: 0 }}
@@ -162,7 +169,8 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
 
         <Text style={[styles.tituloSecao, { marginTop: 26 }]}>Veículos</Text>
         <Text style={styles.subVeiculos}>
-          Cadastre a placa para a portaria te avisar rápido (luz acesa, alarme...).
+          Cadastre a placa do seu veículo para a portaria te informar qualquer
+          anormalidade (luz acesa, alarme...).
         </Text>
         <Card estilo={{ padding: 6 }}>
           {veiculos.length === 0 && (

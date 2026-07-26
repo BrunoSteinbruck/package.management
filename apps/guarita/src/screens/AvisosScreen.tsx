@@ -95,7 +95,7 @@ export function AvisosScreen({ navigation }: Props) {
         {vazio && !carregando && (
           <Text style={styles.vazio}>
             Nada por aqui: você verá avisos da portaria e o status dos seus
-            reportes.
+            relatos.
           </Text>
         )}
 
@@ -134,7 +134,7 @@ export function AvisosScreen({ navigation }: Props) {
           );
         })}
 
-        {ocorrencias.length > 0 && <Text style={styles.secao}>Meus reportes</Text>}
+        {ocorrencias.length > 0 && <Text style={styles.secao}>Meus relatos</Text>}
         {ocorrencias.map((o) => {
           const cor = corStatus(o.status);
           return (

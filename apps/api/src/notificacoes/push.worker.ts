@@ -135,7 +135,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         } else {
           const r = await this.enviarExpo(
             tokens,
-            "Seu reporte foi atualizado",
+            "Seu relato foi atualizado",
             `${notif.aviso.motivo}: ${this.rotuloStatus(notif.aviso.status)}`,
             { avisoId: notif.avisoId },
           );
@@ -223,10 +223,12 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       const dias = Math.floor((Date.now() - maisAntigo) / 86_400_000);
       const resultado = await this.enviarExpo(
         tokens,
-        n === 1 ? "Encomenda esperando" : "Encomendas esperando",
+        n === 1 ? "Encomenda na portaria" : "Encomendas na portaria",
+        // Só informa. Sem "passe para retirar" e sem tom de cobrança: quem
+        // decide quando buscar é o morador.
         n === 1
-          ? `Você tem uma encomenda há ${dias} dias na portaria. Passe para retirar.`
-          : `Você tem ${n} encomendas na portaria (a mais antiga há ${dias} dias). Passe para retirar.`,
+          ? `Sua encomenda está na portaria há ${dias} dias.`
+          : `Você tem ${n} encomendas na portaria, a mais antiga há ${dias} dias.`,
         { tipo: "lembrete", unidadeId },
       );
 
@@ -302,7 +304,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       // (160 chars/segmento em vez de 70): metade do custo por envio.
       await this.sms.enviar(
         titular.morador.telefone,
-        `Guarita: um pacote chegou para ${rotulo} na portaria do ${condominio.nome}! Baixe o app Guarita e receba estes avisos na hora, sempre que chegar encomenda.${link}`,
+        `Guarita: chegou uma encomenda para ${rotulo} na portaria do ${condominio.nome}. Com o app voce e avisado assim que a proxima chegar.${link}`,
       );
       this.logger.log(`Convite SMS enviado para unidade ${rotulo}`);
       return "sem-app-convite-enviado";

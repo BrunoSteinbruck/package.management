@@ -147,7 +147,7 @@ export class AvisosService {
       });
       if (recentes >= MAX_OCORRENCIAS_POR_DIA) {
         throw new HttpException(
-          "Limite diário de reportes atingido. Tente novamente amanhã.",
+          "Limite diário de relatos atingido. Tente novamente amanhã.",
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }

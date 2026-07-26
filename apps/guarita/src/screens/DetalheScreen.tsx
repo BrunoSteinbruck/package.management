@@ -80,16 +80,20 @@ export function DetalheScreen({ navigation, route }: Props) {
                   )}
                   <Text style={styles.legendaFoto}>foto da entrada</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  {fotos.saida ? (
-                    <Image source={{ uri: fotos.saida }} style={styles.foto} />
-                  ) : (
-                    <View style={[styles.foto, styles.fotoVazia]}>
-                      <Icone nome="camera" tamanho={20} cor={theme.colors.textFaint} />
-                    </View>
-                  )}
-                  <Text style={styles.legendaFoto}>foto da entrega</Text>
-                </View>
+                {/* Enquanto está na portaria não existe entrega, então nem o
+                    espaço da foto aparece. O slot só entra depois de retirada. */}
+                {entregue && (
+                  <View style={{ flex: 1 }}>
+                    {fotos.saida ? (
+                      <Image source={{ uri: fotos.saida }} style={styles.foto} />
+                    ) : (
+                      <View style={[styles.foto, styles.fotoVazia]}>
+                        <Icone nome="camera" tamanho={20} cor={theme.colors.textFaint} />
+                      </View>
+                    )}
+                    <Text style={styles.legendaFoto}>foto da entrega</Text>
+                  </View>
+                )}
               </View>
             </Card>
 

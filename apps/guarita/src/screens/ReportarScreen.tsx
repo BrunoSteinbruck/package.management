@@ -63,7 +63,7 @@ export function ReportarScreen({ navigation, route }: Props) {
         body: { unidadeId, categoria, descricao: descricao || undefined, fotoKey },
       });
       Alert.alert(
-        "Reporte enviado",
+        "Relato enviado",
         "A administração foi avisada. Você acompanha o status nos Avisos.",
         [{ text: "OK", onPress: () => navigation.goBack() }],
       );
@@ -89,7 +89,7 @@ export function ReportarScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
-      <HeaderTela titulo="Reportar problema" aoVoltar={() => navigation.goBack()} />
+      <HeaderTela titulo="Relatar desvio" aoVoltar={() => navigation.goBack()} />
       <ScrollView
         contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
@@ -126,7 +126,7 @@ export function ReportarScreen({ navigation, route }: Props) {
         )}
 
         <BotaoCta
-          titulo="Enviar reporte"
+          titulo="Enviar relato"
           altura={66}
           onPress={enviar}
           carregando={salvando}
