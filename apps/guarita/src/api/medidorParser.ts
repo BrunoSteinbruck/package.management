@@ -37,21 +37,30 @@ export function extrairLeituraMedidor(texto: string): {
 }
 
 /**
- * "1.234,5" e "1,234.5" viram 1234.5; "00458" vira 458. Separador único com
- * até 3 dígitos à direita é tratado como decimal (padrão de medidor com
- * ponteiro vermelho); o resto é milhar.
+ * "1.234,5" e "1,234.5" viram 1234.5; "00458" vira 458. Com os dois
+ * separadores, o que aparece por último é o decimal e o outro é milhar.
+ * Separador único com até 3 dígitos à direita é tratado como decimal
+ * (padrão de medidor com dígitos vermelhos); repetido é milhar.
  */
 function normalizar(bruto: string): number | null {
-  const soDigitosESep = bruto.replace(/[^\d.,]/g, "");
-  const partes = soDigitosESep.split(/[.,]/);
+  const s = bruto.replace(/[^\d.,]/g, "");
+  const ultimoPonto = s.lastIndexOf(".");
+  const ultimaVirgula = s.lastIndexOf(",");
   let texto: string;
-  if (partes.length === 1) {
-    texto = partes[0];
-  } else if (partes.length === 2 && partes[1].length <= 3 && partes[1].length > 0) {
-    texto = `${partes[0]}.${partes[1]}`;
+  if (ultimoPonto >= 0 && ultimaVirgula >= 0) {
+    const decimal = ultimoPonto > ultimaVirgula ? "." : ",";
+    const semMilhar = s.replace(decimal === "." ? /,/g : /\./g, "");
+    const partes = semMilhar.split(decimal);
+    texto = partes.length === 2 ? `${partes[0]}.${partes[1]}` : partes.join("");
   } else {
-    // Vários separadores: assume milhar (123.456.789 => 123456789).
-    texto = partes.join("");
+    const partes = s.split(/[.,]/);
+    if (partes.length === 1) {
+      texto = partes[0];
+    } else if (partes.length === 2 && partes[1].length >= 1 && partes[1].length <= 3) {
+      texto = `${partes[0]}.${partes[1]}`;
+    } else {
+      texto = partes.join("");
+    }
   }
   const valor = Number(texto);
   return Number.isFinite(valor) ? valor : null;
