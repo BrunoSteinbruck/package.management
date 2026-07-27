@@ -1,5 +1,11 @@
 import React, { useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -105,11 +111,17 @@ export function LeituraCameraScreen({ navigation }: Props) {
           <Text style={styles.piloAcaoTexto}>Digitar sem foto</Text>
         </Pressable>
         <Pressable
-          style={[styles.shutterAnel, processando && { opacity: 0.5 }]}
+          style={styles.shutterAnel}
           onPress={capturar}
           disabled={processando}
         >
-          <View style={styles.shutter} />
+          {/* Lendo os números da foto (ML Kit leva um instante): o obturador
+              vira spinner para o toque não parecer perdido. */}
+          {processando ? (
+            <ActivityIndicator color={theme.colors.cameraBg} size="large" style={styles.shutter} />
+          ) : (
+            <View style={styles.shutter} />
+          )}
         </Pressable>
         <View style={{ minWidth: 108 }} />
       </View>

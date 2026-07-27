@@ -17,6 +17,7 @@ import {
   competenciaAtual,
   registrarNoCache,
 } from "../api/estadoLeituras";
+import { proximasPendentes } from "../api/rodada";
 import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
 import { rotuloUnidade, type Unidade } from "../api/types";
 import { BotaoCta, Chip, HeaderTela, Kicker, Tela } from "../components/ui";
@@ -28,6 +29,9 @@ let cacheUnidades: Unidade[] | null = null;
 // O zelador faz a rodada por tipo (toda a água, depois todo o gás): o toggle
 // abre no último tipo usado.
 let ultimoTipo: TipoMedidor = "AGUA";
+// Última unidade registrada na sessão: as sugestões seguem a rodada a partir
+// dela, e o próximo apartamento costuma ser o primeiro chip.
+let ultimaUnidadeId: string | null = null;
 
 const NOMES: Record<TipoMedidor, string> = { AGUA: "Água", GAS: "Gás" };
 
@@ -71,15 +75,27 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
     }
   }, []);
 
-  const filtradas = useMemo(() => {
+  const { filtradas, sugerindoPendentes } = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    const base = q
-      ? unidades.filter((u) =>
-          `${u.bloco ?? ""} ${u.identificacao}`.toLowerCase().includes(q),
-        )
-      : unidades;
-    return base.slice(0, 12);
-  }, [busca, unidades]);
+    if (q) {
+      // Busca vale para TODAS as unidades: refazer uma já lida é legítimo.
+      const achadas = unidades.filter((u) =>
+        `${u.bloco ?? ""} ${u.identificacao}`.toLowerCase().includes(q),
+      );
+      return { filtradas: achadas.slice(0, 12), sugerindoPendentes: false };
+    }
+    // Sem busca, os chips são as PENDENTES do tipo, na ordem da rodada a
+    // partir da última registrada: o apartamento seguinte vira o primeiro
+    // chip e o zelador não digita nada.
+    const estado = cacheEstado[tipo];
+    if (estado) {
+      const pendentes = proximasPendentes(estado, ultimaUnidadeId);
+      if (pendentes.length > 0) {
+        return { filtradas: pendentes, sugerindoPendentes: true };
+      }
+    }
+    return { filtradas: unidades.slice(0, 12), sugerindoPendentes: false };
+  }, [busca, unidades, tipo]);
 
   const valor = useMemo(() => {
     const n = Number(valorTexto.replace(",", "."));
@@ -127,6 +143,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
         fotoPendente,
       );
       ultimoTipo = tipo;
+      ultimaUnidadeId = unidade.id;
       registrarNoCache(tipo, unidade.id, valor);
 
       const consumo = resultado.data?.consumo ?? consumoPrevisto;
@@ -135,6 +152,14 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
         : consumo !== null
           ? `Consumo de ${NOMES[tipo].toLowerCase()}: ${consumo.toLocaleString("pt-BR")} m³.`
           : "Primeira leitura desta unidade registrada.";
+      const estado = cacheEstado[tipo];
+      const faltam = estado ? estado.total - estado.lidas : null;
+      const progresso =
+        faltam === null
+          ? ""
+          : faltam === 0
+            ? `\n\nEra a última: as ${estado!.total} unidades de ${NOMES[tipo].toLowerCase()} estão lidas este mês.`
+            : `\n\nFaltam ${faltam} de ${NOMES[tipo].toLowerCase()} este mês.`;
       const alertaNegativo =
         (resultado.data?.alerta ?? (consumo !== null && consumo < 0 ? "NEGATIVO" : null)) ===
         "NEGATIVO"
@@ -142,7 +167,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
           : "";
       Alert.alert(
         resultado.queued ? "Salvo offline" : "Leitura registrada",
-        `${rotuloUnidade(unidade)}: ${detalhe}${alertaNegativo}`,
+        `${rotuloUnidade(unidade)}: ${detalhe}${alertaNegativo}${progresso}`,
         [
           { text: "Ver progresso", onPress: () => navigation.navigate("Leituras") },
           {
@@ -247,6 +272,11 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
                   <Chip key={u.id} rotulo={rotuloUnidade(u)} onPress={() => setUnidade(u)} />
                 ))}
               </View>
+              {sugerindoPendentes && (
+                <Text style={styles.hintPendentes}>
+                  Pendentes de {NOMES[tipo].toLowerCase()}, na ordem da rodada
+                </Text>
+              )}
             </>
           )}
         </View>
@@ -368,6 +398,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   gradeUnidades: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
+  hintPendentes: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    fontWeight: "500",
+    marginTop: 10,
+  },
   cardAnterior: {
     marginTop: 14,
     backgroundColor: theme.colors.notaBg,
