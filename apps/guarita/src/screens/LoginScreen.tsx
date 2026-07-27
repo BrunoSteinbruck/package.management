@@ -22,7 +22,10 @@ import { theme } from "../theme";
 
 const PASSOS = ["Telefone", "Código", "Unidade"] as const;
 
-export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
+export function LoginScreen(props: {
+  /** Pode ser assíncrono: o App busca os módulos antes de trocar de tela. */
+  aoEntrar: (perfil: JwtPayload) => void | Promise<void>;
+}) {
   const insets = useSafeAreaInsets();
   const [fase, setFase] = useState<0 | 1 | 2>(0);
   const [telefone, setTelefone] = useState("");
@@ -80,7 +83,7 @@ export function LoginScreen(props: { aoEntrar: (perfil: JwtPayload) => void }) {
       // (uma ocorrência nova precisa chegar ao síndico).
       await salvarSessao(res);
       await registrarPush();
-      props.aoEntrar(res.perfil);
+      await props.aoEntrar(res.perfil);
     } catch (e) {
       // Telefone desconhecido: passo 3, vincular por convite.
       if (!comConvite && e instanceof ApiError && e.status === 404) {

@@ -229,6 +229,19 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
               </View>
             ),
         )}
+
+        {/* Prateleira dos módulos do condomínio, no corpo e não no rodapé:
+            o rodapé é uma linha só de pílulas, desenhada para uma ou duas
+            ações rápidas, e com quatro o texto quebrava dentro da pílula. */}
+        {modulosDe(MODULOS_MORADOR, "morador", "secundario", ligados).map((m) => (
+          <BotaoModulo
+            key={m.id}
+            titulo={m.titulo}
+            icone={m.icone}
+            onPress={() => navigation.navigate(m.id)}
+            estilo={{ marginTop: 12 }}
+          />
+        ))}
       </ScrollView>
 
       {primeira && (

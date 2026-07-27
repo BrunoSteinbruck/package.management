@@ -190,11 +190,16 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         {/* A sessão já está gravada quando `aoEntrar` dispara, então a busca
-            de módulos vai autenticada. Não bloqueia a entrada: a home lê o
-            cache e se redesenha quando ele chega. */}
+            de módulos vai autenticada.
+
+            ESPERA antes de trocar de tela: disparar sem esperar fazia a home
+            montar e ler o cache que o logout tinha acabado de apagar, e o
+            menu ficava sem os módulos do condomínio. Custa uma requisição
+            curta no login, e falha em silêncio (sem rede, entra com o que
+            houver em cache). */}
         <LoginScreen
-          aoEntrar={(novo) => {
-            void sincronizarModulos();
+          aoEntrar={async (novo) => {
+            await sincronizarModulos();
             setPerfil(novo);
           }}
         />

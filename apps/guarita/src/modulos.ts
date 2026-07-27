@@ -130,7 +130,7 @@ export const MODULOS_SINDICO: readonly Modulo<
   {
     id: "Documentos",
     titulo: "Documentos",
-    icone: "pacote",
+    icone: "lista",
     perfis: ["sindico"],
     slot: "secundario",
     flag: "documentos",
@@ -155,29 +155,34 @@ export const MODULOS_MORADOR: readonly Modulo<
     perfis: ["morador"],
     slot: "rodape",
   },
-  {
-    id: "Documentos",
-    titulo: "Documentos",
-    icone: "pacote",
-    perfis: ["morador"],
-    slot: "rodape",
-    flag: "documentos",
-  },
+  // Os módulos do condomínio ficam no corpo, não no rodapé: o rodapé é uma
+  // linha só de pílulas ao lado de "Histórico", e mais de duas espremem o
+  // texto dentro da pílula. No corpo eles têm largura inteira e sobra espaço.
   {
     id: "Visitas",
-    titulo: "Visitas",
+    titulo: "Minhas visitas",
     icone: "pessoa",
     perfis: ["morador"],
-    slot: "rodape",
+    slot: "secundario",
     flag: "visitantes",
   },
   {
     id: "Cobrancas",
     titulo: "Boletos",
-    icone: "pacote",
+    icone: "boleto",
     perfis: ["morador"],
-    slot: "rodape",
+    slot: "secundario",
     flag: "financeiro",
+  },
+  {
+    // "lista" e não "pacote": o ícone de caixa é da encomenda, e repetir o
+    // mesmo desenho em Documentos fazia as duas linhas se confundirem.
+    id: "Documentos",
+    titulo: "Documentos",
+    icone: "lista",
+    perfis: ["morador"],
+    slot: "secundario",
+    flag: "documentos",
   },
 ];
 

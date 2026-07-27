@@ -19,7 +19,8 @@ export type NomeIcone =
   | "pessoa"
   | "medidor"
   | "gota"
-  | "chama";
+  | "chama"
+  | "boleto";
 
 const DESENHOS: Record<NomeIcone, React.ReactNode> = {
   camera: (
@@ -65,6 +66,15 @@ const DESENHOS: Record<NomeIcone, React.ReactNode> = {
     <>
       <Path d="M8 6h13M8 12h13M8 18h13" />
       <Path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </>
+  ),
+  // Boleto: as barras do código de barras. Os ícones de caixa e de lista já
+  // são encomenda e documento, e reaproveitar qualquer um deles fazia duas
+  // linhas do menu virarem o mesmo desenho.
+  boleto: (
+    <>
+      <Rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <Path d="M6 9v6M9 9v6M12.5 9v6M16 9v6M18.5 9v6" />
     </>
   ),
   pacote: (
