@@ -4,12 +4,14 @@ import type {
   Notificacao,
   Pacote,
   TipoNotificacao,
+  Visita,
 } from "@prisma/client";
 
 export type NotifComRelacoes = Notificacao & {
   pacote: Pacote | null;
   aviso: Aviso | null;
   comunicado: Comunicado | null;
+  visita: Visita | null;
 };
 
 /**
@@ -23,6 +25,7 @@ export type Audiencia =
   | "gestoresDoCondominio"
   /** Moradores com vínculo ativo no condomínio, filtrando pelos blocos alvo. */
   | "moradoresDoComunicado"
+  | "unidadeDaVisita"
   /** Criada já como ENVIADA (marcador de dedup), nunca passa pela fila. */
   | "naoEnfileirada";
 
@@ -125,6 +128,18 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     data: (n) => ({ comunicadoId: n.comunicadoId }),
     semApp: "ignorar",
     marcadorSemApp: "condominio-sem-app",
+  },
+  VISITA_CHEGOU: {
+    // A visita que o morador autorizou está no portão. É o aviso mais
+    // sensível ao tempo do produto inteiro: sem app não vira SMS porque o
+    // atraso do SMS tornaria o aviso inútil justamente quando ele importa.
+    audiencia: "unidadeDaVisita",
+    titulo: () => "Sua visita chegou",
+    corpo: (n) =>
+      `${n.visita?.nomeVisitante ?? "Sua visita"} está na portaria.`,
+    data: (n) => ({ visitaId: n.visitaId }),
+    semApp: "ignorar",
+    marcadorSemApp: "sem-app",
   },
   LEMBRETE: {
     // O push de lembrete sai agrupado por unidade no passo diário; a linha de

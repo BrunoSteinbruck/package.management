@@ -76,6 +76,14 @@ export const MODULOS_PORTARIA: readonly Modulo<
     perfis: ["porteiro"],
     slot: "secundario",
   },
+  {
+    id: "VisitasHoje",
+    titulo: "Visitas de hoje",
+    icone: "pessoa",
+    perfis: ["porteiro", "sindico"],
+    slot: "secundario",
+    flag: "visitantes",
+  },
 ];
 
 export const MODULOS_SINDICO: readonly Modulo<
@@ -127,6 +135,14 @@ export const MODULOS_SINDICO: readonly Modulo<
     slot: "secundario",
     flag: "documentos",
   },
+  {
+    id: "VisitasHoje",
+    titulo: "Visitas de hoje",
+    icone: "pessoa",
+    perfis: ["sindico"],
+    slot: "secundario",
+    flag: "visitantes",
+  },
 ];
 
 export const MODULOS_MORADOR: readonly Modulo<
@@ -146,6 +162,14 @@ export const MODULOS_MORADOR: readonly Modulo<
     perfis: ["morador"],
     slot: "rodape",
     flag: "documentos",
+  },
+  {
+    id: "Visitas",
+    titulo: "Visitas",
+    icone: "pessoa",
+    perfis: ["morador"],
+    slot: "rodape",
+    flag: "visitantes",
   },
 ];
 

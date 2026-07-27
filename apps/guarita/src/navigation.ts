@@ -18,6 +18,8 @@ export type PortariaStackParamList = {
   Leituras: undefined;
   LeituraCamera: undefined;
   LeituraConfirm: { fotoUri: string | null; sugestao: number | null };
+  // Visitas esperadas hoje: a portaria confere e dá baixa na chegada.
+  VisitasHoje: undefined;
 };
 
 /**
@@ -67,4 +69,6 @@ export type MoradorStackParamList = {
   Reportar: undefined;
   Comunicado: { comunicadoId: string };
   Documentos: undefined;
+  Visitas: undefined;
+  NovaVisita: undefined;
 };

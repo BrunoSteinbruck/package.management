@@ -215,6 +215,34 @@ export const CriarDocumentoSchema = z.object({
 });
 export type CriarDocumentoDto = z.infer<typeof CriarDocumentoSchema>;
 
+// ----- Módulo Visitantes -----
+
+/** Data sem hora: o dia previsto da visita. Nunca vira Date no cliente. */
+export const DataSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)");
+
+/** Hora do dia em 24h. A janela é opcional, mas se vier tem que ser hora. */
+export const HoraSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora inválida (use HH:MM)");
+
+export const CriarVisitaSchema = z
+  .object({
+    unidadeId: z.string().uuid(),
+    nomeVisitante: z.string().min(2).max(120),
+    /** Documento de terceiro: opcional por minimização (LGPD). */
+    documento: z.string().max(40).optional(),
+    dataPrevista: DataSchema,
+    janelaInicio: HoraSchema.optional(),
+    janelaFim: HoraSchema.optional(),
+  })
+  .refine(
+    (v) => !v.janelaInicio || !v.janelaFim || v.janelaInicio <= v.janelaFim,
+    { message: "A janela termina antes de começar", path: ["janelaFim"] },
+  );
+export type CriarVisitaDto = z.infer<typeof CriarVisitaSchema>;
+
 // ----- Módulo Leituras de medidores -----
 
 /**

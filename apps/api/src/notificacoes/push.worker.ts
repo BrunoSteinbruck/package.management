@@ -24,6 +24,9 @@ const CONVITE_SMS_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 // não-adotante não recebe nada (segue só o convite SMS de 14 dias na entrada).
 const LEMBRETE_DIAS = 3;
 const LEMBRETE_INTERVALO_MS = 20 * 60 * 60 * 1000; // roda no máx. 1x/~dia
+// Documento do visitante (dado de terceiro) é apagado depois deste prazo.
+// A linha da visita permanece: ver expurgarDocumentosDeVisita.
+const DOC_VISITA_DIAS = 90;
 
 /** Token que não é do Expo não vai para a API do Expo. */
 function apenasExpo(devices: Array<{ pushToken: string }>): string[] {
@@ -71,11 +74,13 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         await this.processarCondominio(condominio);
       }
 
-      // Passo diário: lembretes de pacotes parados há 3+ dias.
+      // Passo diário: lembretes de pacotes parados há 3+ dias e expurgo do
+      // documento de visitante.
       if (Date.now() - this.ultimoLembrete >= LEMBRETE_INTERVALO_MS) {
         this.ultimoLembrete = Date.now();
         for (const condominio of condominios) {
           await this.lembretesDoCondominio(condominio.id);
+          await this.expurgarDocumentosDeVisita(condominio.id);
         }
       }
     } catch (e) {
@@ -92,7 +97,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         where: { status: "FILA", canal: "PUSH" },
         take: 20,
         orderBy: { criadoEm: "asc" },
-        include: { pacote: true, aviso: true, comunicado: true },
+        include: { pacote: true, aviso: true, comunicado: true, visita: true },
       }),
     );
 
@@ -159,6 +164,8 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         return notif.comunicado
           ? this.tokensDoCondominio(notif.condominioId, notif.comunicado.blocos)
           : null;
+      case "unidadeDaVisita":
+        return notif.visita ? this.tokensDaUnidade(notif.visita.unidadeId) : null;
       case "naoEnfileirada":
         return null;
     }
@@ -295,6 +302,29 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         });
         this.logger.log(`Lembrete: ${n} pacote(s) parados, unidade ${unidadeId}`);
       }
+    }
+  }
+
+  /**
+   * Minimização de dado de terceiro (LGPD): o documento do visitante é
+   * apagado depois de DOC_VISITA_DIAS.
+   *
+   * O visitante não é usuário do sistema e não consentiu com nada; o número
+   * do documento serve para o porteiro conferir quem está na frente dele
+   * naquele dia, e perde a finalidade assim que a visita passa. A LINHA da
+   * visita fica: quem entrou no prédio e quando é registro do condomínio,
+   * como a cadeia de custódia das encomendas. Só o identificador some.
+   */
+  private async expurgarDocumentosDeVisita(condominioId: string) {
+    const limite = new Date(Date.now() - DOC_VISITA_DIAS * 24 * 60 * 60 * 1000);
+    const { count } = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.visita.updateMany({
+        where: { dataPrevista: { lt: limite }, documento: { not: null } },
+        data: { documento: null },
+      }),
+    );
+    if (count > 0) {
+      this.logger.log(`Expurgo LGPD: documento de ${count} visita(s) apagado`);
     }
   }
 

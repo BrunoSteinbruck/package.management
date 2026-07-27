@@ -34,6 +34,13 @@ export const MODULOS_CONDOMINIO = [
 ] as const;
 export type ModuloCondominio = (typeof MODULOS_CONDOMINIO)[number];
 
+/**
+ * Ciclo da visita pré-autorizada. CHEGADA é terminal como CANCELADA: quem
+ * entrou, entrou; o registro vira histórico.
+ */
+export const STATUS_VISITA = ["AUTORIZADA", "CHEGOU", "CANCELADA"] as const;
+export type StatusVisita = (typeof STATUS_VISITA)[number];
+
 /** Prateleiras do repositório de documentos do condomínio. */
 export const CATEGORIAS_DOCUMENTO = [
   "ATA",

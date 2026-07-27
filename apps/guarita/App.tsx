@@ -23,6 +23,9 @@ import { ComunicadoScreen } from "./src/screens/ComunicadoScreen";
 import { ComunicadosScreen } from "./src/screens/ComunicadosScreen";
 import { DocumentosScreen } from "./src/screens/DocumentosScreen";
 import { NovoComunicadoScreen } from "./src/screens/NovoComunicadoScreen";
+import { NovaVisitaScreen } from "./src/screens/NovaVisitaScreen";
+import { VisitasHojeScreen } from "./src/screens/VisitasHojeScreen";
+import { VisitasScreen } from "./src/screens/VisitasScreen";
 import { DetalheScreen } from "./src/screens/DetalheScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
 import { EntradaConfirmScreen } from "./src/screens/EntradaConfirmScreen";
@@ -81,6 +84,9 @@ function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
         <Portaria.Screen name="Leituras" component={LeiturasScreen} />
         <Portaria.Screen name="LeituraCamera" component={LeituraCameraScreen} />
         <Portaria.Screen name="LeituraConfirm" component={LeituraConfirmScreen} />
+        <Portaria.Screen name="VisitasHoje">
+          {(props) => <VisitasHojeScreen {...props} podeDarBaixa />}
+        </Portaria.Screen>
       </Portaria.Navigator>
     </NavigationContainer>
   );
@@ -116,6 +122,8 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
         <Sindico.Screen name="Documentos">
           {(props) => <DocumentosScreen {...props} gestor />}
         </Sindico.Screen>
+        {/* Sem `podeDarBaixa`: quem confere no portão é a portaria. */}
+        <Sindico.Screen name="VisitasHoje" component={VisitasHojeScreen} />
       </Sindico.Navigator>
     </NavigationContainer>
   );
@@ -138,6 +146,8 @@ function PilhaMorador({ perfil, aoSair }: PropsPilha) {
         <Morador.Screen name="Reportar" component={ReportarScreen} />
         <Morador.Screen name="Comunicado" component={ComunicadoScreen} />
         <Morador.Screen name="Documentos" component={DocumentosScreen} />
+        <Morador.Screen name="Visitas" component={VisitasScreen} />
+        <Morador.Screen name="NovaVisita" component={NovaVisitaScreen} />
       </Morador.Navigator>
     </NavigationContainer>
   );

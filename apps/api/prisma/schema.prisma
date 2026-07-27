@@ -47,6 +47,13 @@ enum TipoNotificacao {
   OCORRENCIA
   OCORRENCIA_NOVA // Via 2: relato novo, avisa a administração
   COMUNICADO // Síndico publicou para o condomínio (ou para blocos)
+  VISITA_CHEGOU // A portaria deu baixa na visita pré-autorizada
+}
+
+enum StatusVisita {
+  AUTORIZADA
+  CHEGOU
+  CANCELADA
 }
 
 enum CategoriaDocumento {
@@ -115,6 +122,7 @@ model Condominio {
   tarifas      TarifaConsumo[]
   comunicados  Comunicado[]
   documentos   Documento[]
+  visitas      Visita[]
 
   @@map("condominios")
 }
@@ -133,6 +141,7 @@ model Unidade {
   veiculos   Veiculo[]
   avisos     Aviso[]
   leituras   LeituraMedidor[]
+  visitas    Visita[]
 
   @@unique([condominioId, bloco, identificacao])
   @@index([condominioId])
@@ -149,6 +158,7 @@ model Morador {
   devices            Device[]
   avisosReportados   Aviso[]             @relation("avisoCriadoPorMorador")
   comunicadosLidos   ComunicadoLeitura[]
+  visitasAutorizadas Visita[]
 
   @@map("moradores")
 }
@@ -193,6 +203,7 @@ model Usuario {
   leiturasFeitas     LeituraMedidor[]
   comunicadosCriados Comunicado[]
   documentosEnviados Documento[]
+  visitasConferidas  Visita[]
 
   @@index([condominioId])
   @@map("usuarios")
@@ -243,6 +254,7 @@ model Notificacao {
   pacoteId      String?           @map("pacote_id") @db.Uuid
   avisoId       String?           @map("aviso_id") @db.Uuid
   comunicadoId  String?           @map("comunicado_id") @db.Uuid
+  visitaId      String?           @map("visita_id") @db.Uuid
   canal         CanalNotificacao
   tipo          TipoNotificacao
   status        StatusNotificacao @default(FILA)
@@ -253,6 +265,7 @@ model Notificacao {
   pacote     Pacote?     @relation(fields: [pacoteId], references: [id])
   aviso      Aviso?      @relation(fields: [avisoId], references: [id])
   comunicado Comunicado? @relation(fields: [comunicadoId], references: [id])
+  visita     Visita?     @relation(fields: [visitaId], references: [id])
 
   @@index([condominioId, status])
   @@map("notificacoes")
@@ -445,6 +458,46 @@ model Documento {
 
   @@index([condominioId, categoria])
   @@map("documentos")
+}
+
+/**
+ * Visita pré-autorizada pelo morador, conferida pela portaria na chegada.
+ *
+ * O produto já é forte na portaria; isto fecha o outro lado do portão com a
+ * mesma mecânica das encomendas: alguém chega, a equipe confirma numa tela, e
+ * o morador é avisado na hora.
+ *
+ * `documento` é dado pessoal de TERCEIRO (a visita não é usuária do sistema e
+ * não consentiu com nada): fica opcional, só a portaria e o gestor enxergam,
+ * e a rotina de expurgo em `documentos-de-visita` apaga depois de 90 dias.
+ */
+model Visita {
+  id           String       @id @default(uuid()) @db.Uuid
+  condominioId String       @map("condominio_id") @db.Uuid
+  unidadeId    String       @map("unidade_id") @db.Uuid
+  // Quem autorizou. A visita pertence à unidade, mas o registro de quem
+  // liberou a entrada é o que responde "quem deixou essa pessoa entrar?".
+  moradorId    String       @map("morador_id") @db.Uuid
+  nomeVisitante String      @map("nome_visitante")
+  documento    String?
+  // Data prevista (sem hora): a janela opcional é o intervalo do dia.
+  dataPrevista DateTime     @map("data_prevista") @db.Date
+  janelaInicio String?      @map("janela_inicio")
+  janelaFim    String?      @map("janela_fim")
+  status       StatusVisita @default(AUTORIZADA)
+  chegadaEm    DateTime?    @map("chegada_em")
+  baixaPorId   String?      @map("baixa_por_id") @db.Uuid
+  criadoEm     DateTime     @default(now()) @map("criado_em")
+
+  condominio   Condominio    @relation(fields: [condominioId], references: [id])
+  unidade      Unidade       @relation(fields: [unidadeId], references: [id])
+  morador      Morador       @relation(fields: [moradorId], references: [id])
+  baixaPor     Usuario?      @relation(fields: [baixaPorId], references: [id])
+  notificacoes Notificacao[]
+
+  @@index([condominioId, dataPrevista, status])
+  @@index([unidadeId])
+  @@map("visitas")
 }
 
 // Aviso direcionado (Via 1) OU ocorrência reportada pelo morador (Via 2).

@@ -25,6 +25,7 @@ import { ComunicadosView } from "./ComunicadosView";
 import { ConfiguracoesView } from "./ConfiguracoesView";
 import { ConsumosView } from "./ConsumosView";
 import { DocumentosView } from "./DocumentosView";
+import { VisitantesView } from "./VisitantesView";
 import { Importar } from "./Importar";
 
 type Visao =
@@ -36,6 +37,7 @@ type Visao =
   | "ocorrencias"
   | "comunicados"
   | "documentos"
+  | "visitantes"
   | "configuracoes";
 
 function rotulo(u?: UnidadeRotulo) {
@@ -154,6 +156,16 @@ export function Dashboard({
               )}
             </button>
           )}
+          {/* Sem `gestor`: quem confere o portão é a portaria, e o endpoint
+              já aceita a equipe inteira. */}
+          {ligado("visitantes") && (
+            <button
+              className={`item ${visao === "visitantes" ? "ativo" : ""}`}
+              onClick={() => setVisao("visitantes")}
+            >
+              Visitantes
+            </button>
+          )}
           {gestor && ligado("comunicados") && (
             <button
               className={`item ${visao === "comunicados" ? "ativo" : ""}`}
@@ -209,6 +221,7 @@ export function Dashboard({
         {visao === "documentos" && gestor && ligado("documentos") && (
           <DocumentosView />
         )}
+        {visao === "visitantes" && ligado("visitantes") && <VisitantesView />}
         {visao === "configuracoes" && gestor && <ConfiguracoesView />}
       </main>
     </div>

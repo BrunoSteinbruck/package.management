@@ -4,6 +4,7 @@ import type {
   PapelUsuario,
   StatusAviso,
   StatusPacote,
+  StatusVisita,
   TipoMedidor,
 } from "./enums";
 
@@ -237,6 +238,32 @@ export interface DocumentoLinha {
   tamanhoBytes: number;
   criadoEm: string;
   arquivo: FotoRef;
+}
+
+// ----- Visitantes -----
+
+/**
+ * Visita como o morador vê: sem o documento, que ele mesmo digitou mas não
+ * precisa reler, e que só interessa a quem confere no portão.
+ */
+export interface VisitaMorador {
+  id: string;
+  nomeVisitante: string;
+  dataPrevista: string;
+  janelaInicio: string | null;
+  janelaFim: string | null;
+  status: StatusVisita;
+  chegadaEm: string | null;
+  unidade: UnidadeRotulo;
+}
+
+/**
+ * A mesma visita na tela da portaria, com o que o porteiro precisa para
+ * conferir quem está na frente dele: unidade, documento e quem autorizou.
+ */
+export interface VisitaPortaria extends VisitaMorador {
+  documento: string | null;
+  autorizadoPor: string;
 }
 
 // ----- Painel (gestão) -----
