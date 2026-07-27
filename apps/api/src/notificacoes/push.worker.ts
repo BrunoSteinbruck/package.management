@@ -145,15 +145,16 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         // do fallback, que só devolve morador SEM device: ninguém recebe a
         // mesma coisa duas vezes.
         if (despacho.semApp === "whatsapp") {
-          const marca = await this.fallbackWhatsapp(condominio, notif, despacho);
-          const entregou = marca.startsWith("whatsapp-") && !marca.endsWith("-0");
+          const r = await this.fallbackWhatsapp(condominio, notif, despacho);
           if (tokens.length === 0) {
-            providerMsgId = marca;
+            providerMsgId = r.marca;
             // Sem push mas com WhatsApp entregue, a notificação saiu: marcar
             // FALHA diria que ninguém foi avisado, o que não é verdade. O
             // canal só vira WHATSAPP aqui, quando ele foi o único caminho:
-            // com push também entregue, a linha continua PUSH.
-            if (entregou) {
+            // com push também entregue, a linha continua PUSH. A decisão usa
+            // a CONTAGEM devolvida, não o texto da marca: a heurística de
+            // prefixo confundia "whatsapp-desligado" com envio feito.
+            if (r.enviados > 0) {
               novoStatus = "ENVIADA";
               canal = "WHATSAPP";
             }
@@ -361,12 +362,14 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     condominio: { id: string; nome: string },
     notif: NotifComRelacoes,
     despacho: { titulo: (n: NotifComRelacoes) => string; corpo: (n: NotifComRelacoes) => string },
-  ): Promise<string> {
+  ): Promise<{ marca: string; enviados: number }> {
     const cond = await this.prisma.condominio.findUnique({
       where: { id: condominio.id },
       select: { modulos: true },
     });
-    if (!cond?.modulos.includes("whatsapp")) return "whatsapp-desligado";
+    if (!cond?.modulos.includes("whatsapp")) {
+      return { marca: "whatsapp-desligado", enviados: 0 };
+    }
 
     const unidadeId =
       notif.cobranca?.unidadeId ?? notif.visita?.unidadeId ?? null;
@@ -375,7 +378,9 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       unidadeId,
       notif.comunicado?.blocos ?? null,
     );
-    if (moradores.length === 0) return "sem-destinatario-whatsapp";
+    if (moradores.length === 0) {
+      return { marca: "sem-destinatario-whatsapp", enviados: 0 };
+    }
 
     let enviados = 0;
     for (const m of moradores) {
@@ -389,7 +394,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     if (enviados > 0) {
       this.logger.log(`WhatsApp: ${enviados} envio(s) para quem não tem o app`);
     }
-    return `whatsapp-${enviados}`;
+    return { marca: `whatsapp-${enviados}`, enviados };
   }
 
   /**

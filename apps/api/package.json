@@ -9,6 +9,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:rls": "ts-node prisma/apply-rls.ts",
+    "test:e2e": "ts-node test/e2e/run.ts",
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "prisma": {
