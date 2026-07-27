@@ -34,6 +34,9 @@ export function LeiturasScreen({ navigation }: Props) {
 
   const estado = estados[tipo];
   const pendentes = estado?.unidades.filter((u) => u.atual === null) ?? [];
+  // Num condomínio grande são centenas de pendentes: montar tudo travaria a
+  // tela, e a lista é informativa (o fluxo de trabalho é a câmera).
+  const pendentesVisiveis = pendentes.slice(0, 60);
 
   return (
     <Tela comInsetTop>
@@ -114,13 +117,20 @@ export function LeiturasScreen({ navigation }: Props) {
             />
           ) : (
             <View style={styles.gradePendentes}>
-              {pendentes.map((u) => (
+              {pendentesVisiveis.map((u) => (
                 <View key={u.unidadeId} style={styles.piloPendente}>
                   <Text style={styles.piloPendenteTexto}>
                     {u.bloco ? `${u.bloco} ${u.identificacao}` : u.identificacao}
                   </Text>
                 </View>
               ))}
+              {pendentes.length > pendentesVisiveis.length && (
+                <View style={styles.piloPendente}>
+                  <Text style={styles.piloPendenteTexto}>
+                    e mais {pendentes.length - pendentesVisiveis.length}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>

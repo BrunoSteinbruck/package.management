@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  FlatList,
   Image,
   Linking,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -115,9 +115,61 @@ export function ConsumosScreen({ navigation }: Props) {
           </Pressable>
         }
       />
-      <ScrollView
+      {/* FlatList, não ScrollView: com 624 unidades a lista precisa ser
+          virtualizada; filtros e totais viram cabeçalho da lista. */}
+      <FlatList
+        data={dados && totais && totais.lidas === 0 ? [] : dados?.linhas ?? []}
+        keyExtractor={(l) => l.unidadeId}
         contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}
-      >
+        renderItem={({ item: l }) => (
+          <View style={styles.linha}>
+            <View style={{ width: 62 }}>
+              <Text style={styles.unidade}>
+                {l.bloco ? `${l.bloco} ${l.identificacao}` : l.identificacao}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.leituras}>
+                {l.anterior ? l.anterior.valor.toLocaleString("pt-BR") : "-"}
+                {"  >  "}
+                {l.atual ? l.atual.valor.toLocaleString("pt-BR") : "-"}
+              </Text>
+              <Text style={styles.consumo}>
+                {l.consumo !== null
+                  ? `${l.consumo.toLocaleString("pt-BR")} m³${l.valorReais !== null ? ` · ${reais(l.valorReais)}` : ""}`
+                  : l.atual
+                    ? "primeira leitura"
+                    : "sem leitura no mês"}
+              </Text>
+            </View>
+            {l.alerta && (
+              <Selo
+                texto={l.alerta === "NEGATIVO" ? "conferir" : "acima da média"}
+                tom="alerta"
+              />
+            )}
+            {l.atual?.fotoRef && (
+              <Pressable onPress={() => setFotoAberta(l)}>
+                <Image
+                  source={{ uri: urlFoto(l.atual.fotoRef) }}
+                  style={styles.thumbFoto}
+                />
+              </Pressable>
+            )}
+          </View>
+        )}
+        ListEmptyComponent={
+          dados ? (
+            <Vazio
+              variante="hero"
+              icone="medidor"
+              titulo="Sem leituras neste mês"
+              texto={`Nenhuma leitura de ${NOMES[tipo].toLowerCase()} em ${nomeCompetencia(competencia)}.`}
+            />
+          ) : null
+        }
+        ListHeaderComponent={
+          <>
         <View style={styles.linhaFiltros}>
           <View style={styles.chips}>
             {(["AGUA", "GAS"] as const).map((t) => (
@@ -168,54 +220,9 @@ export function ConsumosScreen({ navigation }: Props) {
             <Text style={styles.totalRotulo}>unidades lidas</Text>
           </View>
         </View>
-
-        {dados && totais && totais.lidas === 0 ? (
-          <Vazio
-            variante="hero"
-            icone="medidor"
-            titulo="Sem leituras neste mês"
-            texto={`Nenhuma leitura de ${NOMES[tipo].toLowerCase()} em ${nomeCompetencia(competencia)}.`}
-          />
-        ) : (
-          dados?.linhas.map((l) => (
-            <View key={l.unidadeId} style={styles.linha}>
-              <View style={{ width: 62 }}>
-                <Text style={styles.unidade}>
-                  {l.bloco ? `${l.bloco} ${l.identificacao}` : l.identificacao}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.leituras}>
-                  {l.anterior ? l.anterior.valor.toLocaleString("pt-BR") : "-"}
-                  {"  >  "}
-                  {l.atual ? l.atual.valor.toLocaleString("pt-BR") : "-"}
-                </Text>
-                <Text style={styles.consumo}>
-                  {l.consumo !== null
-                    ? `${l.consumo.toLocaleString("pt-BR")} m³${l.valorReais !== null ? ` · ${reais(l.valorReais)}` : ""}`
-                    : l.atual
-                      ? "primeira leitura"
-                      : "sem leitura no mês"}
-                </Text>
-              </View>
-              {l.alerta && (
-                <Selo
-                  texto={l.alerta === "NEGATIVO" ? "conferir" : "acima da média"}
-                  tom="alerta"
-                />
-              )}
-              {l.atual?.fotoRef && (
-                <Pressable onPress={() => setFotoAberta(l)}>
-                  <Image
-                    source={{ uri: urlFoto(l.atual.fotoRef) }}
-                    style={styles.thumbFoto}
-                  />
-                </Pressable>
-              )}
-            </View>
-          ))
-        )}
-      </ScrollView>
+          </>
+        }
+      />
 
       <Modal
         visible={fotoAberta !== null}

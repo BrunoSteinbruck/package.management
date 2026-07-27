@@ -235,93 +235,102 @@ export class LeiturasService {
   ): Promise<ConsumosResposta> {
     const cid = this.exigirGestor(user);
     const { tipo, comp, compStr } = this.parseFiltros(tipoQ, competenciaQ);
-    return this.prisma.withTenant(cid, async (tx) => {
-      const unidades = await tx.unidade.findMany({
-        orderBy: [{ bloco: "asc" }, { identificacao: "asc" }],
-      });
-      const leituras = await tx.leituraMedidor.findMany({
-        where: { tipo, competencia: { lte: comp } },
-        orderBy: { competencia: "desc" },
-        include: { lidoPor: { select: { nome: true } } },
-      });
-      const tarifaRow = await tx.tarifaConsumo.findUnique({
-        where: { condominioId_tipo: { condominioId: cid, tipo } },
-      });
-      const tarifa = tarifaRow ? Number(tarifaRow.valorPorM3) : null;
-      const porUnidade = agruparPorUnidade(leituras);
+    // A transação fica só com as queries; a assinatura dos foto-tokens (um
+    // por unidade com foto, centenas num condomínio grande) roda depois,
+    // para não prender a conexão do pool com trabalho de CPU.
+    const { unidades, porUnidade, tarifa } = await this.prisma.withTenant(
+      cid,
+      async (tx) => {
+        const unidades = await tx.unidade.findMany({
+          orderBy: [{ bloco: "asc" }, { identificacao: "asc" }],
+        });
+        const leituras = await tx.leituraMedidor.findMany({
+          where: { tipo, competencia: { lte: comp } },
+          orderBy: { competencia: "desc" },
+          include: { lidoPor: { select: { nome: true } } },
+        });
+        const tarifaRow = await tx.tarifaConsumo.findUnique({
+          where: { condominioId_tipo: { condominioId: cid, tipo } },
+        });
+        return {
+          unidades,
+          porUnidade: agruparPorUnidade(leituras),
+          tarifa: tarifaRow ? Number(tarifaRow.valorPorM3) : null,
+        };
+      },
+    );
 
-      const linhas = await Promise.all(
-        unidades.map(async (u) => {
-          const doMedidor = porUnidade.get(u.id) ?? [];
-          const atual =
-            doMedidor[0]?.competencia.getTime() === comp.getTime()
-              ? doMedidor[0]
-              : null;
-          const anteriores = doMedidor.filter((l) => l.competencia < comp);
-          const anterior = anteriores[0] ?? null;
-          const consumo =
-            atual && anterior ? r3(Number(atual.valor.minus(anterior.valor))) : null;
-          return {
-            unidadeId: u.id,
-            bloco: u.bloco,
-            identificacao: u.identificacao,
-            anterior: anterior
-              ? {
-                  competencia: dataParaCompetencia(anterior.competencia),
-                  valor: Number(anterior.valor),
-                }
-              : null,
-            atual: atual
-              ? {
-                  valor: Number(atual.valor),
-                  lidoEm: atual.lidoEm.toISOString(),
-                  lidoPor: atual.lidoPor.nome,
-                  fotoRef: atual.fotoKey
-                    ? {
-                        key: atual.fotoKey,
-                        token: await this.jwt.signAsync(
-                          { tipo: "foto", key: atual.fotoKey },
-                          { expiresIn: "1h" },
-                        ),
-                      }
-                    : null,
-                }
-              : null,
-            consumo,
-            valorReais:
-              consumo !== null && tarifa !== null && consumo >= 0
-                ? r2(consumo * tarifa)
-                : null,
-            alerta: alertaPara(consumo, consumosDerivados(anteriores)),
-          };
-        }),
-      );
-
-      // Consumo negativo é erro a conferir (medidor trocado, leitura errada):
-      // fica na linha com alerta, mas fora de TODO total. Sem isso o total de
-      // m³ encolheria enquanto o de R$ (que já ignora negativos) não.
-      const consumoTotal = r3(
-        linhas.reduce(
-          (soma, l) => soma + (l.consumo !== null && l.consumo >= 0 ? l.consumo : 0),
-          0,
-        ),
-      );
-      return {
-        competencia: compStr,
-        tipo,
-        tarifa,
-        linhas,
-        totais: {
-          lidas: linhas.filter((l) => l.atual !== null).length,
-          totalUnidades: linhas.length,
-          consumo: consumoTotal,
+    const linhas = await Promise.all(
+      unidades.map(async (u) => {
+        const doMedidor = porUnidade.get(u.id) ?? [];
+        const atual =
+          doMedidor[0]?.competencia.getTime() === comp.getTime()
+            ? doMedidor[0]
+            : null;
+        const anteriores = doMedidor.filter((l) => l.competencia < comp);
+        const anterior = anteriores[0] ?? null;
+        const consumo =
+          atual && anterior ? r3(Number(atual.valor.minus(anterior.valor))) : null;
+        return {
+          unidadeId: u.id,
+          bloco: u.bloco,
+          identificacao: u.identificacao,
+          anterior: anterior
+            ? {
+                competencia: dataParaCompetencia(anterior.competencia),
+                valor: Number(anterior.valor),
+              }
+            : null,
+          atual: atual
+            ? {
+                valor: Number(atual.valor),
+                lidoEm: atual.lidoEm.toISOString(),
+                lidoPor: atual.lidoPor.nome,
+                fotoRef: atual.fotoKey
+                  ? {
+                      key: atual.fotoKey,
+                      token: await this.jwt.signAsync(
+                        { tipo: "foto", key: atual.fotoKey },
+                        { expiresIn: "1h" },
+                      ),
+                    }
+                  : null,
+              }
+            : null,
+          consumo,
           valorReais:
-            tarifa !== null
-              ? r2(linhas.reduce((soma, l) => soma + (l.valorReais ?? 0), 0))
+            consumo !== null && tarifa !== null && consumo >= 0
+              ? r2(consumo * tarifa)
               : null,
-        },
-      };
-    });
+          alerta: alertaPara(consumo, consumosDerivados(anteriores)),
+        };
+      }),
+    );
+
+    // Consumo negativo é erro a conferir (medidor trocado, leitura errada):
+    // fica na linha com alerta, mas fora de TODO total. Sem isso o total de
+    // m³ encolheria enquanto o de R$ (que já ignora negativos) não.
+    const consumoTotal = r3(
+      linhas.reduce(
+        (soma, l) => soma + (l.consumo !== null && l.consumo >= 0 ? l.consumo : 0),
+        0,
+      ),
+    );
+    return {
+      competencia: compStr,
+      tipo,
+      tarifa,
+      linhas,
+      totais: {
+        lidas: linhas.filter((l) => l.atual !== null).length,
+        totalUnidades: linhas.length,
+        consumo: consumoTotal,
+        valorReais:
+          tarifa !== null
+            ? r2(linhas.reduce((soma, l) => soma + (l.valorReais ?? 0), 0))
+            : null,
+      },
+    };
   }
 
   /** Série mensal agregada do condomínio, ancorada na competência do cliente. */
