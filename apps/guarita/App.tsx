@@ -26,6 +26,7 @@ import { NovoComunicadoScreen } from "./src/screens/NovoComunicadoScreen";
 import { NovaVisitaScreen } from "./src/screens/NovaVisitaScreen";
 import { VisitasHojeScreen } from "./src/screens/VisitasHojeScreen";
 import { VisitasScreen } from "./src/screens/VisitasScreen";
+import { CobrancasScreen } from "./src/screens/CobrancasScreen";
 import { DetalheScreen } from "./src/screens/DetalheScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
 import { EntradaConfirmScreen } from "./src/screens/EntradaConfirmScreen";
@@ -148,6 +149,7 @@ function PilhaMorador({ perfil, aoSair }: PropsPilha) {
         <Morador.Screen name="Documentos" component={DocumentosScreen} />
         <Morador.Screen name="Visitas" component={VisitasScreen} />
         <Morador.Screen name="NovaVisita" component={NovaVisitaScreen} />
+        <Morador.Screen name="Cobrancas" component={CobrancasScreen} />
       </Morador.Navigator>
     </NavigationContainer>
   );

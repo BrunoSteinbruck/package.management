@@ -71,4 +71,5 @@ export type MoradorStackParamList = {
   Documentos: undefined;
   Visitas: undefined;
   NovaVisita: undefined;
+  Cobrancas: undefined;
 };

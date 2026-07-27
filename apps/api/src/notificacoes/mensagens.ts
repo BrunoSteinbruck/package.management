@@ -1,5 +1,6 @@
 import type {
   Aviso,
+  Cobranca,
   Comunicado,
   Notificacao,
   Pacote,
@@ -12,6 +13,7 @@ export type NotifComRelacoes = Notificacao & {
   aviso: Aviso | null;
   comunicado: Comunicado | null;
   visita: Visita | null;
+  cobranca: Cobranca | null;
 };
 
 /**
@@ -26,6 +28,7 @@ export type Audiencia =
   /** Moradores com vínculo ativo no condomínio, filtrando pelos blocos alvo. */
   | "moradoresDoComunicado"
   | "unidadeDaVisita"
+  | "unidadeDaCobranca"
   /** Criada já como ENVIADA (marcador de dedup), nunca passa pela fila. */
   | "naoEnfileirada";
 
@@ -53,6 +56,32 @@ function rotuloStatus(s: string): string {
  * limite de caracteres: o síndico costuma abrir com uma frase de resumo, e
  * cortar no meio dela entregaria uma notificação que não diz nada.
  */
+const MESES = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/** Competência é DATE: fatia o ISO em vez de converter, para não trocar o mês. */
+function mesDaCompetencia(c: { competencia: Date } | null): string {
+  if (!c) return "";
+  const [, mes] = c.competencia.toISOString().slice(0, 7).split("-");
+  return MESES[Number(mes) - 1] ?? "";
+}
+
+function dataCurta(d: Date | null | undefined): string {
+  if (!d) return "";
+  const [, mes, dia] = d.toISOString().slice(0, 10).split("-");
+  return `${dia}/${mes}`;
+}
+
+function dinheiro(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return Number(v).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
 function primeiraLinha(corpo: string, max = 140): string {
   const linha = corpo.split("\n")[0].trim();
   return linha.length <= max ? linha : `${linha.slice(0, max - 1).trimEnd()}…`;
@@ -138,6 +167,44 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     corpo: (n) =>
       `${n.visita?.nomeVisitante ?? "Sua visita"} está na portaria.`,
     data: (n) => ({ visitaId: n.visitaId }),
+    semApp: "ignorar",
+    marcadorSemApp: "sem-app",
+  },
+  COBRANCA_GERADA: {
+    audiencia: "unidadeDaCobranca",
+    titulo: () => "Boleto disponível",
+    corpo: (n) =>
+      `Taxa de ${mesDaCompetencia(n.cobranca)} · ${dinheiro(n.cobranca?.valor)}, vence ${dataCurta(n.cobranca?.vencimento)}.`,
+    data: (n) => ({ cobrancaId: n.cobrancaId }),
+    semApp: "ignorar",
+    marcadorSemApp: "sem-app",
+  },
+  COBRANCA_LEMBRETE: {
+    audiencia: "unidadeDaCobranca",
+    titulo: () => "Boleto vence em 3 dias",
+    corpo: (n) =>
+      `Taxa de ${mesDaCompetencia(n.cobranca)} · ${dinheiro(n.cobranca?.valor)}, vence ${dataCurta(n.cobranca?.vencimento)}.`,
+    data: (n) => ({ cobrancaId: n.cobrancaId }),
+    semApp: "ignorar",
+    marcadorSemApp: "sem-app",
+  },
+  COBRANCA_VENCIDA: {
+    // Informa, não cobra: quem decide como resolver é o morador, e tom de
+    // cobrança num push é o que faz desinstalar o app.
+    audiencia: "unidadeDaCobranca",
+    titulo: () => "Boleto vencido",
+    corpo: (n) =>
+      `A taxa de ${mesDaCompetencia(n.cobranca)} venceu em ${dataCurta(n.cobranca?.vencimento)}. A segunda via está no app.`,
+    data: (n) => ({ cobrancaId: n.cobrancaId }),
+    semApp: "ignorar",
+    marcadorSemApp: "sem-app",
+  },
+  COBRANCA_PAGA: {
+    audiencia: "unidadeDaCobranca",
+    titulo: () => "Pagamento confirmado",
+    corpo: (n) =>
+      `Recebemos a taxa de ${mesDaCompetencia(n.cobranca)}. Obrigado!`,
+    data: (n) => ({ cobrancaId: n.cobrancaId }),
     semApp: "ignorar",
     marcadorSemApp: "sem-app",
   },

@@ -41,6 +41,15 @@ export type ModuloCondominio = (typeof MODULOS_CONDOMINIO)[number];
 export const STATUS_VISITA = ["AUTORIZADA", "CHEGOU", "CANCELADA"] as const;
 export type StatusVisita = (typeof STATUS_VISITA)[number];
 
+/** Ciclo da cobrança da taxa condominial. */
+export const STATUS_COBRANCA = [
+  "PENDENTE",
+  "PAGA",
+  "VENCIDA",
+  "CANCELADA",
+] as const;
+export type StatusCobranca = (typeof STATUS_COBRANCA)[number];
+
 /** Prateleiras do repositório de documentos do condomínio. */
 export const CATEGORIAS_DOCUMENTO = [
   "ATA",

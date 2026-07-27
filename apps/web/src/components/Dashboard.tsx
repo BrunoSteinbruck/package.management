@@ -26,6 +26,7 @@ import { ConfiguracoesView } from "./ConfiguracoesView";
 import { ConsumosView } from "./ConsumosView";
 import { DocumentosView } from "./DocumentosView";
 import { VisitantesView } from "./VisitantesView";
+import { FinanceiroView } from "./FinanceiroView";
 import { Importar } from "./Importar";
 
 type Visao =
@@ -38,6 +39,7 @@ type Visao =
   | "comunicados"
   | "documentos"
   | "visitantes"
+  | "financeiro"
   | "configuracoes";
 
 function rotulo(u?: UnidadeRotulo) {
@@ -182,6 +184,14 @@ export function Dashboard({
               Documentos
             </button>
           )}
+          {gestor && ligado("financeiro") && (
+            <button
+              className={`item ${visao === "financeiro" ? "ativo" : ""}`}
+              onClick={() => setVisao("financeiro")}
+            >
+              Financeiro
+            </button>
+          )}
           {gestor && (
             <button
               className={`item ${visao === "configuracoes" ? "ativo" : ""}`}
@@ -222,6 +232,9 @@ export function Dashboard({
           <DocumentosView />
         )}
         {visao === "visitantes" && ligado("visitantes") && <VisitantesView />}
+        {visao === "financeiro" && gestor && ligado("financeiro") && (
+          <FinanceiroView />
+        )}
         {visao === "configuracoes" && gestor && <ConfiguracoesView />}
       </main>
     </div>

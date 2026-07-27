@@ -171,6 +171,14 @@ export const MODULOS_MORADOR: readonly Modulo<
     slot: "rodape",
     flag: "visitantes",
   },
+  {
+    id: "Cobrancas",
+    titulo: "Boletos",
+    icone: "pacote",
+    perfis: ["morador"],
+    slot: "rodape",
+    flag: "financeiro",
+  },
 ];
 
 export function modulosDe<Rota extends string>(

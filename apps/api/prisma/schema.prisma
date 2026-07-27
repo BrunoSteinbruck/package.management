@@ -48,6 +48,17 @@ enum TipoNotificacao {
   OCORRENCIA_NOVA // Via 2: relato novo, avisa a administração
   COMUNICADO // Síndico publicou para o condomínio (ou para blocos)
   VISITA_CHEGOU // A portaria deu baixa na visita pré-autorizada
+  COBRANCA_GERADA // Boleto da competência disponível
+  COBRANCA_LEMBRETE // Vence em 3 dias
+  COBRANCA_VENCIDA // Venceu ontem
+  COBRANCA_PAGA // Recibo: o provedor confirmou a liquidação
+}
+
+enum StatusCobranca {
+  PENDENTE
+  PAGA
+  VENCIDA
+  CANCELADA
 }
 
 enum StatusVisita {
@@ -123,6 +134,10 @@ model Condominio {
   comunicados  Comunicado[]
   documentos   Documento[]
   visitas      Visita[]
+  cobrancas    Cobranca[]
+  taxas        TaxaUnidade[]
+  integracao   IntegracaoFinanceira?
+  configFinanceiro ConfigFinanceiro?
 
   @@map("condominios")
 }
@@ -142,6 +157,8 @@ model Unidade {
   avisos     Aviso[]
   leituras   LeituraMedidor[]
   visitas    Visita[]
+  cobrancas  Cobranca[]
+  taxa       TaxaUnidade?
 
   @@unique([condominioId, bloco, identificacao])
   @@index([condominioId])
@@ -255,6 +272,7 @@ model Notificacao {
   avisoId       String?           @map("aviso_id") @db.Uuid
   comunicadoId  String?           @map("comunicado_id") @db.Uuid
   visitaId      String?           @map("visita_id") @db.Uuid
+  cobrancaId    String?           @map("cobranca_id") @db.Uuid
   canal         CanalNotificacao
   tipo          TipoNotificacao
   status        StatusNotificacao @default(FILA)
@@ -266,6 +284,7 @@ model Notificacao {
   aviso      Aviso?      @relation(fields: [avisoId], references: [id])
   comunicado Comunicado? @relation(fields: [comunicadoId], references: [id])
   visita     Visita?     @relation(fields: [visitaId], references: [id])
+  cobranca   Cobranca?   @relation(fields: [cobrancaId], references: [id])
 
   @@index([condominioId, status])
   @@map("notificacoes")
@@ -498,6 +517,118 @@ model Visita {
   @@index([condominioId, dataPrevista, status])
   @@index([unidadeId])
   @@map("visitas")
+}
+
+/**
+ * Credenciais da subconta do condomínio no provedor de cobrança.
+ *
+ * Uma subconta POR CONDOMÍNIO, no CNPJ dele: o dinheiro da taxa condominial
+ * liquida na conta do condomínio, nunca na nossa. Passar a receita de
+ * terceiros pelo nosso caixa seria custódia de fundos, que é outro negócio e
+ * outra licença. É também o que desamarra o módulo da nossa própria PJ.
+ *
+ * `apiKeyCifrada` guarda a chave da subconta cifrada em repouso (AES-GCM,
+ * chave-mestra em env): um dump do banco sozinho não move dinheiro de
+ * ninguém. Nunca sai em log, resposta de API ou Sentry.
+ */
+model IntegracaoFinanceira {
+  id             String   @id @default(uuid()) @db.Uuid
+  condominioId   String   @unique @map("condominio_id") @db.Uuid
+  provedor       String   @default("asaas")
+  contaExternaId String   @map("conta_externa_id")
+  apiKeyCifrada  String   @map("api_key_cifrada")
+  /** Token que o provedor devolve no header do webhook, para autenticá-lo. */
+  webhookSegredo String?  @map("webhook_segredo")
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now()) @map("criado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+
+  @@map("integracoes_financeiras")
+}
+
+model ConfigFinanceiro {
+  id            String   @id @default(uuid()) @db.Uuid
+  condominioId  String   @unique @map("condominio_id") @db.Uuid
+  diaVencimento Int      @default(10) @map("dia_vencimento")
+  /** Enquanto false, nada é gerado: a geração automática é opt-in explícito. */
+  geracaoAutomatica Boolean @default(false) @map("geracao_automatica")
+  reguaAtiva    Boolean  @default(true) @map("regua_ativa")
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+
+  @@map("config_financeiro")
+}
+
+/** Quanto cada unidade paga por mês (a fração ideal varia por unidade). */
+model TaxaUnidade {
+  id           String   @id @default(uuid()) @db.Uuid
+  condominioId String   @map("condominio_id") @db.Uuid
+  unidadeId    String   @unique @map("unidade_id") @db.Uuid
+  valorMensal  Decimal  @map("valor_mensal") @db.Decimal(12, 2)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  unidade    Unidade    @relation(fields: [unidadeId], references: [id])
+
+  @@index([condominioId])
+  @@map("taxas_unidade")
+}
+
+/**
+ * A cobrança de uma unidade numa competência.
+ *
+ * `@@unique([unidadeId, competencia])` é a trava que impede cobrar a mesma
+ * unidade duas vezes pelo mesmo mês, que é o erro caro deste módulo: um
+ * worker que roda duas vezes, ou um deploy no meio da geração, cobraria em
+ * duplicidade sem essa restrição.
+ */
+model Cobranca {
+  id           String         @id @default(uuid()) @db.Uuid
+  condominioId String         @map("condominio_id") @db.Uuid
+  unidadeId    String         @map("unidade_id") @db.Uuid
+  /** Sempre o dia 1 do mês (UTC), como em LeituraMedidor. */
+  competencia  DateTime       @db.Date
+  valor        Decimal        @db.Decimal(12, 2)
+  vencimento   DateTime       @db.Date
+  status       StatusCobranca @default(PENDENTE)
+  provedorCobrancaId String?  @map("provedor_cobranca_id")
+  linhaDigitavel String?      @map("linha_digitavel")
+  urlBoleto      String?      @map("url_boleto")
+  pixCopiaCola   String?      @map("pix_copia_cola")
+  pagoEm       DateTime?      @map("pago_em")
+  valorPago    Decimal?       @map("valor_pago") @db.Decimal(12, 2)
+  criadoEm     DateTime       @default(now()) @map("criado_em")
+  atualizadoEm DateTime       @updatedAt @map("atualizado_em")
+
+  condominio   Condominio    @relation(fields: [condominioId], references: [id])
+  unidade      Unidade       @relation(fields: [unidadeId], references: [id])
+  notificacoes Notificacao[]
+
+  @@unique([unidadeId, competencia])
+  @@index([condominioId, status])
+  @@index([condominioId, competencia])
+  @@map("cobrancas")
+}
+
+/**
+ * Log bruto do que o provedor mandou. Serve a duas coisas: idempotência (o
+ * mesmo evento reentregue não processa de novo) e auditoria, porque quando
+ * alguém disser "paguei e o sistema não baixou" a resposta tem que estar
+ * gravada e não depender do log da aplicação.
+ */
+model EventoWebhookFinanceiro {
+  id           String   @id @default(uuid()) @db.Uuid
+  /** ID do evento no provedor: a chave de idempotência. */
+  eventoId     String   @unique @map("evento_id")
+  tipo         String
+  payload      Json
+  processadoEm DateTime?  @map("processado_em")
+  erro         String?
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  @@map("eventos_webhook_financeiro")
 }
 
 // Aviso direcionado (Via 1) OU ocorrência reportada pelo morador (Via 2).

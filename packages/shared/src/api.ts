@@ -3,6 +3,7 @@ import type {
   ModuloCondominio,
   PapelUsuario,
   StatusAviso,
+  StatusCobranca,
   StatusPacote,
   StatusVisita,
   TipoMedidor,
@@ -264,6 +265,53 @@ export interface VisitaMorador {
 export interface VisitaPortaria extends VisitaMorador {
   documento: string | null;
   autorizadoPor: string;
+}
+
+// ----- Financeiro -----
+
+/** A cobrança como o morador vê, com o que ele precisa para pagar. */
+export interface CobrancaMorador {
+  id: string;
+  competencia: string;
+  valor: number;
+  vencimento: string;
+  status: StatusCobranca;
+  linhaDigitavel: string | null;
+  urlBoleto: string | null;
+  pixCopiaCola: string | null;
+  pagoEm: string | null;
+  unidade: UnidadeRotulo;
+}
+
+export interface CobrancaGestor extends CobrancaMorador {
+  /** Dias de atraso; 0 quando em dia ou paga. */
+  diasAtraso: number;
+}
+
+export interface ResumoFinanceiro {
+  competencia: string;
+  totalCobrado: number;
+  totalPago: number;
+  inadimplencia: number;
+  unidadesCobradas: number;
+  unidadesPagas: number;
+  /** Falso quando o provedor roda em stub: nada foi emitido de verdade. */
+  emissaoReal: boolean;
+}
+
+export interface ConfigFinanceiro {
+  diaVencimento: number;
+  geracaoAutomatica: boolean;
+  reguaAtiva: boolean;
+  /** Existe subconta configurada no provedor? */
+  integrado: boolean;
+  emissaoReal: boolean;
+}
+
+export interface TaxaLinha {
+  unidadeId: string;
+  unidade: UnidadeRotulo;
+  valorMensal: number | null;
 }
 
 // ----- Painel (gestão) -----

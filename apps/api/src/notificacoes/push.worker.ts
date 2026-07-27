@@ -81,6 +81,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         for (const condominio of condominios) {
           await this.lembretesDoCondominio(condominio.id);
           await this.expurgarDocumentosDeVisita(condominio.id);
+          await this.reguaDeCobranca(condominio.id);
         }
       }
     } catch (e) {
@@ -97,7 +98,13 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         where: { status: "FILA", canal: "PUSH" },
         take: 20,
         orderBy: { criadoEm: "asc" },
-        include: { pacote: true, aviso: true, comunicado: true, visita: true },
+        include: {
+          pacote: true,
+          aviso: true,
+          comunicado: true,
+          visita: true,
+          cobranca: true,
+        },
       }),
     );
 
@@ -166,6 +173,10 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
           : null;
       case "unidadeDaVisita":
         return notif.visita ? this.tokensDaUnidade(notif.visita.unidadeId) : null;
+      case "unidadeDaCobranca":
+        return notif.cobranca
+          ? this.tokensDaUnidade(notif.cobranca.unidadeId)
+          : null;
       case "naoEnfileirada":
         return null;
     }
@@ -303,6 +314,84 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Lembrete: ${n} pacote(s) parados, unidade ${unidadeId}`);
       }
     }
+  }
+
+  /**
+   * Régua de cobrança: lembra 3 dias antes e avisa no dia seguinte ao
+   * vencimento, marcando a cobrança como VENCIDA.
+   *
+   * Dedup pela própria linha de Notificacao, como no lembrete de pacote: uma
+   * cobrança que já tem COBRANCA_LEMBRETE não recebe outro. Sem isso, cada
+   * ciclo do worker mandaria o mesmo push de novo, que num aviso sobre
+   * dinheiro é o caminho mais curto para o morador desligar as notificações.
+   *
+   * Só roda com a régua ligada na configuração do condomínio.
+   */
+  private async reguaDeCobranca(condominioId: string) {
+    // Dentro do tenant: `config_financeiro` tem RLS, e ler fora devolveria
+    // null, o que desligaria a régua em silêncio para todo mundo.
+    const cfg = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.configFinanceiro.findUnique({ where: { condominioId } }),
+    );
+    if (!cfg?.reguaAtiva) return;
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const daquiATres = new Date(Date.now() + 3 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+
+    await this.prisma.withTenant(condominioId, async (tx) => {
+      const aVencer = await tx.cobranca.findMany({
+        where: {
+          status: "PENDENTE",
+          vencimento: new Date(`${daquiATres}T00:00:00.000Z`),
+          notificacoes: { none: { tipo: "COBRANCA_LEMBRETE" } },
+        },
+        select: { id: true },
+      });
+      for (const c of aVencer) {
+        await tx.notificacao.create({
+          data: {
+            condominioId,
+            cobrancaId: c.id,
+            canal: "PUSH",
+            tipo: "COBRANCA_LEMBRETE",
+          },
+        });
+      }
+
+      // Venceu ontem ou antes e continua em aberto: marca VENCIDA e avisa
+      // uma vez só.
+      const vencidas = await tx.cobranca.findMany({
+        where: {
+          status: "PENDENTE",
+          vencimento: { lt: new Date(`${hoje}T00:00:00.000Z`) },
+        },
+        select: { id: true, notificacoes: { where: { tipo: "COBRANCA_VENCIDA" } } },
+      });
+      for (const c of vencidas) {
+        await tx.cobranca.update({
+          where: { id: c.id },
+          data: { status: "VENCIDA" },
+        });
+        if (c.notificacoes.length === 0) {
+          await tx.notificacao.create({
+            data: {
+              condominioId,
+              cobrancaId: c.id,
+              canal: "PUSH",
+              tipo: "COBRANCA_VENCIDA",
+            },
+          });
+        }
+      }
+
+      if (aVencer.length || vencidas.length) {
+        this.logger.log(
+          `Régua: ${aVencer.length} lembrete(s), ${vencidas.length} vencida(s)`,
+        );
+      }
+    });
   }
 
   /**

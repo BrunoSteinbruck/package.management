@@ -8,10 +8,12 @@
 -- retorna '' (não NULL): sem o NULLIF o cast ::uuid explode a query.
 --
 -- Tabelas globais (sem RLS): condominios, usuarios, moradores, vinculos,
--- devices, otp_challenges, convites.
+-- devices, otp_challenges, convites, eventos_webhook_financeiro.
 --   usuarios: o login (OTP) localiza pelo telefone antes de existir tenant.
 --   convites: o resgate acontece no onboarding, antes da autenticação,
 --     protegido por código único não-adivinhável, expiração e uso único.
+--   eventos_webhook_financeiro: o webhook do provedor chega antes de sabermos
+--     o tenant, e é do payload dele que o tenant é descoberto.
 --   Isolamento dessas tabelas é responsabilidade da API.
 
 DO $$
@@ -25,7 +27,7 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
   END LOOP;
 
-  FOREACH t IN ARRAY ARRAY['unidades','pacotes','retiradas','notificacoes','vagas','veiculos','avisos','leituras_medidor','tarifas_consumo','comunicados','comunicado_leituras','documentos','visitas']
+  FOREACH t IN ARRAY ARRAY['unidades','pacotes','retiradas','notificacoes','vagas','veiculos','avisos','leituras_medidor','tarifas_consumo','comunicados','comunicado_leituras','documentos','visitas','integracoes_financeiras','config_financeiro','taxas_unidade','cobrancas']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

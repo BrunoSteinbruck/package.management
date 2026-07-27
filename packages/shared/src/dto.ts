@@ -243,6 +243,46 @@ export const CriarVisitaSchema = z
   );
 export type CriarVisitaDto = z.infer<typeof CriarVisitaSchema>;
 
+// ----- Módulo Financeiro -----
+
+export const SalvarConfigFinanceiroSchema = z.object({
+  diaVencimento: z.number().int().min(1).max(31),
+  geracaoAutomatica: z.boolean(),
+  reguaAtiva: z.boolean(),
+});
+export type SalvarConfigFinanceiroDto = z.infer<
+  typeof SalvarConfigFinanceiroSchema
+>;
+
+/** Valor mensal por unidade: a fração ideal varia, então vem lista. */
+export const SalvarTaxasSchema = z.object({
+  taxas: z
+    .array(
+      z.object({
+        unidadeId: z.string().uuid(),
+        valorMensal: z.number().min(0).max(1_000_000),
+      }),
+    )
+    .min(1)
+    .max(2000),
+});
+export type SalvarTaxasDto = z.infer<typeof SalvarTaxasSchema>;
+
+/**
+ * Liga a subconta do condomínio no provedor. A chave é da subconta DELE, no
+ * CNPJ dele: o dinheiro nunca passa pela nossa conta.
+ */
+export const SalvarIntegracaoSchema = z.object({
+  contaExternaId: z.string().min(3).max(120),
+  apiKey: z.string().min(10).max(400),
+});
+export type SalvarIntegracaoDto = z.infer<typeof SalvarIntegracaoSchema>;
+
+export const GerarCobrancasSchema = z.object({
+  competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Use AAAA-MM"),
+});
+export type GerarCobrancasDto = z.infer<typeof GerarCobrancasSchema>;
+
 // ----- Módulo Leituras de medidores -----
 
 /**
