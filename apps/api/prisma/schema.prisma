@@ -179,6 +179,7 @@ model Morador {
   devices            Device[]
   avisosReportados   Aviso[]             @relation("avisoCriadoPorMorador")
   comunicadosLidos   ComunicadoLeitura[]
+  retiradasRecebidas Retirada[]          @relation("retiradaRecebidaPor")
   visitasAutorizadas Visita[]
 
   @@map("moradores")
@@ -260,10 +261,22 @@ model Retirada {
   pacoteId      String   @unique @map("pacote_id") @db.Uuid
   entreguePorId String   @map("entregue_por_id") @db.Uuid
   fotoSaidaKey  String?  @map("foto_saida_key")
+  // Quem RECEBEU. Até aqui a retirada só registrava quem entregou (o
+  // porteiro) e a foto: o pacote saía sem constar para quem foi. O QR não
+  // resolvia isso, porque resolvia a UNIDADE e não a pessoa.
+  //
+  // Dois campos porque quem retira nem sempre é morador: quando é, fica a FK
+  // (nome atual vem da tabela, e acompanha quem mudou de nome); quando é
+  // faxineira, filho ou motoboy, fica só o texto que o porteiro escreveu.
+  // Nome de terceiro é dado pessoal de quem não consentiu: campo opcional,
+  // curto e sem documento, no mesmo critério do visitante.
+  recebidoPorMoradorId String? @map("recebido_por_morador_id") @db.Uuid
+  recebidoPorNome      String? @map("recebido_por_nome")
   retiradoEm    DateTime @default(now()) @map("retirado_em")
 
-  pacote      Pacote  @relation(fields: [pacoteId], references: [id])
-  entreguePor Usuario @relation("entreguePor", fields: [entreguePorId], references: [id])
+  pacote          Pacote   @relation(fields: [pacoteId], references: [id])
+  entreguePor     Usuario  @relation("entreguePor", fields: [entreguePorId], references: [id])
+  recebidoPor     Morador? @relation("retiradaRecebidaPor", fields: [recebidoPorMoradorId], references: [id])
 
   @@index([condominioId])
   @@map("retiradas")

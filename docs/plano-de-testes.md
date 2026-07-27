@@ -33,6 +33,10 @@ O que cada spec protege:
 - `apps/guarita/src/modulos.spec.ts`: o filtro de flags da home. Módulo pago
   não aparece sem a flag; a base nunca some; cada módulo das ondas está atrás
   da flag certa.
+- `apps/guarita/src/nomes.spec.ts`: o rótulo do chip de "quem recebeu". Dois
+  moradores com o mesmo primeiro nome na unidade (pai e filho, ou cadastro
+  duplicado) não podem virar dois chips idênticos: o registro de custódia
+  viraria um chute.
 - `apps/api/src/notificacoes/mensagens.spec.ts`: o registry aguenta relação
   nula (FK SET NULL não pode derrubar o worker e parar a fila de todos os
   condomínios); só comunicado e cobranças usam o canal pago; encomenda segue

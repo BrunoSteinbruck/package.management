@@ -175,9 +175,19 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
             { transform: [{ scale: pressed ? 0.98 : 1 }] },
           ]}
         >
-          <Icone nome="qr" tamanho={34} traco={1.8} />
+          {/* Sem QR, o caminho é buscar a unidade: manter o ícone de QR
+              prometeria um fluxo que a portaria não tem mais. */}
+          <Icone
+            nome={ligados.includes("qr_retirada") ? "qr" : "busca"}
+            tamanho={34}
+            traco={1.8}
+          />
           <Text style={styles.tileRetiradaTitulo}>Retirada</Text>
-          <Text style={styles.tileRetiradaSub}>Toque no pacote ou bipe o QR</Text>
+          <Text style={styles.tileRetiradaSub}>
+            {ligados.includes("qr_retirada")
+              ? "Toque no pacote ou bipe o QR"
+              : "Busque a unidade e entregue"}
+          </Text>
         </Pressable>
 
         {/* Prateleira dos módulos secundários: funcionalidade nova entra aqui

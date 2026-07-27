@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { MoradorDaUnidade } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import {
   diasAtras,
@@ -17,9 +18,11 @@ import {
   type Pacote,
   type Unidade,
 } from "../api/types";
-import { BotaoCta, Chip, HeaderTela } from "../components/ui";
+import { BotaoCta, Chip, HeaderTela, Kicker } from "../components/ui";
 import { Icone } from "../components/icones";
+import { rotuloCurto } from "../nomes";
 import { theme } from "../theme";
+import { useModulos } from "../useModulos";
 import type { PortariaStackParamList } from "../navigation";
 
 let cacheUnidades: Unidade[] | null = null;
@@ -32,11 +35,18 @@ type Props = NativeStackScreenProps<PortariaStackParamList, "Retirada">;
 
 export function RetiradaScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const ligados = useModulos();
   const [unidades, setUnidades] = useState<Unidade[]>(cacheUnidades ?? []);
   const [busca, setBusca] = useState("");
   const [unidade, setUnidade] = useState<Unidade | null>(null);
   const [pendentes, setPendentes] = useState<Pacote[] | null>(null);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  // Quem recebeu: chip de morador ou nome digitado. Um exclui o outro, então
+  // escolher um limpa o outro em vez de deixar os dois preenchidos.
+  const [moradores, setMoradores] = useState<MoradorDaUnidade[]>([]);
+  const [recebedor, setRecebedor] = useState<MoradorDaUnidade | null>(null);
+  const [outroNome, setOutroNome] = useState("");
+  const [digitandoOutro, setDigitandoOutro] = useState(false);
 
   useEffect(() => {
     const inicial = route.params?.unidadeInicial;
@@ -69,6 +79,9 @@ export function RetiradaScreen({ navigation, route }: Props) {
     setUnidade(u);
     setPendentes(null);
     setSelecionados(new Set());
+    setRecebedor(null);
+    setOutroNome("");
+    setDigitandoOutro(false);
     try {
       const lista = await apiFetch<Pacote[]>(`/portaria/unidades/${u.id}/pendentes`);
       setPendentes(lista);
@@ -76,7 +89,19 @@ export function RetiradaScreen({ navigation, route }: Props) {
     } catch (e) {
       Alert.alert("Não foi possível listar", String((e as Error).message));
       setUnidade(null);
+      return;
     }
+    // Falha em silêncio: sem os chips a entrega continua possível, só não
+    // registra quem recebeu. Bloquear a retirada por causa disso seria pior.
+    apiFetch<MoradorDaUnidade[]>(`/portaria/unidades/${u.id}/moradores`)
+      .then(setMoradores)
+      .catch(() => setMoradores([]));
+  }
+
+  function escolherMorador(m: MoradorDaUnidade) {
+    setRecebedor((atual) => (atual?.id === m.id ? null : m));
+    setOutroNome("");
+    setDigitandoOutro(false);
   }
 
   function alternar(id: string) {
@@ -89,6 +114,7 @@ export function RetiradaScreen({ navigation, route }: Props) {
   }
 
   const restantes = (pendentes?.length ?? 0) - selecionados.size;
+  const nomesDaUnidade = useMemo(() => moradores.map((m) => m.nome), [moradores]);
 
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
@@ -110,13 +136,17 @@ export function RetiradaScreen({ navigation, route }: Props) {
                   autoFocus
                 />
               </View>
-              <Pressable
-                style={styles.botaoQr}
-                onPress={() => navigation.navigate("QrScan")}
-              >
-                <Icone nome="qr" tamanho={20} traco={2} />
-                <Text style={styles.botaoQrTexto}>Bipar QR</Text>
-              </Pressable>
+              {/* Conferência opcional: por padrão o morador diz a unidade e a
+                  entrega é registrada com foto e o nome de quem recebeu. */}
+              {ligados.includes("qr_retirada") && (
+                <Pressable
+                  style={styles.botaoQr}
+                  onPress={() => navigation.navigate("QrScan")}
+                >
+                  <Icone nome="qr" tamanho={20} traco={2} />
+                  <Text style={styles.botaoQrTexto}>Bipar QR</Text>
+                </Pressable>
+              )}
             </View>
             <View style={styles.gradeUnidades}>
               {filtradas.map((u) => (
@@ -215,6 +245,44 @@ export function RetiradaScreen({ navigation, route }: Props) {
 
       {unidade && pendentes && pendentes.length > 0 && (
         <View style={[styles.rodape, { paddingBottom: insets.bottom + 12 }]}>
+          {/* Quem recebeu, um toque. É o que a retirada não registrava: a
+              foto mostra o pacote saindo, mas não para quem foi. Opcional de
+              propósito, porque em hora de pico a entrega não pode travar
+              esperando o porteiro preencher. */}
+          {(moradores.length > 0 || digitandoOutro) && (
+            <>
+              <Kicker>Quem retirou (opcional)</Kicker>
+              <View style={styles.chipsRecebedor}>
+                {moradores.map((m) => (
+                  <Chip
+                    key={m.id}
+                    rotulo={rotuloCurto(m.nome, nomesDaUnidade)}
+                    ativo={recebedor?.id === m.id}
+                    onPress={() => escolherMorador(m)}
+                  />
+                ))}
+                <Chip
+                  rotulo="Outra pessoa"
+                  ativo={digitandoOutro}
+                  onPress={() => {
+                    setDigitandoOutro((v) => !v);
+                    setRecebedor(null);
+                  }}
+                />
+              </View>
+              {digitandoOutro && (
+                <TextInput
+                  style={styles.campoOutro}
+                  placeholder="Nome de quem retirou"
+                  placeholderTextColor={theme.colors.textFaint}
+                  value={outroNome}
+                  onChangeText={setOutroNome}
+                  maxLength={120}
+                  autoFocus
+                />
+              )}
+            </>
+          )}
           <BotaoCta
             titulo={`Foto e entregar (${selecionados.size})`}
             icone="camera"
@@ -224,6 +292,10 @@ export function RetiradaScreen({ navigation, route }: Props) {
               navigation.navigate("SaidaCamera", {
                 pacoteIds: [...selecionados],
                 unidadeLabel: rotuloUnidade(unidade),
+                recebidoPorMoradorId: recebedor?.id,
+                recebidoPorNome: recebedor
+                  ? undefined
+                  : outroNome.trim() || undefined,
               })
             }
           />
@@ -234,6 +306,24 @@ export function RetiradaScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
+  chipsRecebedor: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  campoOutro: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 15,
+    color: theme.colors.text,
+    marginBottom: 12,
+  },
   tela: { flex: 1, backgroundColor: theme.colors.bg },
   linhaBusca: { flexDirection: "row", gap: 10 },
   campoBusca: {

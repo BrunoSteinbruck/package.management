@@ -72,6 +72,15 @@ export class PortariaController {
     return this.portaria.pendentesDaUnidade(user, unidadeId);
   }
 
+  /** Chips de "quem recebeu" na tela de retirada. */
+  @Get("unidades/:unidadeId/moradores")
+  moradoresDaUnidade(
+    @CurrentUser() user: JwtPayload,
+    @Param("unidadeId", ParseUUIDPipe) unidadeId: string,
+  ) {
+    return this.portaria.moradoresDaUnidade(user, unidadeId);
+  }
+
   @Post("retiradas")
   registrarRetirada(
     @CurrentUser() user: JwtPayload,

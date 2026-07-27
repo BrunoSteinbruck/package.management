@@ -35,6 +35,10 @@ const DESCRICOES: Record<
     titulo: "Avisos por WhatsApp",
     sub: "Alcança quem ainda não instalou o app. Tem custo por mensagem.",
   },
+  qr_retirada: {
+    titulo: "QR na retirada",
+    sub: "Conferência extra: o morador mostra um QR no app em vez de dizer a unidade. A entrega já é registrada com foto e o nome de quem recebeu.",
+  },
 };
 
 interface LinhaModulo {

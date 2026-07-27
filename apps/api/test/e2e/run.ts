@@ -18,6 +18,7 @@
  * banco em vez de dormir às cegas.
  */
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { MODULOS_CONDOMINIO } from "@pacotes/shared";
 
 const API = process.env.E2E_API_URL ?? "http://localhost:3001/v1";
 const prisma = new PrismaClient();
@@ -50,7 +51,18 @@ async function req<T = Record<string, unknown>>(
 }
 
 async function login(telefone: string): Promise<string> {
-  await req("POST", "/auth/otp/request", { corpo: { telefone } });
+  const pedido = await req<{ statusCode?: number }>("POST", "/auth/otp/request", {
+    corpo: { telefone },
+  });
+  // O rate limit de envio é em memória (3 por telefone/hora) e cada execução
+  // gasta um. Sem esta mensagem o erro aparecia como "código expirado", que
+  // manda investigar o lugar errado.
+  if (pedido.statusCode === 429) {
+    throw new Error(
+      `Rate limit de OTP atingido para ${telefone}. ` +
+        "São 3 execuções por hora; reinicie a API de dev para zerar o contador.",
+    );
+  }
   const r = await req<{ token?: string }>("POST", "/auth/otp/verify", {
     corpo: { telefone, codigo: "246810" },
   });
@@ -147,9 +159,13 @@ async function main() {
       { token: sindico },
     );
     checa(
-      "síndico vê os 5 módulos, todos desligados",
-      lista.length === 5 && lista.every((m) => !m.ativo),
+      "síndico vê todos os módulos, todos desligados",
+      lista.length === MODULOS_CONDOMINIO.length && lista.every((m) => !m.ativo),
       lista.map((m) => m.id).join(","),
+    );
+    checa(
+      "qr_retirada nasce desligado (recurso rebaixado, não padrão)",
+      lista.find((m) => m.id === "qr_retirada")?.ativo === false,
     );
     checa(
       "porteiro não lê a configuração de módulos",
@@ -215,6 +231,119 @@ async function main() {
       where: { id: cid },
       data: { modulos: ["comunicados", "documentos", "visitantes"] },
     });
+  }
+
+  // ===== Retirada: quem recebeu =====
+  console.log("\n== Retirada: quem recebeu ==");
+  {
+    const unidade = (
+      await req<Array<{ unidade: { id: string } }>>("GET", "/morador/pacotes", {
+        token: morador,
+      })
+    )[0].unidade;
+
+    const moradores = await req<Array<{ id: string; nome: string }>>(
+      "GET",
+      `/portaria/unidades/${unidade.id}/moradores`,
+      { token: porteiro },
+    );
+    checa("portaria lista os moradores da unidade", moradores.length > 0);
+    checa(
+      "a lista traz só id e nome: telefone não serve para dar baixa",
+      moradores.every((m) => Object.keys(m).sort().join() === "id,nome"),
+    );
+    checa(
+      "morador não acessa a lista da portaria",
+      (await req<{ statusCode?: number }>(
+        "GET",
+        `/portaria/unidades/${unidade.id}/moradores`,
+        { token: morador },
+      )).statusCode === 403,
+    );
+
+    const novoPacote = async () =>
+      (await req<{ id: string }>("POST", "/portaria/pacotes", {
+        token: porteiro,
+        corpo: { unidadeId: unidade.id, transportadora: "Correios" },
+      })).id;
+
+    const p1 = await novoPacote();
+    await req("POST", "/portaria/retiradas", {
+      token: porteiro,
+      corpo: { pacoteIds: [p1], recebidoPorMoradorId: moradores[0].id },
+    });
+    checa(
+      "morador que recebeu aparece no detalhe do pacote",
+      (await req<{ retiradoPorNome: string | null }>(
+        "GET",
+        `/morador/pacotes/${p1}`,
+        { token: morador },
+      )).retiradoPorNome === moradores[0].nome,
+    );
+
+    const p2 = await novoPacote();
+    await req("POST", "/portaria/retiradas", {
+      token: porteiro,
+      corpo: { pacoteIds: [p2], recebidoPorNome: "Dona Cida (faxineira)" },
+    });
+    checa(
+      "quem não é morador entra pelo nome livre",
+      (await req<{ retiradoPorNome: string | null }>(
+        "GET",
+        `/morador/pacotes/${p2}`,
+        { token: morador },
+      )).retiradoPorNome === "Dona Cida (faxineira)",
+    );
+
+    // Morador de OUTRA unidade não pode constar como quem recebeu: seria um
+    // registro de custódia apontando para quem não tem nada a ver com a entrega.
+    const outraUnidade = (
+      await req<Array<{ id: string }>>("GET", "/cadastro/unidades", {
+        token: sindico,
+      })
+    ).find((u) => u.id !== unidade.id);
+    if (outraUnidade) {
+      const alheios = await req<Array<{ id: string }>>(
+        "GET",
+        `/portaria/unidades/${outraUnidade.id}/moradores`,
+        { token: porteiro },
+      );
+      const forasteiro = alheios.find(
+        (a) => !moradores.some((m) => m.id === a.id),
+      );
+      if (forasteiro) {
+        const p3 = await novoPacote();
+        checa(
+          "morador de outra unidade é recusado como recebedor",
+          (await req<{ statusCode?: number }>("POST", "/portaria/retiradas", {
+            token: porteiro,
+            corpo: { pacoteIds: [p3], recebidoPorMoradorId: forasteiro.id },
+          })).statusCode === 400,
+        );
+        await req("POST", "/portaria/retiradas", {
+          token: porteiro,
+          corpo: { pacoteIds: [p3] },
+        });
+      }
+    }
+
+    // A versão do app publicada nas lojas não manda o campo: a entrega não
+    // pode passar a falhar por causa disso.
+    const p4 = await novoPacote();
+    const semRecebedor = await req<{ retiradas?: unknown[] }>(
+      "POST",
+      "/portaria/retiradas",
+      { token: porteiro, corpo: { pacoteIds: [p4] } },
+    );
+    checa("retirada sem informar quem recebeu continua valendo", !!semRecebedor.retiradas);
+    checa(
+      "e o campo volta nulo, sem inventar um nome",
+      (await req<{ retiradoPorNome: string | null }>(
+        "GET",
+        `/morador/pacotes/${p4}`,
+        { token: morador },
+      )).retiradoPorNome === null,
+    );
   }
 
   // ===== Onda 1: comunicados =====

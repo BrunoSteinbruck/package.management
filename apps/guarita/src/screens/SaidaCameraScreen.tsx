@@ -15,7 +15,8 @@ type Props = NativeStackScreenProps<PortariaStackParamList, "SaidaCamera">;
 
 export function SaidaCameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { pacoteIds, unidadeLabel } = route.params;
+  const { pacoteIds, unidadeLabel, recebidoPorMoradorId, recebidoPorNome } =
+    route.params;
   const [permissao, pedirPermissao] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [enviando, setEnviando] = useState(false);
@@ -40,7 +41,7 @@ export function SaidaCameraScreen({ navigation, route }: Props) {
       }
       const resultado = await postOuEnfileirar<ResultadoRetirada>(
         "/portaria/retiradas",
-        { pacoteIds, fotoSaidaKey },
+        { pacoteIds, fotoSaidaKey, recebidoPorMoradorId, recebidoPorNome },
         fotoPendente,
       );
       if (resultado.queued) {

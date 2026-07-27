@@ -31,6 +31,14 @@ export const MODULOS_CONDOMINIO = [
   "visitantes",
   "financeiro",
   "whatsapp",
+  /**
+   * QR de retirada. Único item da lista que não é módulo novo, e sim recurso
+   * rebaixado: na prática o QR resolve a UNIDADE, que é o mesmo que a pessoa
+   * dizer o número do apartamento, e só funciona para quem tem o app. Quem
+   * registra a entrega é a foto mais o nome de quem recebeu. Fica desligado
+   * por padrão, para o síndico que quiser a conferência extra.
+   */
+  "qr_retirada",
 ] as const;
 export type ModuloCondominio = (typeof MODULOS_CONDOMINIO)[number];
 

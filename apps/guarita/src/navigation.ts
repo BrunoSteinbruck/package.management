@@ -9,7 +9,13 @@ export type PortariaStackParamList = {
   EntradaConfirm: { fotoUri: string | null; codigoRastreio: string | null };
   Retirada: { unidadeInicial?: Unidade } | undefined;
   QrScan: undefined;
-  SaidaCamera: { pacoteIds: string[]; unidadeLabel: string };
+  SaidaCamera: {
+    pacoteIds: string[];
+    unidadeLabel: string;
+    /** Quem recebeu: morador da unidade OU nome livre, nunca os dois. */
+    recebidoPorMoradorId?: string;
+    recebidoPorNome?: string;
+  };
   // Sem parâmetro: a foto é um campo opcional dentro do formulário, com a
   // câmera embutida, e não um passo anterior a ele.
   Avisar: undefined;

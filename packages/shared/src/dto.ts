@@ -56,6 +56,16 @@ export type RegistrarPacoteDto = z.infer<typeof RegistrarPacoteSchema>;
 export const RegistrarRetiradaSchema = z.object({
   pacoteIds: z.array(z.string().uuid()).min(1),
   fotoSaidaKey: FotoKeySchema.optional(),
+  /**
+   * Quem recebeu. Morador da unidade (id) ou outra pessoa (nome livre).
+   *
+   * Os dois são opcionais e mutuamente exclusivos na prática: o app manda o
+   * id quando o porteiro toca no chip do morador, e o nome quando digita
+   * outra pessoa. Opcional porque a versão do app já publicada nas lojas não
+   * manda nenhum dos dois, e a entrega não pode passar a falhar por isso.
+   */
+  recebidoPorMoradorId: z.string().uuid().optional(),
+  recebidoPorNome: z.string().min(2).max(120).optional(),
 });
 export type RegistrarRetiradaDto = z.infer<typeof RegistrarRetiradaSchema>;
 

@@ -6,6 +6,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { perfilDe, type JwtPayload } from "@pacotes/shared";
 import { renovarSessao, sincronizarModulos } from "./src/api/client";
+import { useModulos } from "./src/useModulos";
 import { carregarSessao, limparSessao } from "./src/api/session";
 import type {
   MoradorStackParamList,
@@ -55,6 +56,9 @@ interface PropsPilha {
 }
 
 function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
+  // Lido aqui e não dentro da tela porque quem monta `ArmazenadosScreen` com
+  // as ações é esta pilha: a tela recebe o que pode fazer, não decide.
+  const qrLigado = useModulos().includes("qr_retirada");
   return (
     <NavigationContainer>
       <StatusBar style="light" />
@@ -71,7 +75,13 @@ function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
               aoTocarPacote={(unidade) =>
                 props.navigation.navigate("Retirada", { unidadeInicial: unidade })
               }
-              aoBiparQr={() => props.navigation.navigate("QrScan")}
+              // `aoBiparQr` ausente esconde o botão: a tela já trata a
+              // ausência da ação, que é como o síndico a usa em leitura.
+              aoBiparQr={
+                qrLigado
+                  ? () => props.navigation.navigate("QrScan")
+                  : undefined
+              }
             />
           )}
         </Portaria.Screen>

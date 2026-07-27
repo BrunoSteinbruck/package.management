@@ -267,7 +267,9 @@ export class MoradorService {
             where: { id: pacoteId, unidadeId: vinculo.unidadeId },
             include: {
               recebidoPor: true,
-              retirada: { include: { entreguePor: true } },
+              retirada: {
+                include: { entreguePor: true, recebidoPor: true },
+              },
             },
           });
           if (!pacote) return null;
@@ -293,6 +295,12 @@ export class MoradorService {
           fotoSaida: await this.fotoAssinada(pacote.retirada?.fotoSaidaKey ?? null),
           retiradoEm: pacote.retirada?.retiradoEm ?? null,
           entreguePorNome: pacote.retirada?.entreguePor.nome ?? null,
+          // Nome atual do morador quando há vínculo; senão o texto que o
+          // porteiro escreveu. Null nas retiradas anteriores ao campo.
+          retiradoPorNome:
+            pacote.retirada?.recebidoPor?.nome ??
+            pacote.retirada?.recebidoPorNome ??
+            null,
         };
       }
     }

@@ -137,6 +137,17 @@ export interface DetalhePacote {
   fotoSaida: FotoRef | null;
   retiradoEm: string | null;
   entreguePorNome: string | null;
+  /**
+   * Quem recebeu a encomenda: o morador da unidade ou a pessoa que o porteiro
+   * anotou. Null nas retiradas feitas antes do campo existir.
+   */
+  retiradoPorNome: string | null;
+}
+
+/** Morador da unidade, para o chip de "quem recebeu" na portaria. */
+export interface MoradorDaUnidade {
+  id: string;
+  nome: string;
 }
 
 export interface Vinculado {

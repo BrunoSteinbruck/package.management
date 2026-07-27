@@ -213,19 +213,25 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
                     </Pressable>
                   );
                 })}
-                <BotaoCta
-                  titulo="Retirar na portaria"
-                  icone="qr"
-                  altura={66}
-                  onPress={() =>
-                    navigation.navigate("Qr", {
-                      unidadeId: minha.unidade.id,
-                      rotulo: rotuloUnidade(minha.unidade),
-                      pendentes: minha.pendentes.length,
-                    })
-                  }
-                  estilo={{ marginTop: 12 }}
-                />
+                {/* O QR é conferência opcional do condomínio. Desligado, o
+                    morador simplesmente vai à portaria e diz a unidade, que
+                    é o que ele já fazia: sem o botão, a tela não promete um
+                    ritual que a portaria não vai pedir. */}
+                {ligados.includes("qr_retirada") && (
+                  <BotaoCta
+                    titulo="Retirar na portaria"
+                    icone="qr"
+                    altura={66}
+                    onPress={() =>
+                      navigation.navigate("Qr", {
+                        unidadeId: minha.unidade.id,
+                        rotulo: rotuloUnidade(minha.unidade),
+                        pendentes: minha.pendentes.length,
+                      })
+                    }
+                    estilo={{ marginTop: 12 }}
+                  />
+                )}
               </View>
             ),
         )}

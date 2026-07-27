@@ -89,6 +89,31 @@ export class PortariaService {
         );
       }
 
+      // Quem recebeu: só aceita morador com vínculo ativo NA unidade do
+      // pacote. Sem isso, um id qualquer viraria um registro de custódia
+      // apontando para quem não tem nada a ver com a entrega.
+      let recebidoPorMoradorId: string | undefined;
+      if (dto.recebidoPorMoradorId) {
+        const vinculo = await this.prisma.vinculo.findFirst({
+          where: {
+            moradorId: dto.recebidoPorMoradorId,
+            unidadeId: pacotes[0].unidadeId,
+            status: "ATIVO",
+          },
+        });
+        if (!vinculo) {
+          throw new BadRequestException(
+            "Quem recebeu não tem vínculo ativo com esta unidade",
+          );
+        }
+        recebidoPorMoradorId = dto.recebidoPorMoradorId;
+      }
+      // Nome livre só quando NÃO é morador: com os dois preenchidos, o nome
+      // digitado poderia contradizer a FK e não haveria como saber qual vale.
+      const recebidoPorNome = recebidoPorMoradorId
+        ? undefined
+        : dto.recebidoPorNome?.trim() || undefined;
+
       const retiradas = [];
       for (const pacote of pacotes) {
         retiradas.push(
@@ -98,6 +123,8 @@ export class PortariaService {
               pacoteId: pacote.id,
               entreguePorId: user.sub,
               fotoSaidaKey: dto.fotoSaidaKey,
+              recebidoPorMoradorId,
+              recebidoPorNome,
             },
           }),
         );
@@ -143,6 +170,27 @@ export class PortariaService {
       if (!unidade) throw new BadRequestException("Unidade não encontrada");
       return unidade;
     });
+  }
+
+  /**
+   * Moradores da unidade, para o porteiro dizer quem recebeu com um toque.
+   *
+   * Só nome e id: telefone não tem uso na entrega e é dado pessoal que a
+   * portaria não precisa ver para dar baixa. Ordena pelo vínculo mais antigo,
+   * então o titular aparece primeiro, que é quem mais retira.
+   */
+  async moradoresDaUnidade(user: JwtPayload, unidadeId: string) {
+    const condominioId = this.tenantDe(user);
+    const existe = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.unidade.findUnique({ where: { id: unidadeId } }),
+    );
+    if (!existe) throw new BadRequestException("Unidade não encontrada");
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { unidadeId, condominioId, status: "ATIVO" },
+      include: { morador: { select: { id: true, nome: true } } },
+      orderBy: { criadoEm: "asc" },
+    });
+    return vinculos.map((v) => ({ id: v.morador.id, nome: v.morador.nome }));
   }
 
   /** Números da home da portaria: estoque atual, retiradas de hoje, paradas 3+ dias. */
