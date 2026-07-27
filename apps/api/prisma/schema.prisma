@@ -46,6 +46,14 @@ enum TipoNotificacao {
   AVISO // Via 2: status do relato mudou, avisa o morador que o abriu
   OCORRENCIA
   OCORRENCIA_NOVA // Via 2: relato novo, avisa a administração
+  COMUNICADO // Síndico publicou para o condomínio (ou para blocos)
+}
+
+enum CategoriaDocumento {
+  ATA
+  REGIMENTO
+  CONVENCAO
+  OUTRO
 }
 
 enum ViaAviso {
@@ -105,6 +113,8 @@ model Condominio {
   avisos       Aviso[]
   leituras     LeituraMedidor[]
   tarifas      TarifaConsumo[]
+  comunicados  Comunicado[]
+  documentos   Documento[]
 
   @@map("condominios")
 }
@@ -135,9 +145,10 @@ model Morador {
   telefone String   @unique
   criadoEm DateTime @default(now()) @map("criado_em")
 
-  vinculos         Vinculo[]
-  devices          Device[]
-  avisosReportados Aviso[]   @relation("avisoCriadoPorMorador")
+  vinculos           Vinculo[]
+  devices            Device[]
+  avisosReportados   Aviso[]             @relation("avisoCriadoPorMorador")
+  comunicadosLidos   ComunicadoLeitura[]
 
   @@map("moradores")
 }
@@ -180,6 +191,8 @@ model Usuario {
   avisosCriados      Aviso[]          @relation("avisoCriadoPorUsuario")
   devices            Device[]
   leiturasFeitas     LeituraMedidor[]
+  comunicadosCriados Comunicado[]
+  documentosEnviados Documento[]
 
   @@index([condominioId])
   @@map("usuarios")
@@ -229,15 +242,17 @@ model Notificacao {
   condominioId  String            @map("condominio_id") @db.Uuid
   pacoteId      String?           @map("pacote_id") @db.Uuid
   avisoId       String?           @map("aviso_id") @db.Uuid
+  comunicadoId  String?           @map("comunicado_id") @db.Uuid
   canal         CanalNotificacao
   tipo          TipoNotificacao
   status        StatusNotificacao @default(FILA)
   providerMsgId String?           @map("provider_msg_id")
   criadoEm      DateTime          @default(now()) @map("criado_em")
 
-  condominio Condominio @relation(fields: [condominioId], references: [id])
-  pacote     Pacote?    @relation(fields: [pacoteId], references: [id])
-  aviso      Aviso?     @relation(fields: [avisoId], references: [id])
+  condominio Condominio  @relation(fields: [condominioId], references: [id])
+  pacote     Pacote?     @relation(fields: [pacoteId], references: [id])
+  aviso      Aviso?      @relation(fields: [avisoId], references: [id])
+  comunicado Comunicado? @relation(fields: [comunicadoId], references: [id])
 
   @@index([condominioId, status])
   @@map("notificacoes")
@@ -358,6 +373,78 @@ model TarifaConsumo {
 
   @@unique([condominioId, tipo])
   @@map("tarifas_consumo")
+}
+
+/**
+ * Comunicado do síndico para o condomínio inteiro (ou para blocos).
+ *
+ * Tabela própria e não uma terceira `via` de Aviso: Aviso exige `unidadeId`,
+ * e comunicado não tem unidade. Encaixá-lo lá obrigaria a criar uma linha por
+ * unidade só para dizer a mesma coisa a todo mundo, o que multiplicaria o
+ * mesmo texto por centenas de linhas e ainda misturaria com a Via 1 no painel.
+ */
+model Comunicado {
+  id     String @id @default(uuid()) @db.Uuid
+  condominioId String @map("condominio_id") @db.Uuid
+  titulo String
+  corpo  String
+  // Vazio = condomínio inteiro. Com valores, só as unidades desses blocos.
+  blocos String[] @default([])
+  criadoPorUsuarioId String @map("criado_por_usuario_id") @db.Uuid
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  condominio   Condominio          @relation(fields: [condominioId], references: [id])
+  criadoPor    Usuario             @relation(fields: [criadoPorUsuarioId], references: [id])
+  leituras     ComunicadoLeitura[]
+  notificacoes Notificacao[]
+
+  @@index([condominioId, criadoEm])
+  @@map("comunicados")
+}
+
+/**
+ * Recibo de leitura: existe a linha, o morador leu. É o que responde a
+ * pergunta que o síndico faz depois de todo comunicado ("quem viu?"), e a
+ * razão de o comunicado não caber em Notificacao, que registra ENVIO.
+ */
+model ComunicadoLeitura {
+  id           String   @id @default(uuid()) @db.Uuid
+  condominioId String   @map("condominio_id") @db.Uuid
+  comunicadoId String   @map("comunicado_id") @db.Uuid
+  moradorId    String   @map("morador_id") @db.Uuid
+  lidoEm       DateTime @default(now()) @map("lido_em")
+
+  comunicado Comunicado @relation(fields: [comunicadoId], references: [id])
+  morador    Morador    @relation(fields: [moradorId], references: [id])
+
+  @@unique([comunicadoId, moradorId])
+  @@index([condominioId])
+  @@map("comunicado_leituras")
+}
+
+/**
+ * Ata, regimento ou convenção que o morador consulta pelo app.
+ *
+ * `removidoEm` em vez de DELETE: documento retirado do ar continua sendo o
+ * que estava valendo na época, e o arquivo segue no storage para quem já
+ * tinha o link. Some da lista, não da história.
+ */
+model Documento {
+  id           String             @id @default(uuid()) @db.Uuid
+  condominioId String             @map("condominio_id") @db.Uuid
+  titulo       String
+  categoria    CategoriaDocumento
+  arquivoKey   String             @map("arquivo_key")
+  tamanhoBytes Int                @map("tamanho_bytes")
+  criadoPorUsuarioId String       @map("criado_por_usuario_id") @db.Uuid
+  criadoEm     DateTime           @default(now()) @map("criado_em")
+  removidoEm   DateTime?          @map("removido_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  criadoPor  Usuario    @relation(fields: [criadoPorUsuarioId], references: [id])
+
+  @@index([condominioId, categoria])
+  @@map("documentos")
 }
 
 // Aviso direcionado (Via 1) OU ocorrência reportada pelo morador (Via 2).

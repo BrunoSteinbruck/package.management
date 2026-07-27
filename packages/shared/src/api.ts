@@ -1,4 +1,5 @@
 import type {
+  CategoriaDocumento,
   ModuloCondominio,
   PapelUsuario,
   StatusAviso,
@@ -188,6 +189,54 @@ export interface OcorrenciaMorador {
 export interface OcorrenciaGestor extends OcorrenciaMorador {
   unidade: UnidadeRotulo;
   autor: string;
+}
+
+// ----- Comunicados & Documentos -----
+
+/** Detalhe do comunicado para o morador. GET /morador/comunicados/:id */
+export interface ComunicadoMorador {
+  id: string;
+  titulo: string;
+  corpo: string;
+  criadoEm: string;
+  autor: string;
+}
+
+/**
+ * A mesma publicação vista pelo síndico, com o que ele quer saber depois de
+ * publicar: quantos dos moradores alcançados leram.
+ */
+export interface ComunicadoGestor {
+  id: string;
+  titulo: string;
+  corpo: string;
+  criadoEm: string;
+  autor: string;
+  /** Vazio = condomínio inteiro. */
+  blocos: string[];
+  leituras: number;
+  /** Moradores com vínculo ativo nos blocos alvo, no momento da consulta. */
+  alcance: number;
+}
+
+/** Quem leu um comunicado. GET /cadastro/comunicados/:id/leituras */
+export interface LeituraComunicado {
+  nome: string;
+  unidade: UnidadeRotulo;
+  lidoEm: string;
+}
+
+/**
+ * Documento do condomínio. `arquivo` traz o link assinado (1h) pronto para
+ * abrir; morador e gestor leem do mesmo formato.
+ */
+export interface DocumentoLinha {
+  id: string;
+  titulo: string;
+  categoria: CategoriaDocumento;
+  tamanhoBytes: number;
+  criadoEm: string;
+  arquivo: FotoRef;
 }
 
 // ----- Painel (gestão) -----

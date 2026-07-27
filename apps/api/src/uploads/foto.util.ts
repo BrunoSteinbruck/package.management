@@ -26,8 +26,27 @@ export function mimePorKey(key: string): string | undefined {
 }
 
 export const KEY_FOTO_SEGURA = /^[\w-]+\.(jpg|jpeg|png|webp)$/i;
+export const KEY_DOC_SEGURA = /^[\w-]+\.pdf$/i;
 
-export interface FotoTokenPayload {
-  tipo: "foto";
+/**
+ * Token que autoriza servir UM arquivo.
+ *
+ * `tipo` distingue foto de documento em vez de valer para os dois: o token
+ * já é preso à key, então a separação não protege contra troca de arquivo,
+ * mas mantém honesto quem emite o quê. Um serviço que só sabe assinar foto
+ * não passa a servir PDF por acidente.
+ */
+export interface ArquivoTokenPayload {
+  tipo: "foto" | "documento";
   key: string;
+}
+
+/** Cada tipo de token só abre a key que combina com ele. */
+export function keyCombinaComTipo(
+  tipo: ArquivoTokenPayload["tipo"],
+  key: string,
+): boolean {
+  return tipo === "documento"
+    ? KEY_DOC_SEGURA.test(key)
+    : KEY_FOTO_SEGURA.test(key);
 }

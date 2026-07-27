@@ -19,6 +19,10 @@ import { SindicoHomeScreen } from "./src/screens/SindicoHomeScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
+import { ComunicadoScreen } from "./src/screens/ComunicadoScreen";
+import { ComunicadosScreen } from "./src/screens/ComunicadosScreen";
+import { DocumentosScreen } from "./src/screens/DocumentosScreen";
+import { NovoComunicadoScreen } from "./src/screens/NovoComunicadoScreen";
 import { DetalheScreen } from "./src/screens/DetalheScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
 import { EntradaConfirmScreen } from "./src/screens/EntradaConfirmScreen";
@@ -106,6 +110,12 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
         {/* Consumos em modo leitura: registrar leitura é rota da portaria e
             nem compila nesta pilha. */}
         <Sindico.Screen name="Consumos" component={ConsumosScreen} />
+        <Sindico.Screen name="Comunicados" component={ComunicadosScreen} />
+        <Sindico.Screen name="NovoComunicado" component={NovoComunicadoScreen} />
+        {/* Mesma tela do morador, lendo a lista do gestor. */}
+        <Sindico.Screen name="Documentos">
+          {(props) => <DocumentosScreen {...props} gestor />}
+        </Sindico.Screen>
       </Sindico.Navigator>
     </NavigationContainer>
   );
@@ -126,6 +136,8 @@ function PilhaMorador({ perfil, aoSair }: PropsPilha) {
         </Morador.Screen>
         <Morador.Screen name="Avisos" component={AvisosScreen} />
         <Morador.Screen name="Reportar" component={ReportarScreen} />
+        <Morador.Screen name="Comunicado" component={ComunicadoScreen} />
+        <Morador.Screen name="Documentos" component={DocumentosScreen} />
       </Morador.Navigator>
     </NavigationContainer>
   );

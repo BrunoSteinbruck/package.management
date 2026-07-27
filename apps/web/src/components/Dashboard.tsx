@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import {
   perfilDe,
   type Adocao,
+  type Capacidades,
+  type ModuloCondominio,
   type DiaSerie,
   type FotoRef,
   type JwtPayload,
@@ -19,8 +21,10 @@ import {
   type VinculoPendente,
 } from "@pacotes/shared";
 import { apiFetch, API_URL, limparSessao } from "@/lib/api";
+import { ComunicadosView } from "./ComunicadosView";
 import { ConfiguracoesView } from "./ConfiguracoesView";
 import { ConsumosView } from "./ConsumosView";
+import { DocumentosView } from "./DocumentosView";
 import { Importar } from "./Importar";
 
 type Visao =
@@ -30,6 +34,8 @@ type Visao =
   | "consumos"
   | "moradores"
   | "ocorrencias"
+  | "comunicados"
+  | "documentos"
   | "configuracoes";
 
 function rotulo(u?: UnidadeRotulo) {
@@ -69,6 +75,16 @@ export function Dashboard({
   const [visao, setVisao] = useState<Visao>("visao-geral");
   const [pendentesAprovacao, setPendentesAprovacao] = useState(0);
   const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState(0);
+  const [modulos, setModulos] = useState<ModuloCondominio[]>([]);
+  const ligado = (m: ModuloCondominio) => modulos.includes(m);
+
+  // Recarrega a cada troca de visão: sair de Configurações depois de ligar um
+  // módulo tem que revelar a seção dele sem exigir F5.
+  useEffect(() => {
+    apiFetch<Capacidades>("/conta/capacidades")
+      .then((c) => setModulos(c.modulos))
+      .catch(() => {});
+  }, [visao]);
 
   useEffect(() => {
     if (gestor) {
@@ -138,6 +154,22 @@ export function Dashboard({
               )}
             </button>
           )}
+          {gestor && ligado("comunicados") && (
+            <button
+              className={`item ${visao === "comunicados" ? "ativo" : ""}`}
+              onClick={() => setVisao("comunicados")}
+            >
+              Comunicados
+            </button>
+          )}
+          {gestor && ligado("documentos") && (
+            <button
+              className={`item ${visao === "documentos" ? "ativo" : ""}`}
+              onClick={() => setVisao("documentos")}
+            >
+              Documentos
+            </button>
+          )}
           {gestor && (
             <button
               className={`item ${visao === "configuracoes" ? "ativo" : ""}`}
@@ -171,6 +203,12 @@ export function Dashboard({
         {visao === "consumos" && gestor && <ConsumosView />}
         {visao === "ocorrencias" && gestor && <OcorrenciasView />}
         {visao === "moradores" && gestor && <MoradoresView />}
+        {visao === "comunicados" && gestor && ligado("comunicados") && (
+          <ComunicadosView />
+        )}
+        {visao === "documentos" && gestor && ligado("documentos") && (
+          <DocumentosView />
+        )}
         {visao === "configuracoes" && gestor && <ConfiguracoesView />}
       </main>
     </div>

@@ -80,6 +80,12 @@ export function AvisosScreen({ navigation }: Props) {
           const a = apresentar(item);
           const foto = "foto" in item ? item.foto : null;
           const pacoteId = a.pacoteId;
+          const comunicadoId = a.comunicadoId;
+          const abrir = pacoteId
+            ? () => navigation.navigate("Detalhe", { pacoteId })
+            : comunicadoId
+              ? () => navigation.navigate("Comunicado", { comunicadoId })
+              : undefined;
           return (
             <View>
               <ItemLista
@@ -95,12 +101,8 @@ export function AvisosScreen({ navigation }: Props) {
                       }
                 }
                 direita={a.selo ? <Selo {...a.selo} /> : undefined}
-                chevron={!!pacoteId}
-                onPress={
-                  pacoteId
-                    ? () => navigation.navigate("Detalhe", { pacoteId })
-                    : undefined
-                }
+                chevron={!!abrir}
+                onPress={abrir}
               />
               {item.tipo === "AVISO" && item.podeResolver && (
                 <Pressable

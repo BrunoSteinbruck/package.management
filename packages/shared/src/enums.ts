@@ -34,6 +34,15 @@ export const MODULOS_CONDOMINIO = [
 ] as const;
 export type ModuloCondominio = (typeof MODULOS_CONDOMINIO)[number];
 
+/** Prateleiras do repositório de documentos do condomínio. */
+export const CATEGORIAS_DOCUMENTO = [
+  "ATA",
+  "REGIMENTO",
+  "CONVENCAO",
+  "OUTRO",
+] as const;
+export type CategoriaDocumento = (typeof CATEGORIAS_DOCUMENTO)[number];
+
 /** Motivos sugeridos na Via 1 (equipe avisa a unidade). */
 export const MOTIVOS_AVISO = [
   "Luz acesa",

@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { MODULOS_CONDOMINIO, STATUS_AVISO, TIPOS_MEDIDOR } from "./enums";
+import {
+  CATEGORIAS_DOCUMENTO,
+  MODULOS_CONDOMINIO,
+  STATUS_AVISO,
+  TIPOS_MEDIDOR,
+} from "./enums";
 
 // Corpos de request validados na borda da API. O que a API devolve fica em
 // api.ts.
@@ -181,6 +186,34 @@ export const MudarStatusAvisoSchema = z.object({
   status: z.enum(STATUS_AVISO),
 });
 export type MudarStatusAvisoDto = z.infer<typeof MudarStatusAvisoSchema>;
+
+// ----- Módulo Comunicados & Documentos -----
+
+/**
+ * Key de arquivo de documento (uuid + .pdf). Separada de `FotoKeySchema`
+ * porque as duas coisas percorrem caminhos diferentes no upload e o que vale
+ * numa não vale na outra.
+ */
+export const DocumentoKeySchema = z
+  .string()
+  .max(120)
+  .regex(/^[\w-]+\.pdf$/i, "Key de documento inválida");
+
+export const CriarComunicadoSchema = z.object({
+  titulo: z.string().min(3).max(120),
+  corpo: z.string().min(1).max(4000),
+  /** Vazio (ou ausente) = condomínio inteiro. */
+  blocos: z.array(z.string().max(40)).max(50).optional(),
+});
+export type CriarComunicadoDto = z.infer<typeof CriarComunicadoSchema>;
+
+export const CriarDocumentoSchema = z.object({
+  titulo: z.string().min(3).max(160),
+  categoria: z.enum(CATEGORIAS_DOCUMENTO),
+  arquivoKey: DocumentoKeySchema,
+  tamanhoBytes: z.number().int().min(1).max(20 * 1024 * 1024),
+});
+export type CriarDocumentoDto = z.infer<typeof CriarDocumentoSchema>;
 
 // ----- Módulo Leituras de medidores -----
 

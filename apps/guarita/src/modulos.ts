@@ -111,6 +111,22 @@ export const MODULOS_SINDICO: readonly Modulo<
     perfis: ["sindico"],
     slot: "secundario",
   },
+  {
+    id: "Comunicados",
+    titulo: "Comunicados",
+    icone: "sino",
+    perfis: ["sindico"],
+    slot: "secundario",
+    flag: "comunicados",
+  },
+  {
+    id: "Documentos",
+    titulo: "Documentos",
+    icone: "pacote",
+    perfis: ["sindico"],
+    slot: "secundario",
+    flag: "documentos",
+  },
 ];
 
 export const MODULOS_MORADOR: readonly Modulo<
@@ -122,6 +138,14 @@ export const MODULOS_MORADOR: readonly Modulo<
     icone: "camera",
     perfis: ["morador"],
     slot: "rodape",
+  },
+  {
+    id: "Documentos",
+    titulo: "Documentos",
+    icone: "pacote",
+    perfis: ["morador"],
+    slot: "rodape",
+    flag: "documentos",
   },
 ];
 

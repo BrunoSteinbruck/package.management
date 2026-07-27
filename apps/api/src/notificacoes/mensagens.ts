@@ -1,8 +1,15 @@
-import type { Aviso, Notificacao, Pacote, TipoNotificacao } from "@prisma/client";
+import type {
+  Aviso,
+  Comunicado,
+  Notificacao,
+  Pacote,
+  TipoNotificacao,
+} from "@prisma/client";
 
 export type NotifComRelacoes = Notificacao & {
   pacote: Pacote | null;
   aviso: Aviso | null;
+  comunicado: Comunicado | null;
 };
 
 /**
@@ -14,6 +21,8 @@ export type Audiencia =
   | "unidadeDoAviso"
   | "autorDaOcorrencia"
   | "gestoresDoCondominio"
+  /** Moradores com vínculo ativo no condomínio, filtrando pelos blocos alvo. */
+  | "moradoresDoComunicado"
   /** Criada já como ENVIADA (marcador de dedup), nunca passa pela fila. */
   | "naoEnfileirada";
 
@@ -34,6 +43,16 @@ function deQuem(p: Pacote | null): string {
 
 function rotuloStatus(s: string): string {
   return s === "ABERTO" ? "aberto" : "resolvido";
+}
+
+/**
+ * Prévia do comunicado no push. Corta na primeira quebra de linha antes do
+ * limite de caracteres: o síndico costuma abrir com uma frase de resumo, e
+ * cortar no meio dela entregaria uma notificação que não diz nada.
+ */
+function primeiraLinha(corpo: string, max = 140): string {
+  const linha = corpo.split("\n")[0].trim();
+  return linha.length <= max ? linha : `${linha.slice(0, max - 1).trimEnd()}…`;
 }
 
 const NUNCA = () => "";
@@ -95,6 +114,17 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     data: (n) => ({ avisoId: n.avisoId }),
     semApp: "ignorar",
     marcadorSemApp: "gestor-sem-app",
+  },
+  COMUNICADO: {
+    // Broadcast do síndico. Sem app não vira SMS: comunicado não é gancho de
+    // adoção e o volume tornaria o custo por envio imprevisível. Alcançar
+    // quem não instalou é o trabalho do canal WhatsApp, na Onda 4.
+    audiencia: "moradoresDoComunicado",
+    titulo: (n) => n.comunicado?.titulo ?? "Comunicado do condomínio",
+    corpo: (n) => primeiraLinha(n.comunicado?.corpo ?? ""),
+    data: (n) => ({ comunicadoId: n.comunicadoId }),
+    semApp: "ignorar",
+    marcadorSemApp: "condominio-sem-app",
   },
   LEMBRETE: {
     // O push de lembrete sai agrupado por unidade no passo diário; a linha de

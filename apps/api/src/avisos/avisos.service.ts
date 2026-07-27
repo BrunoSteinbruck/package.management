@@ -258,9 +258,30 @@ export class AvisosService {
 
     const itens: ItemFeed[] = [];
     for (const [condominioId, unidadeIds] of unidadesPorCondominio) {
-      const { avisos, notificacoes } = await this.prisma.withTenant(
+      // Blocos das unidades do morador neste condomínio: o comunicado de um
+      // bloco não pode aparecer para quem mora em outro.
+      const blocosDoMorador = await this.prisma.withTenant(condominioId, (tx) =>
+        tx.unidade.findMany({
+          where: { id: { in: unidadeIds } },
+          select: { bloco: true },
+        }),
+      );
+      const meusBlocos = blocosDoMorador.map((u) => u.bloco ?? "");
+
+      const { avisos, notificacoes, comunicados, lidos } = await this.prisma.withTenant(
         condominioId,
         async (tx) => ({
+          comunicados: await tx.comunicado.findMany({
+            where: {
+              OR: [{ blocos: { isEmpty: true } }, { blocos: { hasSome: meusBlocos } }],
+            },
+            orderBy: { criadoEm: "desc" },
+            take: 40,
+          }),
+          lidos: await tx.comunicadoLeitura.findMany({
+            where: { moradorId },
+            select: { comunicadoId: true },
+          }),
           avisos: await tx.aviso.findMany({
             where: {
               OR: [
@@ -284,6 +305,19 @@ export class AvisosService {
           }),
         }),
       );
+
+      const jaLidos = new Set(lidos.map((l) => l.comunicadoId));
+      for (const c of comunicados) {
+        itens.push({
+          tipo: "COMUNICADO",
+          id: c.id,
+          em: c.criadoEm.toISOString(),
+          comunicadoId: c.id,
+          titulo: c.titulo,
+          resumo: c.corpo.split("\n")[0].slice(0, 160),
+          lido: jaLidos.has(c.id),
+        });
+      }
 
       for (const a of avisos) {
         const base = {

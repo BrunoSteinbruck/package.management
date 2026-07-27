@@ -13,6 +13,8 @@ export interface ItemApresentado {
   selo?: { texto: string; tom: TomSelo };
   /** Presente quando o item abre o detalhe de uma encomenda. */
   pacoteId?: string;
+  /** Presente quando o item abre o detalhe de um comunicado. */
+  comunicadoId?: string;
 }
 
 /**
@@ -84,6 +86,18 @@ export function apresentar(item: ItemFeed): ItemApresentado {
           texto: rotuloStatusAviso(item.status),
           tom: tomDoStatus(item.status),
         },
+      };
+    case "COMUNICADO":
+      return {
+        icone: "sino",
+        corFundo: theme.colors.okBg,
+        corIcone: theme.colors.marca,
+        titulo: item.titulo,
+        sub: item.resumo,
+        // Sem selo quando já leu: o feed do morador é longo, e marcar o que
+        // ele já resolveu polui mais do que informa.
+        selo: item.lido ? undefined : { texto: "novo", tom: "ok" },
+        comunicadoId: item.comunicadoId,
       };
   }
   return desconhecido(item);

@@ -47,6 +47,11 @@ export type SindicoStackParamList = Omit<
   Aprovacoes: undefined;
   // Painel de consumos: o síndico acompanha e exporta, não registra leitura.
   Consumos: undefined;
+  // Comunicados: quem publica é o síndico, então a lista e o compositor
+  // existem só nesta pilha. O morador tem a rota de leitura, não a de escrita.
+  Comunicados: undefined;
+  NovoComunicado: undefined;
+  Documentos: undefined;
 };
 
 /** Pilha do morador (perfil.tipo === "morador"). */
@@ -60,4 +65,6 @@ export type MoradorStackParamList = {
   // escolher. Antes vinha a primeira unidade da home, e quem tinha duas não
   // conseguia relatar pela segunda.
   Reportar: undefined;
+  Comunicado: { comunicadoId: string };
+  Documentos: undefined;
 };

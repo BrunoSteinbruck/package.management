@@ -44,6 +44,15 @@ function item(tipo: ItemFeed["tipo"]): ItemFeed {
         status: "ABERTO",
         foto: null,
       };
+    case "COMUNICADO":
+      return {
+        ...base,
+        tipo,
+        comunicadoId: "c",
+        titulo: "Manutenção do elevador",
+        resumo: "Terça, das 8h às 12h.",
+        lido: false,
+      };
   }
 }
 
@@ -86,5 +95,14 @@ describe("versionamento do feed", () => {
     ];
     const itens = originais.map(item);
     expect(itensParaVersao(itens, 1)).toHaveLength(originais.length);
+  });
+
+  it("app v1 não recebe comunicado, app v2 recebe", () => {
+    // O caso concreto que o mecanismo existe para cobrir: comunicado entrou
+    // no feed depois de haver app publicado, e a versão antiga não tem ramo
+    // para ele em `apresentar()`.
+    const itens = [item("ENTRADA"), item("COMUNICADO")];
+    expect(itensParaVersao(itens, 1).map((i) => i.tipo)).toEqual(["ENTRADA"]);
+    expect(itensParaVersao(itens, 2)).toHaveLength(2);
   });
 });

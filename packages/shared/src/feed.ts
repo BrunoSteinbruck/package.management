@@ -64,6 +64,16 @@ export type ItemFeed =
       descricao: string | null;
       status: StatusAviso;
       foto: FotoRef | null;
+    }
+  | {
+      tipo: "COMUNICADO";
+      id: string;
+      em: string;
+      comunicadoId: string;
+      titulo: string;
+      /** Primeiras linhas; o texto inteiro vem no detalhe. */
+      resumo: string;
+      lido: boolean;
     };
 
 export type TipoItemFeed = ItemFeed["tipo"];
@@ -80,7 +90,7 @@ export type TipoItemFeed = ItemFeed["tipo"];
  *
  * Cliente que não manda `v` é anterior a este mecanismo: vale como v1.
  */
-export const VERSAO_FEED = 1;
+export const VERSAO_FEED = 2;
 
 /**
  * A partir de qual versão de cliente cada tipo pode ser entregue.
@@ -95,6 +105,9 @@ export const VERSAO_MINIMA_ITEM: Record<TipoItemFeed, number> = {
   LEMBRETE: 1,
   AVISO: 1,
   OCORRENCIA: 1,
+  // Chegou com o módulo de comunicados, depois de existir app nas lojas: é o
+  // primeiro tipo que o versionamento realmente protege.
+  COMUNICADO: 2,
 };
 
 /** Filtra o que um cliente naquela versão sabe renderizar. */

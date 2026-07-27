@@ -92,7 +92,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         where: { status: "FILA", canal: "PUSH" },
         take: 20,
         orderBy: { criadoEm: "asc" },
-        include: { pacote: true, aviso: true },
+        include: { pacote: true, aviso: true, comunicado: true },
       }),
     );
 
@@ -155,9 +155,46 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
           : null;
       case "gestoresDoCondominio":
         return this.tokensDosGestores(notif.condominioId);
+      case "moradoresDoComunicado":
+        return notif.comunicado
+          ? this.tokensDoCondominio(notif.condominioId, notif.comunicado.blocos)
+          : null;
       case "naoEnfileirada":
         return null;
     }
+  }
+
+  /**
+   * Tokens dos moradores do condomínio, filtrando pelos blocos alvo (lista
+   * vazia = prédio inteiro).
+   *
+   * Uma linha de Notificacao cobre o broadcast inteiro e os tokens são
+   * resolvidos no envio, como nas demais audiências: gravar uma linha por
+   * morador transformaria cada comunicado em centenas de linhas de fila para
+   * dizer a mesma coisa.
+   */
+  private async tokensDoCondominio(
+    condominioId: string,
+    blocos: string[],
+  ): Promise<string[]> {
+    const unidades = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.unidade.findMany({
+        where: blocos.length > 0 ? { bloco: { in: blocos } } : {},
+        select: { id: true },
+      }),
+    );
+    if (unidades.length === 0) return [];
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { unidadeId: { in: unidades.map((u) => u.id) }, status: "ATIVO" },
+      select: { moradorId: true },
+    });
+    if (vinculos.length === 0) return [];
+    const devices = await this.prisma.device.findMany({
+      where: { moradorId: { in: vinculos.map((v) => v.moradorId) } },
+    });
+    // Dedup: um morador com duas unidades no mesmo bloco alvo apareceria duas
+    // vezes e receberia o push duplicado.
+    return [...new Set(apenasExpo(devices))];
   }
 
   /** Tokens Expo válidos de um morador específico (destinatário de OCORRENCIA). */
