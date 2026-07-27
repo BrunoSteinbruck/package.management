@@ -7,6 +7,7 @@ import {
 import { gerarCodigoConvite } from "../common/convite.util";
 import { PrismaService } from "../prisma/prisma.service";
 import { SmsService } from "../sms/sms.service";
+import { WhatsAppService } from "../whatsapp/whatsapp.service";
 import {
   DESPACHOS,
   type Audiencia,
@@ -52,6 +53,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sms: SmsService,
+    private readonly whatsapp: WhatsAppService,
   ) {}
 
   onModuleInit() {
@@ -114,32 +116,60 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
 
       let novoStatus: "ENVIADA" | "FALHA" = "FALHA";
       let providerMsgId: string | undefined;
+      let canal: "PUSH" | "WHATSAPP" | undefined;
 
       if (tokens === null) {
         // Relação esperada ausente (ou tipo que nunca deveria entrar na fila).
         providerMsgId = "sem-alvo";
-      } else if (tokens.length === 0) {
-        providerMsgId =
-          despacho.semApp === "convite-sms" && notif.pacote
-            ? await this.enviarConviteSms(condominio, notif.pacote.unidadeId)
-            : despacho.marcadorSemApp;
       } else {
-        const r = await this.enviarExpo(
-          tokens,
-          despacho.titulo(notif),
-          despacho.corpo(notif),
-          despacho.data(notif),
-        );
-        if (r.ok) {
-          novoStatus = "ENVIADA";
-          providerMsgId = r.ticketId;
-        } else providerMsgId = r.erro?.slice(0, 180);
+        if (tokens.length > 0) {
+          const r = await this.enviarExpo(
+            tokens,
+            despacho.titulo(notif),
+            despacho.corpo(notif),
+            despacho.data(notif),
+          );
+          if (r.ok) {
+            novoStatus = "ENVIADA";
+            providerMsgId = r.ticketId;
+          } else providerMsgId = r.erro?.slice(0, 180);
+        }
+
+        // O WhatsApp NÃO é alternativa ao push: é complemento, e roda mesmo
+        // quando alguém já recebeu por push.
+        //
+        // A diferença aparece no comunicado do condomínio, onde parte dos
+        // moradores tem o app e parte não. Tratar como "ou um, ou outro"
+        // fazia um único vizinho com o app instalado silenciar o aviso para
+        // todos os outros. Quem escolhe o destinatário certo é a consulta
+        // do fallback, que só devolve morador SEM device: ninguém recebe a
+        // mesma coisa duas vezes.
+        if (despacho.semApp === "whatsapp") {
+          const marca = await this.fallbackWhatsapp(condominio, notif, despacho);
+          const entregou = marca.startsWith("whatsapp-") && !marca.endsWith("-0");
+          if (tokens.length === 0) {
+            providerMsgId = marca;
+            // Sem push mas com WhatsApp entregue, a notificação saiu: marcar
+            // FALHA diria que ninguém foi avisado, o que não é verdade. O
+            // canal só vira WHATSAPP aqui, quando ele foi o único caminho:
+            // com push também entregue, a linha continua PUSH.
+            if (entregou) {
+              novoStatus = "ENVIADA";
+              canal = "WHATSAPP";
+            }
+          }
+        } else if (tokens.length === 0) {
+          providerMsgId =
+            despacho.semApp === "convite-sms" && notif.pacote
+              ? await this.enviarConviteSms(condominio, notif.pacote.unidadeId)
+              : despacho.marcadorSemApp;
+        }
       }
 
       await this.prisma.withTenant(condominioId, (tx) =>
         tx.notificacao.update({
           where: { id: notif.id },
-          data: { status: novoStatus, providerMsgId },
+          data: { status: novoStatus, providerMsgId, ...(canal ? { canal } : {}) },
         }),
       );
     }
@@ -314,6 +344,87 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Lembrete: ${n} pacote(s) parados, unidade ${unidadeId}`);
       }
     }
+  }
+
+  /**
+   * Alcança quem não instalou o app, por WhatsApp.
+   *
+   * Três portas, todas fechadas por padrão, e todas necessárias:
+   *  1. o condomínio contratou o módulo (`whatsapp` nos módulos);
+   *  2. o morador deu opt-in (`aceitaWhatsapp`), que é o consentimento LGPD;
+   *  3. o tipo do aviso é um dos que valem a mensagem paga (`semApp`).
+   *
+   * O canal muda na linha de Notificacao, então o histórico registra por onde
+   * cada aviso saiu, e não fica parecendo push entregue.
+   */
+  private async fallbackWhatsapp(
+    condominio: { id: string; nome: string },
+    notif: NotifComRelacoes,
+    despacho: { titulo: (n: NotifComRelacoes) => string; corpo: (n: NotifComRelacoes) => string },
+  ): Promise<string> {
+    const cond = await this.prisma.condominio.findUnique({
+      where: { id: condominio.id },
+      select: { modulos: true },
+    });
+    if (!cond?.modulos.includes("whatsapp")) return "whatsapp-desligado";
+
+    const unidadeId =
+      notif.cobranca?.unidadeId ?? notif.visita?.unidadeId ?? null;
+    const moradores = await this.destinatariosSemApp(
+      condominio.id,
+      unidadeId,
+      notif.comunicado?.blocos ?? null,
+    );
+    if (moradores.length === 0) return "sem-destinatario-whatsapp";
+
+    let enviados = 0;
+    for (const m of moradores) {
+      const ok = await this.whatsapp.enviar(m.telefone, notif.tipo, [
+        condominio.nome,
+        despacho.titulo(notif),
+        despacho.corpo(notif),
+      ]);
+      if (ok) enviados++;
+    }
+    if (enviados > 0) {
+      this.logger.log(`WhatsApp: ${enviados} envio(s) para quem não tem o app`);
+    }
+    return `whatsapp-${enviados}`;
+  }
+
+  /**
+   * Moradores com opt-in e SEM device: quem já tem o app recebeu push e não
+   * pode receber a mesma coisa duas vezes.
+   */
+  private async destinatariosSemApp(
+    condominioId: string,
+    unidadeId: string | null,
+    blocos: string[] | null,
+  ): Promise<Array<{ telefone: string }>> {
+    const unidades = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.unidade.findMany({
+        where: unidadeId
+          ? { id: unidadeId }
+          : blocos && blocos.length > 0
+            ? { bloco: { in: blocos } }
+            : {},
+        select: { id: true },
+      }),
+    );
+    if (unidades.length === 0) return [];
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { unidadeId: { in: unidades.map((u) => u.id) }, status: "ATIVO" },
+      select: { moradorId: true },
+    });
+    if (vinculos.length === 0) return [];
+    return this.prisma.morador.findMany({
+      where: {
+        id: { in: [...new Set(vinculos.map((v) => v.moradorId))] },
+        aceitaWhatsapp: true,
+        devices: { none: {} },
+      },
+      select: { telefone: true },
+    });
   }
 
   /**

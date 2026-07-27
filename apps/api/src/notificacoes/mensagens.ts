@@ -37,8 +37,16 @@ export interface Despacho {
   titulo: (n: NotifComRelacoes) => string;
   corpo: (n: NotifComRelacoes) => string;
   data: (n: NotifComRelacoes) => Record<string, unknown>;
-  /** Sem nenhum device do outro lado: manda convite por SMS ou desiste. */
-  semApp: "convite-sms" | "ignorar";
+  /**
+   * O que fazer quando ninguém do outro lado tem o app.
+   *
+   * `convite-sms` é o motor de adoção (encomenda). `whatsapp` alcança quem
+   * não instalou, e só vale para o que o condomínio realmente precisa que
+   * chegue: comunicado e cobrança. Aviso de pacote continua em `ignorar` de
+   * propósito, porque transformá-lo em mensagem paga destruiria o incentivo
+   * de instalar o app, que é como o produto entra no prédio.
+   */
+  semApp: "convite-sms" | "whatsapp" | "ignorar";
   /** Vai para `providerMsgId` quando ninguém tem app, só para diagnóstico. */
   marcadorSemApp: string;
 }
@@ -51,11 +59,6 @@ function rotuloStatus(s: string): string {
   return s === "ABERTO" ? "aberto" : "resolvido";
 }
 
-/**
- * Prévia do comunicado no push. Corta na primeira quebra de linha antes do
- * limite de caracteres: o síndico costuma abrir com uma frase de resumo, e
- * cortar no meio dela entregaria uma notificação que não diz nada.
- */
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
@@ -82,6 +85,11 @@ function dinheiro(v: unknown): string {
   });
 }
 
+/**
+ * Prévia do comunicado no push. Corta na primeira quebra de linha antes do
+ * limite de caracteres: o síndico costuma abrir com uma frase de resumo, e
+ * cortar no meio dela entregaria uma notificação que não diz nada.
+ */
 function primeiraLinha(corpo: string, max = 140): string {
   const linha = corpo.split("\n")[0].trim();
   return linha.length <= max ? linha : `${linha.slice(0, max - 1).trimEnd()}…`;
@@ -148,14 +156,14 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     marcadorSemApp: "gestor-sem-app",
   },
   COMUNICADO: {
-    // Broadcast do síndico. Sem app não vira SMS: comunicado não é gancho de
-    // adoção e o volume tornaria o custo por envio imprevisível. Alcançar
-    // quem não instalou é o trabalho do canal WhatsApp, na Onda 4.
+    // Broadcast do síndico. Sem app vai por WhatsApp, e não por SMS: no
+    // volume de um comunicado a diferença de custo por mensagem é de ordem
+    // de grandeza, e comunicado não é gancho de adoção como a encomenda.
     audiencia: "moradoresDoComunicado",
     titulo: (n) => n.comunicado?.titulo ?? "Comunicado do condomínio",
     corpo: (n) => primeiraLinha(n.comunicado?.corpo ?? ""),
     data: (n) => ({ comunicadoId: n.comunicadoId }),
-    semApp: "ignorar",
+    semApp: "whatsapp",
     marcadorSemApp: "condominio-sem-app",
   },
   VISITA_CHEGOU: {
@@ -176,7 +184,7 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     corpo: (n) =>
       `Taxa de ${mesDaCompetencia(n.cobranca)} · ${dinheiro(n.cobranca?.valor)}, vence ${dataCurta(n.cobranca?.vencimento)}.`,
     data: (n) => ({ cobrancaId: n.cobrancaId }),
-    semApp: "ignorar",
+    semApp: "whatsapp",
     marcadorSemApp: "sem-app",
   },
   COBRANCA_LEMBRETE: {
@@ -185,7 +193,7 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     corpo: (n) =>
       `Taxa de ${mesDaCompetencia(n.cobranca)} · ${dinheiro(n.cobranca?.valor)}, vence ${dataCurta(n.cobranca?.vencimento)}.`,
     data: (n) => ({ cobrancaId: n.cobrancaId }),
-    semApp: "ignorar",
+    semApp: "whatsapp",
     marcadorSemApp: "sem-app",
   },
   COBRANCA_VENCIDA: {
@@ -196,7 +204,7 @@ export const DESPACHOS: Record<TipoNotificacao, Despacho> = {
     corpo: (n) =>
       `A taxa de ${mesDaCompetencia(n.cobranca)} venceu em ${dataCurta(n.cobranca?.vencimento)}. A segunda via está no app.`,
     data: (n) => ({ cobrancaId: n.cobrancaId }),
-    semApp: "ignorar",
+    semApp: "whatsapp",
     marcadorSemApp: "sem-app",
   },
   COBRANCA_PAGA: {

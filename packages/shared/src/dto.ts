@@ -243,6 +243,10 @@ export const CriarVisitaSchema = z
   );
 export type CriarVisitaDto = z.infer<typeof CriarVisitaSchema>;
 
+/** Opt-in de WhatsApp: só o próprio morador muda. */
+export const AlternarWhatsappSchema = z.object({ aceita: z.boolean() });
+export type AlternarWhatsappDto = z.infer<typeof AlternarWhatsappSchema>;
+
 // ----- Módulo Financeiro -----
 
 export const SalvarConfigFinanceiroSchema = z.object({

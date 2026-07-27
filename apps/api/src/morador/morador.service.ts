@@ -205,6 +205,38 @@ export class MoradorService {
     return { codigo: convite.codigo, expiraEm: convite.expiraEm };
   }
 
+  /**
+   * Preferências de notificação do morador.
+   *
+   * `temApp` sai daqui porque muda o que a tela deve dizer: com o app
+   * instalado, o WhatsApp não é usado (o push já chega), e prometer o
+   * contrário seria mentira na interface.
+   */
+  async preferencias(user: JwtPayload) {
+    if (user.tipo !== "morador") {
+      throw new ForbiddenException("Apenas moradores");
+    }
+    const morador = await this.prisma.morador.findUniqueOrThrow({
+      where: { id: user.sub },
+      select: { aceitaWhatsapp: true, _count: { select: { devices: true } } },
+    });
+    return {
+      aceitaWhatsapp: morador.aceitaWhatsapp,
+      temApp: morador._count.devices > 0,
+    };
+  }
+
+  async alternarWhatsapp(user: JwtPayload, aceita: boolean) {
+    if (user.tipo !== "morador") {
+      throw new ForbiddenException("Apenas moradores");
+    }
+    await this.prisma.morador.update({
+      where: { id: user.sub },
+      data: { aceitaWhatsapp: aceita },
+    });
+    return this.preferencias(user);
+  }
+
   async vinculadosDaUnidade(user: JwtPayload, unidadeId: string) {
     const moradorId = this.exigirMorador(user);
     await this.exigirVinculoAtivo(moradorId, unidadeId);

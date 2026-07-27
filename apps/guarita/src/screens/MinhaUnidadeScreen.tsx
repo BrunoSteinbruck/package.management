@@ -20,7 +20,15 @@ import type { Veiculo, Vinculado } from "../api/types";
 import { Botao, Card, HeaderTela, Kicker } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
+import { useModulos } from "../useModulos";
 import type { MoradorStackParamList } from "../navigation";
+
+/** GET /morador/preferencias */
+interface Preferencias {
+  aceitaWhatsapp: boolean;
+  /** Com app instalado o canal é o push, e o WhatsApp não entra. */
+  temApp: boolean;
+}
 
 type Props = NativeStackScreenProps<MoradorStackParamList, "MinhaUnidade"> & {
   aoSair: () => void;
@@ -36,6 +44,8 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
   const { unidadeId, rotulo, condominio } = route.params;
   const [vinculados, setVinculados] = useState<Vinculado[]>([]);
   const [convidando, setConvidando] = useState(false);
+  const ligados = useModulos();
+  const [prefs, setPrefs] = useState<Preferencias | null>(null);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [placa, setPlaca] = useState("");
   const [modelo, setModelo] = useState("");
@@ -52,9 +62,26 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
       apiFetch<Vinculado[]>(`/morador/unidades/${unidadeId}/vinculados`)
         .then(setVinculados)
         .catch(() => {});
+      apiFetch<Preferencias>("/morador/preferencias")
+        .then(setPrefs)
+        .catch(() => {});
       carregarVeiculos();
     }, [unidadeId, carregarVeiculos]),
   );
+
+  async function alternarWhatsapp() {
+    if (!prefs) return;
+    try {
+      setPrefs(
+        await apiFetch<Preferencias>("/morador/preferencias/whatsapp", {
+          method: "POST",
+          body: { aceita: !prefs.aceitaWhatsapp },
+        }),
+      );
+    } catch (e) {
+      Alert.alert("Não foi possível salvar", String((e as Error).message));
+    }
+  }
 
   async function adicionarVeiculo() {
     if (placa.trim().length < 6) return;
@@ -223,23 +250,41 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
           </View>
         </Card>
 
+        {/* Com o app instalado o aviso chega por push, e o WhatsApp não é
+            usado: oferecer a opção aqui prometeria algo que não acontece.
+            Por isso a linha só vira toggle para quem não tem device. */}
         <Pressable
           style={({ pressed }) => [styles.linhaNotif, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-          onPress={() =>
-            Alert.alert(
-              "Notificações",
-              "Hoje todos os moradores vinculados recebem os avisos de encomenda. Preferências individuais chegam em breve.",
-            )
-          }
+          onPress={ligados.includes("whatsapp") && prefs && !prefs.temApp
+            ? alternarWhatsapp
+            : () =>
+                Alert.alert(
+                  "Notificações",
+                  "Todos os moradores vinculados recebem os avisos da unidade neste aparelho.",
+                )}
         >
           <View style={styles.iconeNotif}>
             <Icone nome="sino" tamanho={20} cor={theme.colors.ok} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.notifTitulo}>Notificações</Text>
-            <Text style={styles.notifSub}>Todos os vinculados recebem os avisos</Text>
+            <Text style={styles.notifSub}>
+              {ligados.includes("whatsapp") && prefs && !prefs.temApp
+                ? prefs.aceitaWhatsapp
+                  ? "Recebendo comunicados e boletos por WhatsApp"
+                  : "Toque para receber comunicados e boletos por WhatsApp"
+                : "Todos os vinculados recebem os avisos"}
+            </Text>
           </View>
-          <Icone nome="chevron" tamanho={22} cor={theme.colors.textFaint} />
+          {ligados.includes("whatsapp") && prefs && !prefs.temApp ? (
+            <Icone
+              nome={prefs.aceitaWhatsapp ? "check" : "chevron"}
+              tamanho={22}
+              cor={prefs.aceitaWhatsapp ? theme.colors.ok : theme.colors.textFaint}
+            />
+          ) : (
+            <Icone nome="chevron" tamanho={22} cor={theme.colors.textFaint} />
+          )}
         </Pressable>
 
         <Botao

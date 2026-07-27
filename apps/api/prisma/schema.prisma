@@ -169,6 +169,10 @@ model Morador {
   id       String   @id @default(uuid()) @db.Uuid
   nome     String
   telefone String   @unique
+  // Opt-in de WhatsApp (LGPD): consentimento é ato positivo, então o padrão
+  // é false e quem liga é o morador, no app. Só vale para quem NÃO tem o
+  // app instalado no aparelho em uso; com app, o canal é o push.
+  aceitaWhatsapp Boolean @default(false) @map("aceita_whatsapp")
   criadoEm DateTime @default(now()) @map("criado_em")
 
   vinculos           Vinculo[]

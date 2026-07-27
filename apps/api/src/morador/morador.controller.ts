@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import {
+  AlternarWhatsappDto,
+  AlternarWhatsappSchema,
   CriarVeiculoDto,
   CriarVeiculoSchema,
   EmitirConviteDto,
@@ -85,6 +87,23 @@ export class MoradorController {
     @Body(new ZodPipe(EmitirConviteSchema)) dto: EmitirConviteDto,
   ) {
     return this.morador.emitirConvite(user, dto);
+  }
+
+  /**
+   * Preferência de WhatsApp. Consentimento LGPD é ato positivo do titular,
+   * então só o próprio morador liga ou desliga, pelo app.
+   */
+  @Get("preferencias")
+  preferencias(@CurrentUser() user: JwtPayload) {
+    return this.morador.preferencias(user);
+  }
+
+  @Post("preferencias/whatsapp")
+  alternarWhatsapp(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(AlternarWhatsappSchema)) dto: AlternarWhatsappDto,
+  ) {
+    return this.morador.alternarWhatsapp(user, dto.aceita);
   }
 
   @Get("unidades/:unidadeId/vinculados")
