@@ -50,6 +50,17 @@ o problema."
 - **Relatórios:** tempo médio de retirada, volume por transportadora, pico de
   horário. "Você acompanha tudo daqui, sem pedir nada pro porteiro."
 
+## Extra: leitura de água e gás (40s, se o condomínio tem medição individual)
+
+- No app do porteiro: **Leituras de água e gás** → "Ler medidor" → foto de um
+  medidor (ou de uma foto impressa): o número aparece sugerido, confirmar,
+  escolher o apartamento (o próximo da rodada já vem como primeiro chip).
+- "O zelador para de anotar em prancheta e digitar planilha. Cada leitura fica
+  com foto como prova."
+- No painel: **Consumos** → tabela com leitura anterior, atual, m³ e **R$**,
+  alerta de consumo fora do padrão, e **Exportar Excel/PDF**. "O relatório que
+  hoje dá trabalho sai pronto daqui."
+
 ## Fechamento (20s)
 
 "Resumindo: a portaria fica mais rápida, o morador para de reclamar, e você tem

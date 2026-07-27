@@ -88,6 +88,29 @@ Provider pronto; basta a chave.
 5. Reinicie a API: a partir daí a entrada no app pré-preenche
    transportadora e sugere a unidade pela etiqueta.
 
+## 5. Leituras de água e gás: antes da primeira rodada
+
+Código pronto; o que resta é configuração e expectativa alinhada.
+
+1. **Tarifas**: no painel (Consumos → Tarifas por m³), cadastrar o R$/m³ de
+   água e de gás ANTES da primeira rodada; sem elas a tabela mostra só o
+   consumo, sem valor.
+2. **Primeira rodada é a linha de base**: a primeira leitura de cada unidade
+   não tem consumo (não existe anterior). Consumo, valor e alertas aparecem
+   a partir do segundo mês. Avise o síndico para não estranhar.
+3. **OCR do medidor roda NO aparelho** (ML Kit): funciona no development
+   build (item 3), NÃO no Expo Go, onde o zelador digita o número. A chave
+   do Vision (item 4) não é usada para medidor, só para etiqueta.
+4. **Fotos de leitura são comprovante**: em produção exigem o R2 configurado
+   (mesmo requisito das fotos de encomenda; o disco do Render é efêmero).
+5. **Backup**: se o `backup-role.sql` já tiver sido rodado no banco, rode de
+   novo: a versão atual corrige os privilégios para tabelas criadas por
+   migrations futuras (sem isso o pg_dump falha com as tabelas de leitura).
+6. **Teste de campo com medidor de verdade**: no dev build, fotografar
+   medidores reais do prédio (escuro, vidro sujo, ângulo) e conferir a taxa
+   de acerto da sugestão; o fluxo aceita ajuste manual, mas a promessa da
+   proposta é a leitura automática.
+
 ## Ordem sugerida do teste conjunto
 
 1. Vision (script → depois no app, foto da etiqueta preenchendo campos)

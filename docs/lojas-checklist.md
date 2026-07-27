@@ -74,6 +74,9 @@ DEMO_CODIGO="<6 dígitos>"
   experiência da portaria e a do morador.
 - As contas precisam existir no banco: semeie com
   `prisma/seed-demo.ts` (`PORTEIRO_TELEFONE`, `MORADOR_DEMO_TELEFONE`).
+- O seed já inclui 4 meses de leituras de água/gás e tarifas: a conta da
+  portaria mostra a tela de Leituras populada para o revisor, e os
+  screenshots das lojas podem incluir o painel de Consumos.
 - Informe o par telefone/código nas notas de review das duas lojas.
 - Deixar as duas variáveis em branco desativa o desvio.
 
@@ -107,6 +110,9 @@ seed é idempotente: rode de novo antes da próxima submissão.
 - [ ] Teste fechado 12×14 dias, se conta pessoal
 - [x] Permissão `RECORD_AUDIO` removida: o app não grava áudio, e permissão
       sensível sem uso é bandeira no review (`recordAudioAndroid: false`)
+- [x] Texto da permissão de câmera cobre todos os usos reais (etiquetas,
+      entregas, QR e medidores de água/gás): divergência entre o texto e o
+      uso observado é motivo de rejeição
 
 ## Ainda sem dono
 

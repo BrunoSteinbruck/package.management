@@ -38,7 +38,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "A câmera é usada para fotografar etiquetas, registrar entregas e ler QR codes.",
+          "cameraPermission": "A câmera é usada para fotografar etiquetas de encomendas e medidores de água e gás, registrar entregas e ler QR codes.",
           "recordAudioAndroid": false
         }
       ]
