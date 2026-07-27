@@ -56,7 +56,18 @@ h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
   color: var(--acento-claro);
   padding: 0 12px 22px;
 }
-.sidebar nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+/* min-height: 0 é o que permite o nav encolher abaixo do próprio conteúdo
+   dentro da coluna de 100vh; sem ele a lista fura a altura da tela e leva
+   "Sair" e o rodapé para fora do campo de visão, sem barra para alcançá-los.
+   Passa a importar agora que a lista de visões cresce a cada módulo novo. */
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 .sidebar .item {
   display: flex;
   align-items: center;

@@ -86,6 +86,28 @@ export function apresentar(item: ItemFeed): ItemApresentado {
         },
       };
   }
+  return desconhecido(item);
+}
+
+/**
+ * Rede de segurança para tipo que este binário não conhece.
+ *
+ * Não deveria acontecer: a API filtra o feed pela versão que o app declara em
+ * `?v=`. Mas o custo de estar errado é a caixa de entrada inteira em branco,
+ * porque o `switch` acima devolveria `undefined`, então vale uma linha.
+ *
+ * O parâmetro `never` preserva a exaustividade que o switch já dava: tipo
+ * novo em `ItemFeed` sem ramo acima chega aqui como algo diferente de `never`
+ * e para de compilar.
+ */
+function desconhecido(_item: never): ItemApresentado {
+  return {
+    icone: "sino",
+    corFundo: theme.colors.divisor,
+    corIcone: theme.colors.textSecondary,
+    titulo: "Novidade no seu condomínio",
+    sub: "Atualize o app para ver este item.",
+  };
 }
 
 function comDescricao(descricao: string | null, em: string): string {

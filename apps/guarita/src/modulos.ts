@@ -1,4 +1,4 @@
-import type { Perfil } from "@pacotes/shared";
+import type { ModuloCondominio, Perfil } from "@pacotes/shared";
 import type { NomeIcone } from "./components/icones";
 import type {
   MoradorStackParamList,
@@ -47,6 +47,16 @@ export interface Modulo<Rota extends string> {
   icone: NomeIcone;
   perfis: readonly Perfil[];
   slot: Slot;
+  /**
+   * Módulo opcional: só aparece se o condomínio tiver ligado. Ausente
+   * significa base do produto, que todo condomínio tem.
+   *
+   * A rota continua existindo na pilha mesmo com a flag desligada. É de
+   * propósito: o que a flag governa é a porta de entrada, e é isso que deixa
+   * um binário já publicado nas lojas conviver com condomínios que
+   * contrataram coisas diferentes.
+   */
+  flag?: ModuloCondominio;
 }
 
 export const MODULOS_PORTARIA: readonly Modulo<
@@ -119,6 +129,12 @@ export function modulosDe<Rota extends string>(
   modulos: readonly Modulo<Rota>[],
   perfil: Perfil,
   slot: Slot,
+  ligados: readonly ModuloCondominio[] = [],
 ): readonly Modulo<Rota>[] {
-  return modulos.filter((m) => m.perfis.includes(perfil) && m.slot === slot);
+  return modulos.filter(
+    (m) =>
+      m.perfis.includes(perfil) &&
+      m.slot === slot &&
+      (!m.flag || ligados.includes(m.flag)),
+  );
 }

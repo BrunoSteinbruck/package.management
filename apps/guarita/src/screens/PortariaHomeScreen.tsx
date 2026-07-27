@@ -20,6 +20,7 @@ import { limparSessao } from "../api/session";
 import { BotaoModulo } from "../components/ui";
 import { Icone } from "../components/icones";
 import { MODULOS_PORTARIA, modulosDe } from "../modulos";
+import { useModulos } from "../useModulos";
 import { theme } from "../theme";
 import type { PortariaStackParamList } from "../navigation";
 
@@ -41,6 +42,7 @@ function iniciais(nome: string): string {
 
 export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
   const insets = useSafeAreaInsets();
+  const ligados = useModulos();
   const [online, setOnline] = useState(true);
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [fila, setFila] = useState(0);
@@ -180,7 +182,12 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
 
         {/* Prateleira dos módulos secundários: funcionalidade nova entra aqui
             pelo manifesto, sem mexer no layout da tela. */}
-        {modulosDe(MODULOS_PORTARIA, perfilDe(perfil), "secundario").map((m) => (
+        {modulosDe(
+          MODULOS_PORTARIA,
+          perfilDe(perfil),
+          "secundario",
+          ligados,
+        ).map((m) => (
           <BotaoModulo
             key={m.id}
             titulo={m.titulo}

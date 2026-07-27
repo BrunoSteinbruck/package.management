@@ -24,6 +24,7 @@ import {
 import { BotaoCta, BotaoModulo, Card } from "../components/ui";
 import { Icone } from "../components/icones";
 import { MODULOS_MORADOR, modulosDe } from "../modulos";
+import { useModulos } from "../useModulos";
 import { theme } from "../theme";
 import type { MoradorStackParamList } from "../navigation";
 
@@ -33,6 +34,7 @@ type Props = NativeStackScreenProps<MoradorStackParamList, "Home"> & {
 
 export function MoradorHomeScreen({ navigation, perfil }: Props) {
   const insets = useSafeAreaInsets();
+  const ligados = useModulos();
   const [unidades, setUnidades] = useState<MinhaUnidade[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [atualizando, setAtualizando] = useState(false);
@@ -234,7 +236,7 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
           <View style={styles.linhaRodape}>
             {/* Os módulos do rodapé vêm do manifesto; navegar fica aqui porque
                 só a home conhece a unidade carregada. */}
-            {modulosDe(MODULOS_MORADOR, "morador", "rodape").map((m) => (
+            {modulosDe(MODULOS_MORADOR, "morador", "rodape", ligados).map((m) => (
               <BotaoModulo
                 key={m.id}
                 variante="pill"

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { STATUS_AVISO, TIPOS_MEDIDOR } from "./enums";
+import { MODULOS_CONDOMINIO, STATUS_AVISO, TIPOS_MEDIDOR } from "./enums";
 
 // Corpos de request validados na borda da API. O que a API devolve fica em
 // api.ts.
@@ -108,6 +108,16 @@ export const CriarUsuarioSchema = z.object({
   papel: z.enum(["PORTEIRO", "APOIO", "SINDICO"]),
 });
 export type CriarUsuarioDto = z.infer<typeof CriarUsuarioSchema>;
+
+/**
+ * A lista inteira, não um toggle por módulo: o painel manda o estado final
+ * que o síndico está vendo, então dois gestores editando ao mesmo tempo não
+ * produzem uma combinação que nenhum dos dois pediu.
+ */
+export const SalvarModulosSchema = z.object({
+  modulos: z.array(z.enum(MODULOS_CONDOMINIO)),
+});
+export type SalvarModulosDto = z.infer<typeof SalvarModulosSchema>;
 
 // ----- Módulo Avisos & Ocorrências -----
 

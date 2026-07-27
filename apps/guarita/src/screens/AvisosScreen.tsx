@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { ItemFeed } from "@pacotes/shared";
+import { VERSAO_FEED, type ItemFeed } from "@pacotes/shared";
 import { apiFetch, urlFoto } from "../api/client";
 import { apresentar } from "../feed";
 import { HeaderTela, ItemLista, Selo, Tela, Vazio } from "../components/ui";
@@ -27,7 +27,9 @@ export function AvisosScreen({ navigation }: Props) {
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
-      setItens(await apiFetch<ItemFeed[]>("/morador/feed"));
+      // A versão declara o que ESTE binário sabe renderizar: a API omite
+      // tipo mais novo em vez de mandar algo que `apresentar()` não conhece.
+      setItens(await apiFetch<ItemFeed[]>(`/morador/feed?v=${VERSAO_FEED}`));
     } catch {
       // offline: mantém o que está na tela
     } finally {

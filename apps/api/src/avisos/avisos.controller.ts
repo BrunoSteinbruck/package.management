@@ -65,10 +65,19 @@ export class AvisosController {
     return this.avisos.mudarStatus(user, id, dto.status);
   }
 
-  // Morador: a caixa de entrada inteira em uma resposta.
+  /**
+   * Morador: a caixa de entrada inteira em uma resposta.
+   *
+   * `v` é a versão do contrato de feed que o app entende. Ausente significa
+   * app anterior ao versionamento (vale 1). Ver `itensParaVersao` no shared:
+   * mandar um tipo que a versão instalada não conhece derruba a tela dela.
+   */
   @Get("morador/feed")
-  meuFeed(@CurrentUser() user: JwtPayload) {
-    return this.avisos.meuFeed(user);
+  meuFeed(@CurrentUser() user: JwtPayload, @Query("v") v?: string) {
+    // Piso em 1: versão não existe abaixo disso, então ausente, zero e lixo
+    // caem todos no mesmo lugar, que é o app anterior ao versionamento.
+    const pedida = Number.parseInt(v ?? "", 10);
+    return this.avisos.meuFeed(user, Number.isNaN(pedida) ? 1 : Math.max(1, pedida));
   }
 
   // Morador (Via 2 reporte + Via 1 recebe)

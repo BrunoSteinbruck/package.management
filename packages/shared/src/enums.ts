@@ -16,6 +16,24 @@ export type StatusPacote = (typeof STATUS_PACOTE)[number];
 export const TIPOS_MEDIDOR = ["AGUA", "GAS"] as const;
 export type TipoMedidor = (typeof TIPOS_MEDIDOR)[number];
 
+/**
+ * Módulos que o síndico liga por condomínio.
+ *
+ * Encomenda, aviso e leitura não estão aqui: são a base que todo condomínio
+ * contrata. A lista existe para o que veio depois, e resolve duas coisas de
+ * uma vez. O síndico escolhe o que o prédio usa, e um app já publicado nas
+ * lojas não oferece porta de entrada para um módulo que o condomínio dele não
+ * tem: sem isso, cada módulo novo exigiria esperar a adoção da versão.
+ */
+export const MODULOS_CONDOMINIO = [
+  "comunicados",
+  "documentos",
+  "visitantes",
+  "financeiro",
+  "whatsapp",
+] as const;
+export type ModuloCondominio = (typeof MODULOS_CONDOMINIO)[number];
+
 /** Motivos sugeridos na Via 1 (equipe avisa a unidade). */
 export const MOTIVOS_AVISO = [
   "Luz acesa",

@@ -17,6 +17,8 @@ import {
   ImportarMoradoresDto,
   ImportarMoradoresSchema,
   JwtPayload,
+  SalvarModulosDto,
+  SalvarModulosSchema,
 } from "@pacotes/shared";
 import { AuthGuard, CurrentUser } from "../auth/auth.guard";
 import { ZodPipe } from "../common/zod.pipe";
@@ -26,6 +28,19 @@ import { CadastroService } from "./cadastro.service";
 @UseGuards(AuthGuard)
 export class CadastroController {
   constructor(private readonly cadastro: CadastroService) {}
+
+  @Get("modulos")
+  listarModulos(@CurrentUser() user: JwtPayload) {
+    return this.cadastro.listarModulos(user);
+  }
+
+  @Post("modulos")
+  salvarModulos(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(SalvarModulosSchema)) dto: SalvarModulosDto,
+  ) {
+    return this.cadastro.salvarModulos(user, dto);
+  }
 
   @Get("unidades")
   listarUnidades(@CurrentUser() user: JwtPayload) {

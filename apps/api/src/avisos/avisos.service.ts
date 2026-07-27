@@ -13,7 +13,7 @@ import type {
   JwtPayload,
   StatusAviso,
 } from "@pacotes/shared";
-import { normalizarPlaca } from "@pacotes/shared";
+import { itensParaVersao, normalizarPlaca } from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
 
 const PLACA_NO_TEXTO = /[A-Z]{3}\d[A-Z0-9]\d{2}/;
@@ -236,8 +236,13 @@ export class AvisosService {
    * Percorre condomínios, não vínculos: um morador com duas unidades no mesmo
    * condomínio veria cada relato seu duas vezes, porque a consulta de Via 2
    * filtra por autor e não por unidade.
+   *
+   * `versaoCliente` é a versão do contrato de feed do app que pediu. Tipo mais
+   * novo que ela não sai daqui: o `switch` que monta a tela no app não tem
+   * ramo final, então item desconhecido derrubaria a caixa de entrada de quem
+   * ainda não atualizou.
    */
-  async meuFeed(user: JwtPayload): Promise<ItemFeed[]> {
+  async meuFeed(user: JwtPayload, versaoCliente = 1): Promise<ItemFeed[]> {
     const moradorId = this.exigirMorador(user);
     const vinculos = await this.prisma.vinculo.findMany({
       where: { moradorId, status: "ATIVO" },
@@ -330,7 +335,7 @@ export class AvisosService {
       }
     }
 
-    return itens
+    return itensParaVersao(itens, versaoCliente)
       .sort((x, y) => new Date(y.em).getTime() - new Date(x.em).getTime())
       .slice(0, 60);
   }

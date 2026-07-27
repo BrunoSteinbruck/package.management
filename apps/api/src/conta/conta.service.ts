@@ -3,7 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import type { JwtPayload } from "@pacotes/shared";
+import type { Capacidades, JwtPayload, ModuloCondominio } from "@pacotes/shared";
+import { MODULOS_CONDOMINIO } from "@pacotes/shared";
 import { randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -28,6 +29,43 @@ import { PrismaService } from "../prisma/prisma.service";
 @Injectable()
 export class ContaService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Módulos que esta sessão enxerga. O app chama ao abrir e guarda o
+   * resultado; a home usa para decidir quais pontos de entrada mostrar.
+   *
+   * Fica fora do JWT porque o token vale 30 dias: módulo ligado hoje pelo
+   * síndico precisa aparecer na próxima abertura, não no próximo login.
+   *
+   * Filtra contra `MODULOS_CONDOMINIO` porque a coluna é `text[]`: valor
+   * escrito por script ou por versão futura da API não vaza para o cliente
+   * como módulo que ele não sabe interpretar.
+   */
+  async capacidades(user: JwtPayload): Promise<Capacidades> {
+    const ids =
+      user.tipo === "morador"
+        ? (
+            await this.prisma.vinculo.findMany({
+              where: { moradorId: user.sub, status: "ATIVO" },
+              select: { condominioId: true },
+            })
+          ).map((v) => v.condominioId)
+        : user.condominioId
+          ? [user.condominioId]
+          : [];
+    if (ids.length === 0) return { modulos: [] };
+
+    const condominios = await this.prisma.condominio.findMany({
+      where: { id: { in: ids } },
+      select: { modulos: true },
+    });
+    const ligados = new Set(condominios.flatMap((c) => c.modulos));
+    return {
+      modulos: MODULOS_CONDOMINIO.filter((m) =>
+        ligados.has(m),
+      ) as ModuloCondominio[],
+    };
+  }
 
   /** O que a exclusão vai fazer, para a tela de confirmação do app. */
   async previa(user: JwtPayload) {

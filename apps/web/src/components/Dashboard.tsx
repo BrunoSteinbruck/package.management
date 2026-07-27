@@ -19,6 +19,7 @@ import {
   type VinculoPendente,
 } from "@pacotes/shared";
 import { apiFetch, API_URL, limparSessao } from "@/lib/api";
+import { ConfiguracoesView } from "./ConfiguracoesView";
 import { ConsumosView } from "./ConsumosView";
 import { Importar } from "./Importar";
 
@@ -28,7 +29,8 @@ type Visao =
   | "relatorios"
   | "consumos"
   | "moradores"
-  | "ocorrencias";
+  | "ocorrencias"
+  | "configuracoes";
 
 function rotulo(u?: UnidadeRotulo) {
   if (!u) return "-";
@@ -136,6 +138,14 @@ export function Dashboard({
               )}
             </button>
           )}
+          {gestor && (
+            <button
+              className={`item ${visao === "configuracoes" ? "ativo" : ""}`}
+              onClick={() => setVisao("configuracoes")}
+            >
+              Configurações
+            </button>
+          )}
           <button className="item" onClick={() => { limparSessao(); aoSair(); }}>
             Sair
           </button>
@@ -161,6 +171,7 @@ export function Dashboard({
         {visao === "consumos" && gestor && <ConsumosView />}
         {visao === "ocorrencias" && gestor && <OcorrenciasView />}
         {visao === "moradores" && gestor && <MoradoresView />}
+        {visao === "configuracoes" && gestor && <ConfiguracoesView />}
       </main>
     </div>
   );

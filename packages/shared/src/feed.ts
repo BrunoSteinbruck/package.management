@@ -67,3 +67,37 @@ export type ItemFeed =
     };
 
 export type TipoItemFeed = ItemFeed["tipo"];
+
+/**
+ * Versão do contrato do feed que este código entende. O app manda a sua em
+ * `GET /morador/feed?v=`, e a API omite o que for mais novo que isso.
+ *
+ * Existe porque `apresentar()` no app é um `switch` sem ramo final: item de
+ * tipo desconhecido devolveria `undefined` e derrubaria a caixa de entrada.
+ * Enquanto o feed só tinha os cinco tipos originais isso era teórico, porque
+ * app e API subiam juntos. Deixou de ser no momento em que existe versão
+ * instalada nas lojas que não acompanha o servidor.
+ *
+ * Cliente que não manda `v` é anterior a este mecanismo: vale como v1.
+ */
+export const VERSAO_FEED = 1;
+
+/**
+ * A partir de qual versão de cliente cada tipo pode ser entregue.
+ *
+ * `Record` sobre a união: tipo novo em `ItemFeed` não compila até declarar
+ * aqui a partir de quando ele existe, que é justamente a decisão fácil de
+ * esquecer.
+ */
+export const VERSAO_MINIMA_ITEM: Record<TipoItemFeed, number> = {
+  ENTRADA: 1,
+  RETIRADA: 1,
+  LEMBRETE: 1,
+  AVISO: 1,
+  OCORRENCIA: 1,
+};
+
+/** Filtra o que um cliente naquela versão sabe renderizar. */
+export function itensParaVersao(itens: ItemFeed[], versao: number): ItemFeed[] {
+  return itens.filter((i) => VERSAO_MINIMA_ITEM[i.tipo] <= versao);
+}

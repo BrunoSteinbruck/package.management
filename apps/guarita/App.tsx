@@ -5,7 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { perfilDe, type JwtPayload } from "@pacotes/shared";
-import { renovarSessao } from "./src/api/client";
+import { renovarSessao, sincronizarModulos } from "./src/api/client";
 import { carregarSessao, limparSessao } from "./src/api/session";
 import type {
   MoradorStackParamList,
@@ -139,7 +139,11 @@ export default function App() {
     carregarSessao().then(async (sessao) => {
       if (sessao) {
         setPerfil(sessao.perfil);
-        if (!(await renovarSessao())) {
+        if (await renovarSessao()) {
+          // Depois de renovar: o condomínio pode ter ligado um módulo desde
+          // a última abertura, e a home decide o menu por este cache.
+          await sincronizarModulos();
+        } else {
           // Conta excluída/desativada em outro aparelho: cai para o login.
           await limparSessao();
           setPerfil(null);
@@ -161,7 +165,15 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <LoginScreen aoEntrar={setPerfil} />
+        {/* A sessão já está gravada quando `aoEntrar` dispara, então a busca
+            de módulos vai autenticada. Não bloqueia a entrada: a home lê o
+            cache e se redesenha quando ele chega. */}
+        <LoginScreen
+          aoEntrar={(novo) => {
+            void sincronizarModulos();
+            setPerfil(novo);
+          }}
+        />
       </SafeAreaProvider>
     );
   }

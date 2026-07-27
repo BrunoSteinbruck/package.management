@@ -1,5 +1,5 @@
-import type { JwtPayload } from "@pacotes/shared";
-import { carregarSessao, salvarSessao } from "./session";
+import type { Capacidades, JwtPayload } from "@pacotes/shared";
+import { carregarSessao, salvarModulos, salvarSessao } from "./session";
 
 // Em dispositivo físico, defina EXPO_PUBLIC_API_URL no .env com o IP da sua
 // máquina na rede local (ex.: http://192.168.0.10:3001/v1).
@@ -70,6 +70,22 @@ export async function renovarSessao(): Promise<boolean> {
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) return false;
     return true;
+  }
+}
+
+/**
+ * Atualiza o cache de módulos ligados no condomínio. Chamado ao abrir o app,
+ * junto da renovação de sessão.
+ *
+ * Falha em silêncio de propósito: sem rede, a home segue com o último valor
+ * conhecido em vez de perder pontos de entrada que o condomínio tem.
+ */
+export async function sincronizarModulos(): Promise<void> {
+  try {
+    const { modulos } = await apiFetch<Capacidades>("/conta/capacidades");
+    await salvarModulos(modulos);
+  } catch {
+    // mantém o cache anterior
   }
 }
 

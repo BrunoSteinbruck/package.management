@@ -9,7 +9,10 @@ import type {
   CriarVagasDto,
   ImportarMoradoresDto,
   JwtPayload,
+  ModuloCondominio,
+  SalvarModulosDto,
 } from "@pacotes/shared";
+import { MODULOS_CONDOMINIO } from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -27,6 +30,38 @@ export class CadastroService {
     if (user.papel !== "SINDICO" && user.papel !== "ADMIN") {
       throw new ForbiddenException("Apenas síndico ou admin");
     }
+  }
+
+  /**
+   * Módulos ligados no condomínio, para a aba Configurações.
+   *
+   * Devolve a lista inteira com o estado de cada um (e não só os ligados):
+   * a tela precisa mostrar o que existe para contratar, não apenas o que já
+   * está em uso.
+   */
+  async listarModulos(user: JwtPayload) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    const condominio = await this.prisma.condominio.findUniqueOrThrow({
+      where: { id: condominioId },
+      select: { modulos: true },
+    });
+    const ligados = new Set(condominio.modulos);
+    return MODULOS_CONDOMINIO.map((id) => ({ id, ativo: ligados.has(id) }));
+  }
+
+  async salvarModulos(user: JwtPayload, dto: SalvarModulosDto) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    // Ordem e duplicatas normalizadas contra MODULOS_CONDOMINIO: o que fica
+    // gravado não depende da ordem em que a tela mandou.
+    const pedidos = new Set<ModuloCondominio>(dto.modulos);
+    const modulos = MODULOS_CONDOMINIO.filter((m) => pedidos.has(m));
+    await this.prisma.condominio.update({
+      where: { id: condominioId },
+      data: { modulos: [...modulos] },
+    });
+    return { modulos };
   }
 
   listarUnidades(user: JwtPayload) {

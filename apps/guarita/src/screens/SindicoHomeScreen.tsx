@@ -25,6 +25,7 @@ import { limparSessao } from "../api/session";
 import { BotaoModulo } from "../components/ui";
 import { Icone } from "../components/icones";
 import { MODULOS_SINDICO, modulosDe } from "../modulos";
+import { useModulos } from "../useModulos";
 import { theme } from "../theme";
 import type { SindicoStackParamList } from "../navigation";
 
@@ -40,6 +41,7 @@ function iniciais(nome: string): string {
 
 export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
   const insets = useSafeAreaInsets();
+  const ligados = useModulos();
   const [abertas, setAbertas] = useState<number | null>(null);
   const [pendentes, setPendentes] = useState<number | null>(null);
   const [resumo, setResumo] = useState<Resumo | null>(null);
@@ -207,7 +209,12 @@ export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
         )}
 
         {/* Prateleira do manifesto: gestão e portaria entram aqui. */}
-        {modulosDe(MODULOS_SINDICO, perfilDe(perfil), "secundario").map((m) => (
+        {modulosDe(
+          MODULOS_SINDICO,
+          perfilDe(perfil),
+          "secundario",
+          ligados,
+        ).map((m) => (
           <BotaoModulo
             key={m.id}
             titulo={m.titulo}

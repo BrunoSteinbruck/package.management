@@ -1,4 +1,5 @@
 import type {
+  ModuloCondominio,
   PapelUsuario,
   StatusAviso,
   StatusPacote,
@@ -33,6 +34,21 @@ export interface Unidade extends UnidadeRotulo {
 export interface FotoRef {
   key: string;
   token: string;
+}
+
+/**
+ * O que a sessão atual pode ver. GET /conta/capacidades
+ *
+ * Fica fora do JWT de propósito: o token vale 30 dias, e módulo ligado pelo
+ * síndico precisa aparecer na próxima abertura do app, não no próximo login.
+ *
+ * Para o morador é a união dos módulos dos condomínios onde ele tem vínculo
+ * ativo. Quem mora em dois prédios vê o menu do que qualquer um dos dois
+ * oferece; a autorização de cada rota continua sendo do servidor, esta lista
+ * só decide o que a home mostra.
+ */
+export interface Capacidades {
+  modulos: ModuloCondominio[];
 }
 
 // ----- Pacotes -----
