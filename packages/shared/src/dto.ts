@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cpfCnpjValido } from "./documento";
 import {
   CATEGORIAS_DOCUMENTO,
   MODULOS_CONDOMINIO,
@@ -275,6 +276,21 @@ export const SalvarTaxasSchema = z.object({
       z.object({
         unidadeId: z.string().uuid(),
         valorMensal: z.number().min(0).max(1_000_000),
+        /**
+         * Responsável financeiro: quem o boleto cobra. Opcional no contrato
+         * porque o síndico costuma cadastrar os valores primeiro e os
+         * pagadores depois, mas SEM os dois primeiros campos o provedor real
+         * não emite nada (ele exige nome e CPF/CNPJ para criar o cliente).
+         *
+         * É o proprietário, que na unidade alugada não é quem mora: por isso
+         * não sai do cadastro de moradores.
+         */
+        responsavelNome: z.string().min(2).max(120).optional(),
+        responsavelCpfCnpj: z
+          .string()
+          .refine(cpfCnpjValido, "CPF ou CNPJ inválido")
+          .optional(),
+        responsavelEmail: z.string().email().max(160).optional(),
       }),
     )
     .min(1)

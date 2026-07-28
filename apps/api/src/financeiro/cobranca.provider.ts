@@ -8,12 +8,30 @@ import { randomUUID } from "node:crypto";
  * que se reescreve é uma classe, não o módulo. Mesmo desenho de `SmsProvider`.
  */
 export interface CobrancaProvider {
+  /**
+   * Garante o cliente (pagador) na subconta e devolve o id dele.
+   *
+   * Existe porque não se emite boleto no vazio: o provedor precisa saber em
+   * nome de quem cobrar, com nome e CPF/CNPJ. Quem chama guarda o id
+   * devolvido, para a próxima geração reusar em vez de duplicar a pessoa.
+   */
+  garantirCliente(entrada: EntradaCliente): Promise<string>;
   /** Cria a cobrança e devolve o que o morador usa para pagar. */
   criar(entrada: EntradaCobranca): Promise<SaidaCobranca>;
   cancelar(apiKey: string, provedorCobrancaId: string): Promise<void>;
   readonly nome: string;
   /** Falso quando roda em stub: nada de verdade é cobrado. */
   readonly real: boolean;
+}
+
+export interface EntradaCliente {
+  apiKey: string;
+  nome: string;
+  /** Só dígitos. O provedor recusa documento inválido. */
+  cpfCnpj: string;
+  email?: string;
+  /** Nossa referência (unidadeId): ajuda a reconciliar do lado do provedor. */
+  referenciaExterna: string;
 }
 
 export interface EntradaCobranca {
@@ -46,6 +64,13 @@ class StubCobrancaProvider implements CobrancaProvider {
   private readonly logger = new Logger("CobrancaStub");
   readonly nome = "stub";
   readonly real = false;
+
+  async garantirCliente(entrada: EntradaCliente): Promise<string> {
+    this.logger.warn(
+      `[stub] Cliente NAO criado de verdade: ${entrada.nome} (${entrada.referenciaExterna})`,
+    );
+    return `stub_cli_${randomUUID()}`;
+  }
 
   async criar(entrada: EntradaCobranca): Promise<SaidaCobranca> {
     this.logger.warn(
@@ -111,6 +136,29 @@ class AsaasProvider implements CobrancaProvider {
     return (await res.json()) as T;
   }
 
+  /**
+   * Cria o cliente na subconta. O Asaas PERMITE duplicata (documentado por
+   * eles), então quem chama é responsável por guardar o id: por isso este
+   * método devolve o id em vez de ser chamado a cada cobrança.
+   */
+  async garantirCliente(entrada: EntradaCliente): Promise<string> {
+    const r = await this.chamar<{ id: string }>(entrada.apiKey, "/customers", {
+      method: "POST",
+      body: JSON.stringify({
+        name: entrada.nome,
+        cpfCnpj: entrada.cpfCnpj,
+        ...(entrada.email ? { email: entrada.email } : {}),
+        externalReference: entrada.referenciaExterna,
+        // O condomínio não notifica pelo Asaas: quem avisa o morador é o
+        // nosso push (e o WhatsApp, quando ligado). Sem isto o pagador
+        // receberia dois avisos da mesma cobrança, de remetentes diferentes.
+        notificationDisabled: true,
+      }),
+    });
+    this.logger.log(`Cliente ${r.id} criado para ${entrada.referenciaExterna}`);
+    return r.id;
+  }
+
   async criar(entrada: EntradaCobranca): Promise<SaidaCobranca> {
     const r = await this.chamar<RespostaAsaas>(entrada.apiKey, "/payments", {
       method: "POST",
@@ -129,8 +177,35 @@ class AsaasProvider implements CobrancaProvider {
       provedorCobrancaId: r.id,
       linhaDigitavel: r.identificationField ?? null,
       urlBoleto: r.bankSlipUrl ?? r.invoiceUrl ?? null,
-      pixCopiaCola: null,
+      pixCopiaCola: await this.pixCopiaCola(entrada.apiKey, r.id),
     };
+  }
+
+  /**
+   * O código PIX vem numa chamada separada: o POST /payments não o devolve.
+   *
+   * Falha em silêncio de propósito. Sem PIX o morador ainda paga pelo código
+   * de barras ou pela página do boleto, e derrubar a geração do mês inteiro
+   * porque a conta do condomínio não tem chave PIX habilitada seria uma
+   * troca ruim.
+   */
+  private async pixCopiaCola(
+    apiKey: string,
+    pagamentoId: string,
+  ): Promise<string | null> {
+    try {
+      const r = await this.chamar<{ payload?: string }>(
+        apiKey,
+        `/payments/${pagamentoId}/pixQrCode`,
+        { method: "GET" },
+      );
+      return r.payload ?? null;
+    } catch (e) {
+      this.logger.warn(
+        `PIX indisponivel para ${pagamentoId}: ${(e as Error).message.slice(0, 120)}`,
+      );
+      return null;
+    }
   }
 
   async cancelar(apiKey: string, provedorCobrancaId: string): Promise<void> {

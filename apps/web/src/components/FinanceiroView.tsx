@@ -1,14 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type {
-  CobrancaGestor,
-  ConfigFinanceiro,
-  ResumoFinanceiro,
-  StatusCobranca,
-  TaxaLinha,
+import {
+  cpfCnpjValido,
+  formatarCpfCnpj,
+  type CobrancaGestor,
+  type ConfigFinanceiro,
+  type ResumoFinanceiro,
+  type StatusCobranca,
+  type TaxaLinha,
 } from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
+
+/** Só cobra quem tem valor E pagador: o provedor exige nome e documento. */
+function prontaParaCobrar(t: TaxaLinha): boolean {
+  return (
+    (t.valorMensal ?? 0) > 0 && !!t.responsavelNome && !!t.responsavelCpfCnpj
+  );
+}
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -102,12 +111,25 @@ export function FinanceiroView() {
       return;
     setGerando(true);
     try {
-      const r = await apiFetch<{ criadas: number; puladas: number }>(
-        "/cadastro/financeiro/gerar",
-        { method: "POST", body: { competencia } },
-      );
+      const r = await apiFetch<{
+        criadas: number;
+        puladas: number;
+        naoCobradas: string[];
+      }>("/cadastro/financeiro/gerar", { method: "POST", body: { competencia } });
       setErro(null);
-      alert(`${r.criadas} cobrança(s) criada(s), ${r.puladas} já existiam.`);
+      // As unidades que ficaram de fora precisam ser ditas em voz alta: sem
+      // isso o síndico lê "3 criadas" e não descobre que 13 não foram
+      // cobradas. As duas causas aparecem juntas de propósito: da resposta
+      // não dá para saber qual foi, e mandar conferir as duas é honesto.
+      const faltando = r.naoCobradas?.length
+        ? `\n\nSEM COBRANÇA (${r.naoCobradas.length}): ${r.naoCobradas.join(", ")}.` +
+          "\nOu falta nome/CPF do responsável na aba Taxas, ou a credencial do" +
+          " provedor foi recusada. Corrija e gere de novo: o que já foi criado" +
+          " não duplica."
+        : "";
+      alert(
+        `${r.criadas} cobrança(s) criada(s), ${r.puladas} já existiam.${faltando}`,
+      );
       await carregar();
     } catch (e) {
       setErro((e as Error).message);
@@ -116,18 +138,63 @@ export function FinanceiroView() {
     }
   }
 
-  async function salvarTaxa(unidadeId: string, valor: string) {
-    const valorMensal = Number(valor.replace(",", "."));
+  /**
+   * Salva um campo por vez (a tabela grava no blur de cada célula), mas manda
+   * a linha inteira: o endpoint faz upsert e omitir os outros campos os
+   * apagaria.
+   */
+  async function salvarTaxa(
+    unidadeId: string,
+    mudanca: { valor?: string; nome?: string; documento?: string; email?: string },
+  ) {
+    const atual = taxas.find((t) => t.unidadeId === unidadeId);
+    if (!atual) return;
+
+    const valorMensal =
+      mudanca.valor !== undefined
+        ? Number(mudanca.valor.replace(",", "."))
+        : (atual.valorMensal ?? 0);
     if (!Number.isFinite(valorMensal) || valorMensal < 0) return;
+
+    const documento =
+      mudanca.documento !== undefined
+        ? mudanca.documento.trim()
+        : (atual.responsavelCpfCnpj ?? "");
+    // Barra aqui o documento inválido: o servidor também recusa, mas o erro
+    // vindo do zod fala de "taxas.0.responsavelCpfCnpj", que não diz nada
+    // para quem está preenchendo uma tabela.
+    if (documento && !cpfCnpjValido(documento)) {
+      setErro(`CPF/CNPJ inválido em ${rotulo(atual.unidade)}.`);
+      return;
+    }
+
+    const nome =
+      mudanca.nome !== undefined ? mudanca.nome.trim() : (atual.responsavelNome ?? "");
+    const email =
+      mudanca.email !== undefined
+        ? mudanca.email.trim()
+        : (atual.responsavelEmail ?? "");
+
     try {
       await apiFetch("/cadastro/financeiro/taxas", {
         method: "POST",
-        body: { taxas: [{ unidadeId, valorMensal }] },
+        body: {
+          taxas: [
+            {
+              unidadeId,
+              valorMensal,
+              ...(nome ? { responsavelNome: nome } : {}),
+              ...(documento ? { responsavelCpfCnpj: documento } : {}),
+              ...(email ? { responsavelEmail: email } : {}),
+            },
+          ],
+        },
       });
-      setTaxas((atual) =>
-        atual.map((t) => (t.unidadeId === unidadeId ? { ...t, valorMensal } : t)),
-      );
       setErro(null);
+      // Recarrega em vez de remendar o estado: trocar o pagador zera o
+      // cliente do provedor no servidor, e o selo "pronta?" tem que refletir
+      // isso sem exigir F5.
+      setTaxas(await apiFetch<TaxaLinha[]>("/cadastro/financeiro/taxas"));
     } catch (e) {
       setErro((e as Error).message);
     }
@@ -285,13 +352,20 @@ export function FinanceiroView() {
       {aba === "taxas" && (
         <div className="card">
           <p className="aviso">
-            O valor mensal de cada unidade. Unidade sem valor não é cobrada.
+            O valor mensal de cada unidade e quem paga. Unidade sem valor não é
+            cobrada, e sem <strong>nome e CPF/CNPJ do responsável</strong> o
+            banco não emite o boleto: é o proprietário, que na unidade alugada
+            não é quem mora.
           </p>
           <table>
             <thead>
               <tr>
                 <th>Unidade</th>
                 <th>Valor mensal</th>
+                <th>Responsável</th>
+                <th>CPF/CNPJ</th>
+                <th>E-mail (opcional)</th>
+                <th>Pronta?</th>
               </tr>
             </thead>
             <tbody>
@@ -303,9 +377,52 @@ export function FinanceiroView() {
                       defaultValue={t.valorMensal ?? ""}
                       placeholder="0,00"
                       inputMode="decimal"
-                      style={{ width: 140 }}
-                      onBlur={(e) => salvarTaxa(t.unidadeId, e.target.value)}
+                      style={{ width: 110 }}
+                      onBlur={(e) =>
+                        salvarTaxa(t.unidadeId, { valor: e.target.value })
+                      }
                     />
+                  </td>
+                  <td>
+                    <input
+                      defaultValue={t.responsavelNome ?? ""}
+                      placeholder="Nome completo"
+                      style={{ width: 180 }}
+                      onBlur={(e) =>
+                        salvarTaxa(t.unidadeId, { nome: e.target.value })
+                      }
+                    />
+                  </td>
+                  <td>
+                    <input
+                      defaultValue={
+                        t.responsavelCpfCnpj
+                          ? formatarCpfCnpj(t.responsavelCpfCnpj)
+                          : ""
+                      }
+                      placeholder="000.000.000-00"
+                      inputMode="numeric"
+                      style={{ width: 170 }}
+                      onBlur={(e) =>
+                        salvarTaxa(t.unidadeId, { documento: e.target.value })
+                      }
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="email"
+                      defaultValue={t.responsavelEmail ?? ""}
+                      placeholder="opcional"
+                      style={{ width: 180 }}
+                      onBlur={(e) =>
+                        salvarTaxa(t.unidadeId, { email: e.target.value })
+                      }
+                    />
+                  </td>
+                  <td>
+                    <span className={`selo ${prontaParaCobrar(t) ? "ok" : "alerta"}`}>
+                      {prontaParaCobrar(t) ? "sim" : "faltam dados"}
+                    </span>
                   </td>
                 </tr>
               ))}

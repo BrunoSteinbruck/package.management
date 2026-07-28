@@ -323,6 +323,15 @@ export interface TaxaLinha {
   unidadeId: string;
   unidade: UnidadeRotulo;
   valorMensal: number | null;
+  /**
+   * Responsável financeiro (o proprietário, que pode não ser quem mora).
+   * Sem nome e documento o provedor real não emite boleto para a unidade.
+   */
+  responsavelNome: string | null;
+  responsavelCpfCnpj: string | null;
+  responsavelEmail: string | null;
+  /** Cliente já criado no provedor: a unidade está pronta para ser cobrada. */
+  clienteCriado: boolean;
 }
 
 // ----- Painel (gestão) -----

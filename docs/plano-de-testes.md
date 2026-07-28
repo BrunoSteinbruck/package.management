@@ -94,6 +94,10 @@ visita, conferir as duas notificações na tela bloqueada e o toque abrindo a
 tela certa (o `data` do push carrega o id do recurso).
 
 **Asaas sandbox** (quando a conta existir):
+0. Antes de tudo, preencher **nome e CPF/CNPJ do responsável** de pelo menos
+   uma unidade (Financeiro → Valor por unidade). Sem isso o provedor real não
+   cria o cliente e nenhum boleto sai: a unidade aparece em `naoCobradas` na
+   resposta da geração.
 1. Criar conta em sandbox.asaas.com; anotar a apiKey da subconta de teste.
 2. Na API: `ASAAS_API_URL=https://api-sandbox.asaas.com/v3` e uma
    `FINANCEIRO_CRIPTO_CHAVE` própria. O aviso vermelho do painel some.
@@ -137,6 +141,13 @@ tipo novo. A suíte E2E cobre v1 vs v2; ao criar v3, adicionar o caso.
 3. `"whatsapp-desligado"` passava numa heurística de prefixo e marcava como
    ENVIADA uma notificação que não saiu. Pego pelo detalhe do triplo
    `canal|status|marcador` que a suíte imprime.
+4. O código mandava o UUID interno da unidade como cliente do provedor. O
+   stub aceita qualquer coisa, então a suíte passava e **toda cobrança
+   falharia contra a API real**: o Asaas exige um cliente criado nele, com
+   nome e CPF/CNPJ. Este não foi pego por teste nenhum, e sim lendo a
+   documentação do provedor antes de abrir a conta. Lição: stub que aceita
+   tudo esconde contrato de terceiro; ao ligar um provedor real pela
+   primeira vez, conferir os campos obrigatórios na documentação dele.
 
 Padrão dos três: falha silenciosa que nenhum typecheck pegaria. É o buraco
 que só E2E com olhar no banco cobre.

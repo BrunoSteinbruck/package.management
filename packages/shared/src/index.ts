@@ -7,6 +7,7 @@
 // perfil.ts  identidade da sessão e o perfil que decide a experiência
 
 export * from "./enums";
+export * from "./documento";
 export * from "./dto";
 export * from "./api";
 export * from "./feed";

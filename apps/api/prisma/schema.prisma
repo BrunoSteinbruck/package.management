@@ -579,11 +579,34 @@ model ConfigFinanceiro {
 }
 
 /** Quanto cada unidade paga por mês (a fração ideal varia por unidade). */
+/**
+ * Quanto a unidade paga e quem é o responsável por pagar.
+ *
+ * O responsável mora AQUI e não em `Morador` de propósito: quem paga a taxa é
+ * o proprietário, que muitas vezes não é quem mora (imóvel alugado) e pode
+ * nunca abrir o app. Amarrar a cobrança ao morador deixaria a unidade alugada
+ * sem como cobrar.
+ *
+ * Nome e CPF/CNPJ são exigência do provedor: o Asaas não cria cliente sem os
+ * dois, e não emite boleto sem cliente. São dados pessoais de quem pode nem
+ * ser usuário do produto: só o gestor lê, e a API nunca os devolve ao morador.
+ */
 model TaxaUnidade {
   id           String   @id @default(uuid()) @db.Uuid
   condominioId String   @map("condominio_id") @db.Uuid
   unidadeId    String   @unique @map("unidade_id") @db.Uuid
   valorMensal  Decimal  @map("valor_mensal") @db.Decimal(12, 2)
+  responsavelNome    String? @map("responsavel_nome")
+  /** Só dígitos. Validado na borda: documento errado só falharia no dia 1. */
+  responsavelCpfCnpj String? @map("responsavel_cpf_cnpj")
+  /** Opcional: com ele o provedor manda o boleto por e-mail também. */
+  responsavelEmail   String? @map("responsavel_email")
+  /**
+   * Id do cliente na subconta do provedor, guardado depois da primeira
+   * criação. Sem ele, cada geração criaria um cliente novo: o Asaas permite
+   * duplicata e a conta do condomínio encheria de cópias da mesma pessoa.
+   */
+  clienteExternoId   String? @map("cliente_externo_id")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   condominio Condominio @relation(fields: [condominioId], references: [id])

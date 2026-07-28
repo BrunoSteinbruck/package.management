@@ -16,6 +16,7 @@ import type {
   SalvarTaxasDto,
   TaxaLinha,
 } from "@pacotes/shared";
+import { soDigitos } from "@pacotes/shared";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CobrancaProviderService } from "./cobranca.provider";
@@ -43,6 +44,11 @@ type LinhaCobranca = {
 /** Decimal do Prisma para número, sem passar por string solta. */
 function reais(v: unknown): number {
   return Number(v);
+}
+
+/** Como a unidade aparece para o síndico na lista de pendências. */
+function rotuloUnidade(u: { bloco: string | null; identificacao: string }): string {
+  return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
 }
 
 function paraMorador(c: LinhaCobranca): CobrancaMorador {
@@ -163,13 +169,19 @@ export class FinanceiroService {
       });
       const taxas = await tx.taxaUnidade.findMany();
       const porUnidade = new Map(taxas.map((t) => [t.unidadeId, t]));
-      return unidades.map((u) => ({
-        unidadeId: u.id,
-        unidade: { bloco: u.bloco, identificacao: u.identificacao },
-        valorMensal: porUnidade.has(u.id)
-          ? reais(porUnidade.get(u.id)!.valorMensal)
-          : null,
-      }));
+      return unidades.map((u) => {
+        const t = porUnidade.get(u.id);
+        return {
+          unidadeId: u.id,
+          unidade: { bloco: u.bloco, identificacao: u.identificacao },
+          valorMensal: t ? reais(t.valorMensal) : null,
+          responsavelNome: t?.responsavelNome ?? null,
+          responsavelCpfCnpj: t?.responsavelCpfCnpj ?? null,
+          responsavelEmail: t?.responsavelEmail ?? null,
+          /** Já existe no provedor: a unidade está pronta para ser cobrada. */
+          clienteCriado: !!t?.clienteExternoId,
+        };
+      });
     });
   }
 
@@ -186,14 +198,34 @@ export class FinanceiroService {
         throw new BadRequestException("Unidade inexistente na lista de taxas");
       }
       for (const t of dto.taxas) {
+        const responsavel = {
+          responsavelNome: t.responsavelNome?.trim() || null,
+          responsavelCpfCnpj: t.responsavelCpfCnpj
+            ? soDigitos(t.responsavelCpfCnpj)
+            : null,
+          responsavelEmail: t.responsavelEmail?.trim() || null,
+        };
+        // Trocar o responsável invalida o cliente já criado no provedor: ele
+        // foi aberto com o CPF de outra pessoa, e reusar o id cobraria em
+        // nome de quem não é mais o responsável. Zerar força criar outro.
+        const anterior = await tx.taxaUnidade.findUnique({
+          where: { unidadeId: t.unidadeId },
+        });
+        const mudouPagador =
+          anterior?.responsavelCpfCnpj !== responsavel.responsavelCpfCnpj;
         await tx.taxaUnidade.upsert({
           where: { unidadeId: t.unidadeId },
           create: {
             condominioId: cid,
             unidadeId: t.unidadeId,
             valorMensal: t.valorMensal,
+            ...responsavel,
           },
-          update: { valorMensal: t.valorMensal },
+          update: {
+            valorMensal: t.valorMensal,
+            ...responsavel,
+            ...(mudouPagador ? { clienteExternoId: null } : {}),
+          },
         });
       }
       return { salvas: dto.taxas.length };
@@ -236,7 +268,7 @@ export class FinanceiroService {
       ? decifrar(integracao.apiKeyCifrada)
       : "sem-credencial";
 
-    const { criadas, puladas } = await this.prisma.withTenant(
+    const { criadas, puladas, naoCobradas } = await this.prisma.withTenant(
       condominioId,
       async (tx) => {
         const taxas = await tx.taxaUnidade.findMany({
@@ -248,9 +280,42 @@ export class FinanceiroService {
         });
         const feitas = new Set(jaExistem.map((c) => c.unidadeId));
         let criadas = 0;
+        const naoCobradas: string[] = [];
         for (const taxa of taxas) {
           if (feitas.has(taxa.unidadeId)) continue;
           if (reais(taxa.valorMensal) <= 0) continue;
+
+          // Com provedor real não existe boleto sem pagador: o Asaas exige
+          // nome e CPF/CNPJ para criar o cliente. Sem isso a unidade é PULADA
+          // e volta na resposta, em vez de gerar uma cobrança órfã que nunca
+          // viraria boleto e ficaria inadimplente para sempre no painel.
+          if (this.cobrancas.real && !taxa.clienteExternoId) {
+            if (!taxa.responsavelNome || !taxa.responsavelCpfCnpj) {
+              naoCobradas.push(rotuloUnidade(taxa.unidade));
+              continue;
+            }
+            try {
+              const clienteId = await this.cobrancas.provider.garantirCliente({
+                apiKey,
+                nome: taxa.responsavelNome,
+                cpfCnpj: taxa.responsavelCpfCnpj,
+                email: taxa.responsavelEmail ?? undefined,
+                referenciaExterna: taxa.unidadeId,
+              });
+              await tx.taxaUnidade.update({
+                where: { id: taxa.id },
+                data: { clienteExternoId: clienteId },
+              });
+              taxa.clienteExternoId = clienteId;
+            } catch (e) {
+              this.logger.error(
+                `Cliente da unidade ${taxa.unidadeId} nao criado: ${(e as Error).message.slice(0, 140)}`,
+              );
+              naoCobradas.push(rotuloUnidade(taxa.unidade));
+              continue;
+            }
+          }
+
           const cobranca = await tx.cobranca.create({
             data: {
               condominioId,
@@ -266,7 +331,9 @@ export class FinanceiroService {
           try {
             const emitida = await this.cobrancas.provider.criar({
               apiKey,
-              clienteExternoId: taxa.unidadeId,
+              // O cliente do provedor, não o nosso uuid: o Asaas recusa um id
+              // que não existe na subconta dele.
+              clienteExternoId: taxa.clienteExternoId ?? taxa.unidadeId,
               valor: reais(taxa.valorMensal),
               vencimento,
               descricao: `Taxa condominial de ${nomeDaCompetencia(competencia)}`,
@@ -296,11 +363,21 @@ export class FinanceiroService {
           }
           criadas++;
         }
-        return { criadas, puladas: feitas.size };
+        return { criadas, puladas: feitas.size, naoCobradas };
       },
     );
 
-    return { competencia, vencimento, criadas, puladas, emissaoReal: this.cobrancas.real };
+    return {
+      competencia,
+      vencimento,
+      criadas,
+      puladas,
+      // Unidades que ficaram de fora: sem responsável cadastrado OU com
+      // falha ao preparar o pagador no provedor. O painel mostra a lista,
+      // senão o síndico vê "criadas: 3" sem saber que 13 ficaram de fora.
+      naoCobradas,
+      emissaoReal: this.cobrancas.real,
+    };
   }
 
   // ---------- Consulta ----------
