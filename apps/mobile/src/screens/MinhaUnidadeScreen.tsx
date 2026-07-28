@@ -119,7 +119,7 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
       });
       await Share.share({
         message:
-          `Você foi convidado para o Guarita, o app de encomendas do ${condominio}. ` +
+          `Você foi convidado para o Convivar, o app de encomendas do ${condominio}. ` +
           `Baixe o app, entre com seu celular e use o código ${convite.codigo} ` +
           `para se vincular à unidade ${rotulo}. O código vale por 7 dias.`,
       });

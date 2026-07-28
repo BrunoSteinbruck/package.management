@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "Guarita",
-    "slug": "guarita",
+    "name": "Convivar",
+    "slug": "convivar",
     "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "br.com.pacotes.guarita",
+      "bundleIdentifier": "br.com.convivar",
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "br.com.pacotes.guarita",
+      "package": "br.com.convivar",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

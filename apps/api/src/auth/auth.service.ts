@@ -120,7 +120,7 @@ export class AuthService {
       try {
         await this.sms.enviar(
           telefone,
-          `Guarita: seu codigo de acesso e ${codigo}. Vale por 5 minutos.`,
+          `Convivar: seu codigo de acesso e ${codigo}. Vale por 5 minutos.`,
         );
       } catch (e) {
         // Em dev (echo ligado) a falha de SMS não é fatal: números do seed

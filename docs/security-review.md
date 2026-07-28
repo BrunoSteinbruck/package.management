@@ -1,4 +1,4 @@
-# Revisão de segurança: Guarita
+# Revisão de segurança: Convivar
 
 ## Revisão 3 (2026-07-26): leituras de medidores (água/gás)
 

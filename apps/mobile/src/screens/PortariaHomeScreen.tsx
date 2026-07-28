@@ -78,7 +78,7 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
     >
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <View style={styles.linhaLogo}>
-          <Text style={styles.logo}>guarita</Text>
+          <Text style={styles.logo}>convivar</Text>
           <View style={styles.piloOnline}>
             <View
               style={[

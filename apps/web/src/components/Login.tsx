@@ -55,7 +55,7 @@ export function Login({ aoEntrar }: { aoEntrar: (perfil: JwtPayload) => void }) 
   return (
     <div className="login-fundo">
       <div className="login-cartao">
-        <div className="login-logo">guarita</div>
+        <div className="login-logo">convivar</div>
         <h1 style={{ marginTop: 12 }}>Painel do condomínio</h1>
         <p className="aviso" style={{ marginTop: 4 }}>
           {fase === "telefone"

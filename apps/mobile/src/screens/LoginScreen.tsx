@@ -107,7 +107,7 @@ export function LoginScreen(props: {
       style={{ flex: 1 }}
     >
       <View style={[styles.header, { paddingTop: insets.top + 34 }]}>
-        <Text style={styles.logo}>guarita</Text>
+        <Text style={styles.logo}>convivar</Text>
         <Text style={styles.headline}>Suas encomendas, sem espera na portaria</Text>
         <Text style={styles.sub}>Avisamos quando chegar. Você retira com um QR.</Text>
       </View>

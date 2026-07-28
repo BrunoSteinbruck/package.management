@@ -85,7 +85,7 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  apps/guarita:
+  apps/mobile:
     dependencies:
       '@pacotes/shared':
         specifier: workspace:*

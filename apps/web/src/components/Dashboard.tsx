@@ -104,7 +104,7 @@ export function Dashboard({
   return (
     <div className="layout">
       <aside className="sidebar">
-        <div className="logo">guarita</div>
+        <div className="logo">convivar</div>
         <nav>
           <button
             className={`item ${visao === "visao-geral" ? "ativo" : ""}`}
@@ -445,7 +445,7 @@ function PacotesView() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "guarita-pacotes.csv";
+    a.download = "convivar-pacotes.csv";
     a.click();
     URL.revokeObjectURL(url);
   }

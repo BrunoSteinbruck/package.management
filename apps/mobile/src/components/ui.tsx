@@ -15,7 +15,7 @@ import type { StatusAviso } from "@pacotes/shared";
 import { theme } from "../theme";
 import { Icone, NomeIcone } from "./icones";
 
-/** CTA no padrão Guarita: gradiente verde-ação, sombra, pressed scale 0.98. */
+/** CTA no padrão da marca: gradiente verde-ação, sombra, pressed scale 0.98. */
 export function BotaoCta(props: {
   titulo: string;
   onPress: () => void;

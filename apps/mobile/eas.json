@@ -14,7 +14,7 @@
       "pnpm": "11.13.0",
       "node": "24.13.0",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://guarita-api.onrender.com/v1"
+        "EXPO_PUBLIC_API_URL": "https://convivar-api.onrender.com/v1"
       }
     },
     "production": {

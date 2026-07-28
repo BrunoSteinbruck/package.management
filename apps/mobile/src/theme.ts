@@ -1,4 +1,4 @@
-// Tokens do design system Guarita v1 (docs/design_handoff_guarita_v1).
+// Tokens do design system v1 (docs/design_handoff_guarita_v1).
 export const theme = {
   colors: {
     marca: "#175C38",

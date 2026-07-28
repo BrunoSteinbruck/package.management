@@ -5,12 +5,30 @@ credencial e decisão. Marque conforme avançar.
 
 ## Bloqueio 0: duas decisões que definem o cronograma
 
-### Nome
+### Nome: **Convivar** (definido 2026-07-28)
 O bundle ID é **permanente depois da primeira publicação**: não dá para
-trocar, só criar outro app do zero. Hoje é `br.com.pacotes.guarita`.
-Decidir o nome ANTES de submeter. Ao decidir: bateria INPI (classes 9 e 42) +
-domínios + busca nas duas lojas, e então trocar bundle ID, `app.json`, marca
-lowercase no app/painel e o projeto EAS.
+trocar, só criar outro app do zero. Hoje é `br.com.convivar`, e como nada foi
+publicado ainda, esta é a última janela barata para mexer nele.
+
+O código já está todo renomeado. O que **não** dá para fazer em código e
+segue pendente:
+
+- [ ] Bateria de verificação da marca ANTES de registrar: INPI (classes 9 e
+      42), domínios e busca nas duas lojas. O nome anterior caiu justamente
+      por conflito descoberto nessa checagem.
+- [ ] **Firebase: registrar um app Android novo com `br.com.convivar`** e
+      baixar o `google-services.json` de lá. O arquivo no repo teve o
+      `package_name` trocado para o app.json bater, mas o
+      `mobilesdk_app_id` e a `api_key` ainda apontam para o registro antigo:
+      o push Android falha até o arquivo ser regerado. Não afeta Expo Go nem
+      iOS.
+- [ ] **Expo/EAS**: o slug virou `convivar`. Renomear o projeto em
+      expo.dev (ou rodar `eas init` e atualizar o `projectId` no app.json),
+      senão o build sobe para o projeto antigo.
+- [ ] **Render**: os serviços do `render.yaml` mudaram de nome
+      (`convivar-db`, `convivar-api`, `convivar-backup`). Blueprint **não
+      renomeia serviço existente: ele cria outro**. Se já houver ambiente de
+      produção, renomeie no painel do Render ou aceite migrar o banco.
 
 ### Pessoa física ou empresa
 
@@ -29,7 +47,7 @@ vira o D-U-N-S.
 - [x] Apple Developer: US$ 99/ano (conta **pessoa física**; migrar para
       Organization depois, via App Transfer, quando o CNPJ sair)
 - [ ] Google Play Console: US$ 25, pagamento único
-- [x] Firebase (grátis) → `google-services.json` em `apps/guarita/`,
+- [x] Firebase (grátis) → `google-services.json` em `apps/mobile/`,
       referenciado em `android.googleServicesFile`
 - [ ] `eas credentials` → Android → **FCM V1 service account key**. O arquivo
       acima faz o app RECEBER; sem esta chave a Expo não consegue ENVIAR o

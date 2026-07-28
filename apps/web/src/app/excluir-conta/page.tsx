@@ -80,7 +80,7 @@ export default function ExcluirContaPage() {
   return (
     <div className="login-fundo">
       <div className="login-cartao">
-        <div className="login-logo">guarita</div>
+        <div className="login-logo">convivar</div>
         <h1 style={{ marginTop: 12 }}>Excluir minha conta</h1>
 
         {fase === "telefone" && (

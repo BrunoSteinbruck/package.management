@@ -584,7 +584,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       // (160 chars/segmento em vez de 70): metade do custo por envio.
       await this.sms.enviar(
         titular.morador.telefone,
-        `Guarita: chegou uma encomenda para ${rotulo} na portaria do ${condominio.nome}. Com o app voce e avisado assim que a proxima chegar.${link}`,
+        `Convivar: chegou uma encomenda para ${rotulo} na portaria do ${condominio.nome}. Com o app voce e avisado assim que a proxima chegar.${link}`,
       );
       this.logger.log(`Convite SMS enviado para unidade ${rotulo}`);
       return "sem-app-convite-enviado";

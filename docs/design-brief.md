@@ -9,7 +9,7 @@ condomínio (reservas, comunicados, ocorrências, visitantes). O design deve
 nascer com essa ambição: uma identidade que funcione para "o app do
 condomínio", não só para pacotes.
 
-**Nome:** em aberto. Candidatos considerados: Chegou, Guarita, Praça, Condô.
+**Nome:** Convivar (definido 2026-07-28). Candidatos anteriores: Chegou, Guarita, Praça, Condô.
 O design system não deve depender do nome (logo entra depois).
 
 ## Três clientes, dois agora

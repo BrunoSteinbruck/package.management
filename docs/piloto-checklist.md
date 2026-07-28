@@ -28,17 +28,17 @@ O código já envia SMS quando as variáveis existem; sem elas, roda em stub.
 O blueprint `render.yaml` na raiz cria API + PostgreSQL com HTTPS.
 
 1. Crie a conta em render.com (pode entrar com o GitHub).
-2. **New → Blueprint** → conecte o repo `BrunoSteinbruck/Guarita` → Apply.
+2. **New → Blueprint** → conecte o repo `BrunoSteinbruck/package.management` → Apply.
 3. Aguarde o primeiro deploy (build + migrations rodam sozinhos; o RLS
    entra via migration).
-4. No serviço `guarita-api` → aba Shell, rode o bootstrap do condomínio:
+4. No serviço `convivar-api` → aba Shell, rode o bootstrap do condomínio:
    ```
    pnpm --filter @pacotes/api exec ts-node scripts/bootstrap.ts \
      "Residencial Aurora" residencial-aurora "Seu Nome" SEUTELEFONE
    ```
-5. Anote a URL (ex.: `https://guarita-api.onrender.com`). Para os apps
+5. Anote a URL (ex.: `https://convivar-api.onrender.com`). Para os apps
    apontarem pra ela: `EXPO_PUBLIC_API_URL=https://.../v1` no
-   `apps/guarita/.env`.
+   `apps/mobile/.env`.
 6. Cole também as variáveis do Twilio/Vision no dashboard (Environment).
 
 Notas: plano free hiberna após inatividade (primeira chamada demora ~30s)
@@ -53,7 +53,7 @@ projectId. O EAS CLI já está instalado na máquina.
 1. Crie a conta em expo.dev (gratuita).
 2. No terminal:
    ```
-   cd "apps/guarita"
+   cd "apps/mobile"
    eas login
    eas init            # cria o projeto e grava o projectId no app.json
    eas build --profile development --platform ios
@@ -61,7 +61,7 @@ projectId. O EAS CLI já está instalado na máquina.
 3. O build roda na nuvem (~10–20 min na fila free). Ao final, escaneie o
    QR do terminal com o iPhone para instalar o app.
 4. Abra o app instalado (não o Expo Go) com o Metro rodando
-   (`pnpm --filter @pacotes/guarita start`). Faça login como morador →
+   (`pnpm --filter @pacotes/mobile start`). Faça login como morador →
    o push token registra de verdade.
 5. Ligue o worker: rode a API **sem** `PUSH_WORKER_DESLIGADO=1`. Registre
    uma entrada como porteiro → o push chega no aparelho.

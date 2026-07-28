@@ -9,7 +9,7 @@ fallback para quem ainda não aderiu).
 - `apps/api`: API NestJS + Prisma/PostgreSQL (multi-tenant com RLS), worker
   de push (Expo Push) e OCR de etiquetas (stub em dev; Google Vision via
   `GOOGLE_VISION_API_KEY`)
-- `apps/guarita`: app Expo único: o login roteia por papel. Equipe da
+- `apps/mobile`: app Expo único: o login roteia por papel. Equipe da
   portaria: entrada com câmera/scanner + OCR, retirada parcial com foto,
   scan do QR do morador, fila offline. Morador: push, pendentes/histórico,
   QR de retirada, convite de familiar

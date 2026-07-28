@@ -73,7 +73,7 @@ export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
       style={{ flex: 1 }}
     >
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <Text style={styles.logo}>guarita</Text>
+        <Text style={styles.logo}>convivar</Text>
         <View style={styles.linhaCondominio}>
           <View style={{ flex: 1 }}>
             <Text style={styles.condominio} numberOfLines={1}>

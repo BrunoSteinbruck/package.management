@@ -30,10 +30,10 @@ O que cada spec protege:
 
 - `packages/shared/src/feed.spec.ts`: o versionamento do feed. App v1 nunca
   recebe COMUNICADO; tipo novo sem versão mínima não passa.
-- `apps/guarita/src/modulos.spec.ts`: o filtro de flags da home. Módulo pago
+- `apps/mobile/src/modulos.spec.ts`: o filtro de flags da home. Módulo pago
   não aparece sem a flag; a base nunca some; cada módulo das ondas está atrás
   da flag certa.
-- `apps/guarita/src/nomes.spec.ts`: o rótulo do chip de "quem recebeu". Dois
+- `apps/mobile/src/nomes.spec.ts`: o rótulo do chip de "quem recebeu". Dois
   moradores com o mesmo primeiro nome na unidade (pai e filho, ou cadastro
   duplicado) não podem virar dois chips idênticos: o registro de custódia
   viraria um chute.

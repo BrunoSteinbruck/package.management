@@ -71,7 +71,7 @@ const fmtReais = new Intl.NumberFormat("pt-BR", {
 export class ExportService {
   async gerarXlsx(dados: DadosExport): Promise<Buffer> {
     const wb = new ExcelJS.Workbook();
-    wb.creator = "guarita";
+    wb.creator = "Convivar";
     for (const mes of dados.meses) {
       const ws = wb.addWorksheet(mes.competencia);
       ws.columns = [
