@@ -108,6 +108,9 @@ async function zerar(cid: string): Promise<void> {
         ],
       },
     });
+    // Extrato antes de cobranças e despesas: as FKs apontam para elas.
+    await tx.extratoItem.deleteMany({});
+    await tx.despesa.deleteMany({});
     await tx.cobranca.deleteMany({});
     await tx.taxaUnidade.deleteMany({});
     await tx.configFinanceiro.deleteMany({});
@@ -848,6 +851,112 @@ async function main() {
       minhas.length >= 1 &&
         new Set(minhas.map((c) => c.unidade.identificacao)).size === 1 &&
         !!minhas[0].linhaDigitavel,
+    );
+  }
+
+  // ===== Conciliação bancária =====
+  console.log("\n== Conciliação bancária ==");
+  {
+    const despesa = await req<{ id: string }>(
+      "POST",
+      "/cadastro/financeiro/despesas",
+      {
+        token: sindico,
+        corpo: { descricao: "Elevador (e2e)", valor: 1200, data: "2026-07-10" },
+      },
+    );
+    // O caso número 1 do síndico: despesa esperada na sexta (10/07), débito
+    // aparecendo na segunda (13/07). Tem que virar sugestão explicada.
+    const ofx = `OFXHEADER:100\n<OFX><BANKTRANLIST><STMTTRN>\n<DTPOSTED>20260713\n<TRNAMT>-1200,00\n<FITID>e2e-fds-1\n<MEMO>PAGTO ELEVADOR\n</STMTTRN><STMTTRN>\n<DTPOSTED>20260714\n<TRNAMT>35.00\n<FITID>e2e-rend-1\n<MEMO>RENDIMENTO\n</STMTTRN></BANKTRANLIST></OFX>`;
+    const imp = await req<{ importados: number }>(
+      "POST",
+      "/cadastro/financeiro/extrato",
+      { token: sindico, corpo: { ofx } },
+    );
+    checa("OFX importado (2 lançamentos)", imp.importados === 2);
+    checa(
+      "reimportar não duplica",
+      (await req<{ importados: number; repetidos: number }>(
+        "POST",
+        "/cadastro/financeiro/extrato",
+        { token: sindico, corpo: { ofx } },
+      )).repetidos === 2,
+    );
+
+    const painel = await req<{
+      sugestoes: Array<{
+        extrato: { id: string; descricao: string };
+        alvoTipo: "COBRANCA" | "DESPESA";
+        alvoId: string;
+        confianca: string;
+        motivo: string;
+      }>;
+      semPar: Array<{ descricao: string }>;
+    }>("GET", "/cadastro/financeiro/conciliacao", { token: sindico });
+    const s = painel.sugestoes.find((x) => x.extrato.descricao === "PAGTO ELEVADOR");
+    checa(
+      "débito de segunda casa com a despesa de sexta, com o motivo escrito",
+      s?.alvoId === despesa.id && !!s?.motivo.includes("sexta"),
+      s?.motivo,
+    );
+    checa(
+      "rendimento não vira chute: fica para o humano",
+      painel.semPar.some((x) => x.descricao === "RENDIMENTO"),
+    );
+    if (s) {
+      const ac = await req<{ aceitas: number }>(
+        "POST",
+        "/cadastro/financeiro/conciliacao/aceitar",
+        {
+          token: sindico,
+          corpo: {
+            itens: [
+              {
+                extratoItemId: s.extrato.id,
+                alvoTipo: s.alvoTipo,
+                alvoId: s.alvoId,
+                motivo: s.motivo,
+              },
+            ],
+          },
+        },
+      );
+      checa("aceite grava com a justificativa", ac.aceitas === 1);
+      checa(
+        "aceitar de novo não duplica o vínculo",
+        (await req<{ aceitas: number }>(
+          "POST",
+          "/cadastro/financeiro/conciliacao/aceitar",
+          {
+            token: sindico,
+            corpo: {
+              itens: [
+                {
+                  extratoItemId: s.extrato.id,
+                  alvoTipo: s.alvoTipo,
+                  alvoId: s.alvoId,
+                  motivo: s.motivo,
+                },
+              ],
+            },
+          },
+        )).aceitas === 0,
+      );
+    }
+    checa(
+      "despesa conciliada não pode ser removida",
+      (await req<{ statusCode?: number }>(
+        "DELETE",
+        `/cadastro/financeiro/despesas/${despesa.id}`,
+        { token: sindico },
+      )).statusCode === 400,
+    );
+    checa(
+      "porteiro não registra despesa",
+      (await req<{ statusCode?: number }>("POST", "/cadastro/financeiro/despesas", {
+        token: porteiro,
+        corpo: { descricao: "indevida", valor: 10, data: "2026-07-10" },
+      })).statusCode === 403,
     );
   }
 

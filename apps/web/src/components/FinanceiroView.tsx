@@ -11,6 +11,7 @@ import {
   type TaxaLinha,
 } from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
+import { ConciliacaoView } from "./ConciliacaoView";
 
 /** Só cobra quem tem valor E pagador: o provedor exige nome e documento. */
 function prontaParaCobrar(t: TaxaLinha): boolean {
@@ -66,7 +67,9 @@ export function FinanceiroView() {
   const [resumo, setResumo] = useState<ResumoFinanceiro | null>(null);
   const [config, setConfig] = useState<ConfigFinanceiro | null>(null);
   const [taxas, setTaxas] = useState<TaxaLinha[]>([]);
-  const [aba, setAba] = useState<"cobrancas" | "taxas">("cobrancas");
+  const [aba, setAba] = useState<"cobrancas" | "taxas" | "conciliacao">(
+    "cobrancas",
+  );
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
 
@@ -252,6 +255,12 @@ export function FinanceiroView() {
           >
             Valor por unidade
           </button>
+          <button
+            className={`chip ${aba === "conciliacao" ? "ativo" : ""}`}
+            onClick={() => setAba("conciliacao")}
+          >
+            Conciliação
+          </button>
         </div>
         {aba === "cobrancas" && (
           <div className="chips" style={{ marginLeft: "auto" }}>
@@ -430,6 +439,8 @@ export function FinanceiroView() {
           </table>
         </div>
       )}
+
+      {aba === "conciliacao" && <ConciliacaoView />}
     </>
   );
 }

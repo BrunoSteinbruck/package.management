@@ -15,6 +15,7 @@ import {
   type PacoteLinha,
   type Pendencia,
   type Relatorios,
+  type ResumoFinanceiro,
   type Resumo,
   type UnidadeRotulo,
   type VagaLinha,
@@ -217,7 +218,9 @@ export function Dashboard({
           <VisaoGeral
             gestor={gestor}
             ocorrenciasAbertas={ocorrenciasAbertas}
-            aoVerOcorrencias={() => setVisao("ocorrencias")}
+            pendentesAprovacao={pendentesAprovacao}
+            modulos={modulos}
+            aoNavegar={setVisao}
           />
         )}
         {visao === "pacotes" && <PacotesView />}
@@ -244,17 +247,26 @@ export function Dashboard({
 function VisaoGeral({
   gestor,
   ocorrenciasAbertas,
-  aoVerOcorrencias,
+  pendentesAprovacao,
+  modulos,
+  aoNavegar,
 }: {
   gestor: boolean;
   ocorrenciasAbertas: number;
-  aoVerOcorrencias: () => void;
+  pendentesAprovacao: number;
+  modulos: ModuloCondominio[];
+  aoNavegar: (v: Visao) => void;
 }) {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [adocao, setAdocao] = useState<Adocao | null>(null);
   const [serie, setSerie] = useState<DiaSerie[]>([]);
+  const [financeiro, setFinanceiro] = useState<ResumoFinanceiro | null>(null);
+  const [visitasHoje, setVisitasHoje] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+
+  const temFinanceiro = gestor && modulos.includes("financeiro");
+  const temVisitantes = modulos.includes("visitantes");
 
   useEffect(() => {
     (async () => {
@@ -270,7 +282,23 @@ function VisaoGeral({
     })();
   }, []);
 
+  // Os blocos dos módulos falham sozinhos: um endpoint fora do ar não pode
+  // apagar a home inteira do síndico.
+  useEffect(() => {
+    if (temFinanceiro) {
+      apiFetch<ResumoFinanceiro>("/cadastro/financeiro/resumo")
+        .then(setFinanceiro)
+        .catch(() => {});
+    }
+    if (temVisitantes) {
+      apiFetch<Array<unknown>>("/portaria/visitas-hoje")
+        .then((v) => setVisitasHoje(v.length))
+        .catch(() => {});
+    }
+  }, [temFinanceiro, temVisitantes]);
+
   const maxSerie = Math.max(1, ...serie.map((d) => Math.max(d.entradas, d.retiradas)));
+  const clicavel = { cursor: "pointer" } as const;
 
   return (
     <>
@@ -283,6 +311,74 @@ function VisaoGeral({
         })}
       </p>
       {erro && <p className="erro">{erro}</p>}
+
+      {/* O dia do síndico é reativo: a primeira linha responde "o que precisa
+          de MIM agora?", em cards que já levam para a ação. Métrica de
+          acompanhamento vem depois; o quarteirão de pacotes, que era a tela
+          inteira, vira o terceiro bloco. */}
+      {gestor && (
+        <div className="metricas">
+          <div
+            className="metrica"
+            onClick={() => aoNavegar("ocorrencias")}
+            style={clicavel}
+          >
+            <div className={`valor ${ocorrenciasAbertas > 0 ? "" : "verde"}`}>
+              {ocorrenciasAbertas}
+            </div>
+            <div className="rotulo">relatos de moradores abertos</div>
+            <div className="sub">
+              {ocorrenciasAbertas > 0 ? "aguardando resposta" : "fila limpa"}
+            </div>
+          </div>
+          <div
+            className="metrica"
+            onClick={() => aoNavegar("moradores")}
+            style={clicavel}
+          >
+            <div className={`valor ${pendentesAprovacao > 0 ? "" : "verde"}`}>
+              {pendentesAprovacao}
+            </div>
+            <div className="rotulo">moradores para aprovar</div>
+            <div className="sub">
+              {pendentesAprovacao > 0 ? "cadastro aguardando" : "ninguém esperando"}
+            </div>
+          </div>
+          {temFinanceiro && financeiro && (
+            <div
+              className="metrica"
+              onClick={() => aoNavegar("financeiro")}
+              style={clicavel}
+            >
+              <div
+                className={`valor ${financeiro.inadimplencia > 0 ? "" : "verde"}`}
+              >
+                {financeiro.inadimplencia.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                  maximumFractionDigits: 0,
+                })}
+              </div>
+              <div className="rotulo">em aberto no mês</div>
+              <div className="sub">
+                {financeiro.unidadesPagas} de {financeiro.unidadesCobradas}{" "}
+                unidades pagaram
+              </div>
+            </div>
+          )}
+          {temVisitantes && (
+            <div
+              className="metrica"
+              onClick={() => aoNavegar("visitantes")}
+              style={clicavel}
+            >
+              <div className="valor">{visitasHoje ?? "-"}</div>
+              <div className="rotulo">visitas esperadas hoje</div>
+              <div className="sub">pré-autorizadas pelos moradores</div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="metricas">
         <div className="metrica">
@@ -303,19 +399,6 @@ function VisaoGeral({
             {adocao?.unidadesComApp ?? 0} de {adocao?.totalUnidades ?? 0} unidades
           </div>
         </div>
-        {gestor && (
-          <div
-            className="metrica"
-            onClick={ocorrenciasAbertas > 0 ? aoVerOcorrencias : undefined}
-            style={ocorrenciasAbertas > 0 ? { cursor: "pointer" } : undefined}
-          >
-            <div className={`valor ${ocorrenciasAbertas > 0 ? "" : "verde"}`}>
-              {ocorrenciasAbertas}
-            </div>
-            <div className="rotulo">ocorrências abertas</div>
-            <div className="sub">relatadas pelos moradores</div>
-          </div>
-        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 16 }}>

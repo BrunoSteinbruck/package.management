@@ -133,6 +133,8 @@ model Condominio {
   tarifas      TarifaConsumo[]
   comunicados  Comunicado[]
   documentos   Documento[]
+  despesas     Despesa[]
+  extratoItens ExtratoItem[]
   visitas      Visita[]
   cobrancas    Cobranca[]
   taxas        TaxaUnidade[]
@@ -225,6 +227,7 @@ model Usuario {
   leiturasFeitas     LeituraMedidor[]
   comunicadosCriados Comunicado[]
   documentosEnviados Documento[]
+  despesasCriadas    Despesa[]
   visitasConferidas  Visita[]
 
   @@index([condominioId])
@@ -645,6 +648,7 @@ model Cobranca {
   condominio   Condominio    @relation(fields: [condominioId], references: [id])
   unidade      Unidade       @relation(fields: [unidadeId], references: [id])
   notificacoes Notificacao[]
+  extratoItens ExtratoItem[]
 
   @@unique([unidadeId, competencia])
   @@index([condominioId, status])
@@ -669,6 +673,67 @@ model EventoWebhookFinanceiro {
   criadoEm     DateTime @default(now()) @map("criado_em")
 
   @@map("eventos_webhook_financeiro")
+}
+
+/**
+ * Saída de dinheiro que o síndico registra para a prestação de contas.
+ *
+ * NÃO é contas a pagar: nada aqui agenda nem executa pagamento (território
+ * de administradora, fora da nossa aposta). É o registro do que se espera
+ * ver debitado no extrato, para a conciliação ter contra o que bater.
+ */
+model Despesa {
+  id           String   @id @default(uuid()) @db.Uuid
+  condominioId String   @map("condominio_id") @db.Uuid
+  descricao    String
+  valor        Decimal  @db.Decimal(12, 2)
+  // Dia em que o débito deve aparecer no extrato.
+  data         DateTime @db.Date
+  criadoPorUsuarioId String @map("criado_por_usuario_id") @db.Uuid
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  condominio   Condominio    @relation(fields: [condominioId], references: [id])
+  criadoPor    Usuario       @relation(fields: [criadoPorUsuarioId], references: [id])
+  extratoItens ExtratoItem[]
+
+  @@index([condominioId, data])
+  @@map("despesas")
+}
+
+/**
+ * Uma linha do extrato bancário importado (OFX).
+ *
+ * A conciliação é o par (item do extrato, cobrança paga OU despesa). Quem
+ * fecha o par é o síndico aceitando uma sugestão; `conciliadoObs` guarda o
+ * motivo em português ("compensado 2 dias depois: pagamento de sexta"),
+ * porque prestação de contas é auditável e um match sem explicação vira a
+ * mesma linha vermelha muda que o concorrente dele mostra hoje.
+ */
+model ExtratoItem {
+  id           String   @id @default(uuid()) @db.Uuid
+  condominioId String   @map("condominio_id") @db.Uuid
+  // Id da transação no banco (FITID do OFX): é o dedupe de reimportação.
+  fitid        String
+  data         DateTime @db.Date
+  // Positivo entra, negativo sai, como no extrato.
+  valor        Decimal  @db.Decimal(12, 2)
+  descricao    String
+  cobrancaId   String?  @map("cobranca_id") @db.Uuid
+  despesaId    String?  @map("despesa_id") @db.Uuid
+  conciliadoEm DateTime? @map("conciliado_em")
+  conciliadoObs String? @map("conciliado_obs")
+  // Linha que não pertence à prestação (rendimento, estorno), com o porquê.
+  ignoradoEm   DateTime? @map("ignorado_em")
+  ignoradoObs  String?   @map("ignorado_obs")
+  importadoEm  DateTime @default(now()) @map("importado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  cobranca   Cobranca?  @relation(fields: [cobrancaId], references: [id])
+  despesa    Despesa?   @relation(fields: [despesaId], references: [id])
+
+  @@unique([condominioId, fitid])
+  @@index([condominioId, data])
+  @@map("extrato_itens")
 }
 
 // Aviso direcionado (Via 1) OU ocorrência reportada pelo morador (Via 2).

@@ -41,6 +41,15 @@ O que cada spec protege:
   nula (FK SET NULL não pode derrubar o worker e parar a fila de todos os
   condomínios); só comunicado e cobranças usam o canal pago; encomenda segue
   como motor de adoção.
+- `apps/api/src/financeiro/conciliacao.util.spec.ts`: o motor da conciliação
+  bancária. Os dois casos que consomem o mês do síndico (pagamento de fim de
+  semana compensado no dia útil seguinte; centavos de tarifa) viram sugestão
+  COM explicação; data e valor divergindo juntos NÃO viram sugestão; pares
+  são um-para-um.
+- `apps/api/src/financeiro/ofx.parser.spec.ts`: o leitor de extrato aguenta o
+  que os bancos escrevem (SGML sem fechamento, vírgula decimal, fuso na
+  data) e recusa lixo em vez de inventar valor. Dinheiro nunca passa por
+  float.
 - `apps/api/src/financeiro/competencia.util.spec.ts`: vencimento dia 31 em
   fevereiro, virada de ano, fuso do condomínio.
 - `apps/api/src/financeiro/cripto.util.spec.ts`: a cifra das credenciais

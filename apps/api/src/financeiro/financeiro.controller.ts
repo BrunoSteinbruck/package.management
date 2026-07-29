@@ -1,15 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
+  Param,
+  ParseUUIDPipe,
   Post,
   Query,
   UseGuards,
 } from "@nestjs/common";
 import {
+  AceitarConciliacaoDto,
+  AceitarConciliacaoSchema,
+  CriarDespesaDto,
+  CriarDespesaSchema,
   GerarCobrancasDto,
   GerarCobrancasSchema,
+  IgnorarExtratoItemDto,
+  IgnorarExtratoItemSchema,
+  ImportarExtratoDto,
+  ImportarExtratoSchema,
   JwtPayload,
   SalvarConfigFinanceiroDto,
   SalvarConfigFinanceiroSchema,
@@ -20,13 +31,78 @@ import {
 } from "@pacotes/shared";
 import { AuthGuard, CurrentUser } from "../auth/auth.guard";
 import { ZodPipe } from "../common/zod.pipe";
+import { ConciliacaoService } from "./conciliacao.service";
 import { FinanceiroService } from "./financeiro.service";
 import { WebhookFinanceiroService } from "./webhook.service";
 
 @Controller()
 @UseGuards(AuthGuard)
 export class FinanceiroController {
-  constructor(private readonly financeiro: FinanceiroService) {}
+  constructor(
+    private readonly financeiro: FinanceiroService,
+    private readonly conciliacao: ConciliacaoService,
+  ) {}
+
+  // ---------- Conciliação bancária ----------
+
+  @Post("cadastro/financeiro/despesas")
+  criarDespesa(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(CriarDespesaSchema)) dto: CriarDespesaDto,
+  ) {
+    return this.conciliacao.criarDespesa(user, dto);
+  }
+
+  @Get("cadastro/financeiro/despesas")
+  listarDespesas(@CurrentUser() user: JwtPayload) {
+    return this.conciliacao.listarDespesas(user);
+  }
+
+  @Delete("cadastro/financeiro/despesas/:id")
+  removerDespesa(
+    @CurrentUser() user: JwtPayload,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.conciliacao.removerDespesa(user, id);
+  }
+
+  @Post("cadastro/financeiro/extrato")
+  importarExtrato(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(ImportarExtratoSchema)) dto: ImportarExtratoDto,
+  ) {
+    return this.conciliacao.importarExtrato(user, dto);
+  }
+
+  @Get("cadastro/financeiro/conciliacao")
+  painelConciliacao(@CurrentUser() user: JwtPayload) {
+    return this.conciliacao.painel(user);
+  }
+
+  @Post("cadastro/financeiro/conciliacao/aceitar")
+  aceitarConciliacao(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(AceitarConciliacaoSchema)) dto: AceitarConciliacaoDto,
+  ) {
+    return this.conciliacao.aceitar(user, dto);
+  }
+
+  @Post("cadastro/financeiro/conciliacao/:id/ignorar")
+  ignorarExtratoItem(
+    @CurrentUser() user: JwtPayload,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodPipe(IgnorarExtratoItemSchema)) dto: IgnorarExtratoItemDto,
+  ) {
+    return this.conciliacao.ignorar(user, id, dto);
+  }
+
+  @Post("cadastro/financeiro/conciliacao/:id/desfazer")
+  desfazerConciliacao(
+    @CurrentUser() user: JwtPayload,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.conciliacao.desfazer(user, id);
+  }
 
   @Get("cadastro/financeiro/config")
   config(@CurrentUser() user: JwtPayload) {

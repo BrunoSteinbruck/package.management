@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CobrancaProviderService } from "./cobranca.provider";
+import { ConciliacaoService } from "./conciliacao.service";
 import {
   FinanceiroController,
   WebhookFinanceiroController,
@@ -11,6 +12,7 @@ import { WebhookFinanceiroService } from "./webhook.service";
   controllers: [FinanceiroController, WebhookFinanceiroController],
   providers: [
     FinanceiroService,
+    ConciliacaoService,
     WebhookFinanceiroService,
     CobrancaProviderService,
   ],

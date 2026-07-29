@@ -298,6 +298,45 @@ export const SalvarTaxasSchema = z.object({
 });
 export type SalvarTaxasDto = z.infer<typeof SalvarTaxasSchema>;
 
+/** Despesa para a prestação de contas (não é contas a pagar: só registro). */
+export const CriarDespesaSchema = z.object({
+  descricao: z.string().min(2).max(160),
+  valor: z.number().min(0.01).max(1_000_000),
+  /** Dia em que o débito deve aparecer no extrato. */
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (YYYY-MM-DD)"),
+});
+export type CriarDespesaDto = z.infer<typeof CriarDespesaSchema>;
+
+/** Upload do extrato OFX. O conteúdo vem como texto: OFX é texto puro. */
+export const ImportarExtratoSchema = z.object({
+  ofx: z.string().min(20).max(2_000_000),
+});
+export type ImportarExtratoDto = z.infer<typeof ImportarExtratoSchema>;
+
+/**
+ * Aceite das sugestões de conciliação. O motivo viaja junto porque é ele que
+ * fica gravado como justificativa auditável do match.
+ */
+export const AceitarConciliacaoSchema = z.object({
+  itens: z
+    .array(
+      z.object({
+        extratoItemId: z.string().uuid(),
+        alvoTipo: z.enum(["COBRANCA", "DESPESA"]),
+        alvoId: z.string().uuid(),
+        motivo: z.string().min(3).max(300),
+      }),
+    )
+    .min(1)
+    .max(1000),
+});
+export type AceitarConciliacaoDto = z.infer<typeof AceitarConciliacaoSchema>;
+
+export const IgnorarExtratoItemSchema = z.object({
+  motivo: z.string().min(3).max(200),
+});
+export type IgnorarExtratoItemDto = z.infer<typeof IgnorarExtratoItemSchema>;
+
 /**
  * Liga a subconta do condomínio no provedor. A chave é da subconta DELE, no
  * CNPJ dele: o dinheiro nunca passa pela nossa conta.

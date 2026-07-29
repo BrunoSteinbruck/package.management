@@ -310,6 +310,61 @@ export interface ResumoFinanceiro {
   emissaoReal: boolean;
 }
 
+// ----- Conciliação bancária -----
+
+export interface DespesaLinha {
+  id: string;
+  descricao: string;
+  valor: number;
+  data: string;
+  /** Já casada com uma linha do extrato. */
+  conciliada: boolean;
+}
+
+/** Uma linha do extrato na tela de conciliação. */
+export interface ExtratoLinha {
+  id: string;
+  data: string;
+  valor: number;
+  descricao: string;
+}
+
+/** Sugestão pronta para o aceite de um clique. */
+export interface SugestaoConciliacao {
+  extrato: ExtratoLinha;
+  alvoTipo: "COBRANCA" | "DESPESA";
+  alvoId: string;
+  /** "302 · B, Julho/2026" ou a descrição da despesa. */
+  alvoRotulo: string;
+  alvoData: string;
+  alvoValor: number;
+  confianca: "exata" | "provavel";
+  motivo: string;
+}
+
+export interface PainelConciliacao {
+  /** O que o motor conseguiu explicar: um clique para aceitar. */
+  sugestoes: SugestaoConciliacao[];
+  /** Linhas do extrato que precisam de olho humano. */
+  semPar: ExtratoLinha[];
+  /** Cobranças pagas e despesas que o extrato não mostra. */
+  alvosSemExtrato: Array<{
+    tipo: "COBRANCA" | "DESPESA";
+    rotulo: string;
+    data: string;
+    valor: number;
+  }>;
+  conciliadas: number;
+  ignoradas: number;
+}
+
+export interface ResultadoImportacaoExtrato {
+  importados: number;
+  /** FITID repetido: reimportar o mesmo arquivo não duplica. */
+  repetidos: number;
+  ilegiveis: number;
+}
+
 export interface ConfigFinanceiro {
   diaVencimento: number;
   geracaoAutomatica: boolean;
