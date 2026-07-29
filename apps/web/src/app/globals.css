@@ -102,7 +102,18 @@ h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 .sidebar .rodape .nome { font-weight: 700; color: #fff; }
 .sidebar .rodape .sub { color: rgba(255, 255, 255, 0.7); font-size: 12px; }
 
-.conteudo { flex: 1; padding: 26px 30px 64px; max-width: 1180px; }
+/* O teto existe para a tabela de pacotes não virar uma linha de 2000px, mas
+   com `margin: 0` o conteúdo grudava à esquerda e sobrava meia tela de vazio
+   à direita em monitor grande. Centralizar reparte a folga; o teto mais alto
+   aproveita a largura que um painel de tabelas realmente usa. */
+.conteudo {
+  flex: 1;
+  padding: 26px 30px 64px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
 
 .card {
   background: var(--surface);
@@ -175,6 +186,9 @@ td .unidade { font-weight: 700; }
   padding: 3px 12px;
   font-size: 12.5px;
   font-weight: 600;
+  /* Selo é rótulo curto: quebrar em duas linhas engorda a linha da tabela e
+     desalinha a coluna inteira. Em tela estreita a coluna encolhe, não o selo. */
+  white-space: nowrap;
 }
 .selo.ok { background: var(--ok-bg); color: var(--ok); }
 .selo.alerta { background: var(--alerta-bg); color: var(--alerta); }
