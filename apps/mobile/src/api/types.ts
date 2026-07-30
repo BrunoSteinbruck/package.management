@@ -2,21 +2,19 @@
 // API. Aqui ficam só os nomes que as telas usam e os formatadores de
 // apresentação, que são decisão de UI e não de contrato.
 
+// Só o que alguma tela realmente importa daqui. Tipo que nenhuma tela usa
+// sai da lista, e não do shared: quem consome o contrato inteiro é a API e o
+// painel, e re-exportar o que ninguém pede só faz parecer que há mais
+// superfície do que existe.
 export type {
   AlvoIdentificado,
-  AvisoMorador,
   DetalhePacote,
-  FotoRef,
   ListaPacotes,
   MinhaUnidade,
-  OcorrenciaMorador,
   Pacote,
-  PacoteMorador,
-  Pendencia,
   RespostaOcr,
   ResultadoRetirada,
   Unidade,
-  UnidadeRotulo,
   Veiculo,
   Vinculado,
 } from "@pacotes/shared";

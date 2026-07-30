@@ -36,6 +36,12 @@ export class MoradorController {
     return this.morador.meusPacotes(user);
   }
 
+  /**
+   * @deprecated Substituído por GET morador/feed, junto com morador/avisos e
+   * morador/ocorrencias. Segue de pé pelo mesmo motivo das duas irmãs: há app
+   * instalado que ainda chama, e elas só saem quando a versão nova estiver
+   * nas lojas. Faltava a marca só aqui.
+   */
   @Get("notificacoes")
   minhasNotificacoes(@CurrentUser() user: JwtPayload) {
     return this.morador.minhasNotificacoes(user);

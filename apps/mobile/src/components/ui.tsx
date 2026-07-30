@@ -234,7 +234,7 @@ export function tomDoStatus(s: StatusAviso): TomSelo {
 }
 
 /** Miniatura do item: foto real ou ícone em círculo colorido. */
-export type MediaItem =
+type MediaItem =
   | { fotoUri: string }
   | { icone: NomeIcone; corFundo: string; corIcone: string };
 

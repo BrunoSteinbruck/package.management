@@ -45,11 +45,6 @@ export class AvisosController {
     return this.avisos.criarAviso(user, dto);
   }
 
-  @Get("portaria/avisos")
-  listarAvisosEquipe(@CurrentUser() user: JwtPayload, @Query("status") status?: string) {
-    return this.avisos.listarAvisosEquipe(user, status);
-  }
-
   // Gestor (Via 2)
   @Get("cadastro/ocorrencias")
   listarOcorrencias(@CurrentUser() user: JwtPayload, @Query("status") status?: string) {

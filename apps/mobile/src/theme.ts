@@ -1,36 +1,45 @@
 // Tokens do design system v1 (docs/design_handoff_guarita_v1).
+
+/**
+ * As cores saem do objeto do tema para os gradientes poderem apontar para
+ * elas. Antes `gradiente` repetia os mesmos hex à mão, então `marcaEscuro` e
+ * `acaoEscuro` pareciam tokens mortos enquanto suas cores estavam vivas
+ * duplicadas: trocar a marca exigiria editar o valor em dois lugares.
+ */
+const colors = {
+  marca: "#175C38",
+  marcaEscuro: "#0F4728",
+  acao: "#00A85A",
+  acaoEscuro: "#00803E",
+  acentoClaro: "#7CE3A8",
+  ok: "#0F7A44",
+  okBg: "#EAF6EE",
+  text: "#17251C",
+  textSecondary: "#5E6E63",
+  textMuted: "#7A8A7E",
+  textFaint: "#9FB0A4",
+  bg: "#F3F5F2",
+  surface: "#FFFFFF",
+  border: "#E3EAE4",
+  chipBorder: "#C7D2C9",
+  divisor: "#EEF2EE",
+  toggleOff: "#D8E0D9",
+  alerta: "#B45309",
+  alertaBg: "#FDF0DC",
+  notif: "#D9480F",
+  aviso: "#D97706",
+  cameraBg: "#12160F",
+  scanner: "#3FD98A",
+  notaBg: "#EEF3EE",
+  unidadeBg: "#F0FBF4",
+  placeholder: "#E9EDE8",
+} as const;
+
 export const theme = {
-  colors: {
-    marca: "#175C38",
-    marcaEscuro: "#0F4728",
-    acao: "#00A85A",
-    acaoEscuro: "#00803E",
-    acentoClaro: "#7CE3A8",
-    ok: "#0F7A44",
-    okBg: "#EAF6EE",
-    text: "#17251C",
-    textSecondary: "#5E6E63",
-    textMuted: "#7A8A7E",
-    textFaint: "#9FB0A4",
-    bg: "#F3F5F2",
-    surface: "#FFFFFF",
-    border: "#E3EAE4",
-    chipBorder: "#C7D2C9",
-    divisor: "#EEF2EE",
-    toggleOff: "#D8E0D9",
-    alerta: "#B45309",
-    alertaBg: "#FDF0DC",
-    notif: "#D9480F",
-    aviso: "#D97706",
-    cameraBg: "#12160F",
-    scanner: "#3FD98A",
-    notaBg: "#EEF3EE",
-    unidadeBg: "#F0FBF4",
-    placeholder: "#E9EDE8",
-  },
+  colors,
   gradiente: {
-    marca: ["#175C38", "#0F4728"] as const,
-    acao: ["#00A85A", "#00803E"] as const,
+    marca: [colors.marca, colors.marcaEscuro] as const,
+    acao: [colors.acao, colors.acaoEscuro] as const,
   },
   spacing: { xs: 4, sm: 8, md: 16, lg: 20, xl: 32 },
   radius: { card: 20, tile: 24, sheet: 28, input: 18, foto: 12, pill: 999 },

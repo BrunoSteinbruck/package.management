@@ -148,7 +148,6 @@ const styles = StyleSheet.create({
   sub: { fontSize: 14, color: theme.colors.textSecondary, fontWeight: "500" },
   descricao: { fontSize: theme.font.corpo, color: theme.colors.text, lineHeight: 23 },
   foto: { width: "100%", height: 220, borderRadius: theme.radius.card },
-  acoes: { flexDirection: "row", gap: 10, marginTop: 10 },
   nota: {
     fontSize: 13,
     color: theme.colors.textMuted,

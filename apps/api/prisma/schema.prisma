@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/**
+ * SEM USO no código: `Condominio.plano` só é escrito pelos seeds e nunca é
+ * lido. Não existe billing do SaaS, e o que hoje liga ou desliga funcionalidade
+ * é `Condominio.modulos`, não o plano. Fica como registro comercial do que foi
+ * precificado; quem for implementar cobrança do produto começa por aqui.
+ */
 enum Plano {
   ESSENCIAL
   PROFISSIONAL
@@ -35,6 +41,12 @@ enum StatusVinculo {
 enum CanalNotificacao {
   PUSH
   WHATSAPP
+  // SEM USO: nenhum caminho grava SMS nesta tabela. O tipo local do worker é
+  // literalmente `"PUSH" | "WHATSAPP"`. O SMS que o produto envia (código de
+  // acesso e convite de adoção) não vira linha de Notificacao: o convite é
+  // registrado em Convite.canal, que é outro enum. Fica porque tirar valor de
+  // enum no Postgres exige recriar o tipo; se um dia o SMS entrar na fila de
+  // notificação, o valor já está aqui.
   SMS
 }
 
@@ -98,6 +110,9 @@ enum Plataforma {
 
 enum CanalConvite {
   SMS
+  // SEM USO: nenhum código emite convite por cartaz ou pela portaria. Eram as
+  // ideias de adoção que perderam para o SMS automático na entrada de
+  // encomenda. Mantidos pelo mesmo motivo de CanalNotificacao.SMS.
   POSTER
   PORTARIA
   MORADOR
@@ -195,6 +210,9 @@ model Vinculo {
   // do vínculo global antes de abrir a transação com RLS.
   condominioId        String        @map("condominio_id") @db.Uuid
   status              StatusVinculo @default(PENDENTE)
+  // SEM USO: era o gancho para "preferências de notificação por morador", que
+  // acabou nascendo em outro lugar (Morador.aceitaWhatsapp, por pessoa e não
+  // por vínculo, porque o opt-in de LGPD é da pessoa). Nada lê nem escreve.
   contatoPreferencial Boolean       @default(false) @map("contato_preferencial")
   aprovadoPorId       String?       @map("aprovado_por_id") @db.Uuid
   criadoEm            DateTime      @default(now()) @map("criado_em")

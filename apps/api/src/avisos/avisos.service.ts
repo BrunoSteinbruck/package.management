@@ -116,18 +116,6 @@ export class AvisosService {
     });
   }
 
-  /** Avisos direcionados (Via 1): para equipe/painel. */
-  listarAvisosEquipe(user: JwtPayload, status?: string) {
-    const cid = this.tenantEquipe(user);
-    return this.prisma.withTenant(cid, (tx) =>
-      tx.aviso.findMany({
-        where: { via: "DIRECIONADO", ...(status ? { status: status as StatusAviso } : {}) },
-        include: { unidade: true },
-        orderBy: { criadoEm: "desc" },
-        take: 100,
-      }),
-    );
-  }
 
   // ---------- Via 2: morador reporta / gestor gere ----------
 
