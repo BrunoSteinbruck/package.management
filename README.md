@@ -27,7 +27,8 @@ pnpm --filter @pacotes/shared build
 cp apps/api/.env.example apps/api/.env   # ajuste DATABASE_URL se preciso
 pnpm db:migrate      # cria as tabelas
 pnpm db:rls          # aplica as policies de Row-Level Security
-pnpm db:seed         # dados de demonstração (Residencial Aurora)
+pnpm db:seed         # base mínima: condomínio, unidades, equipe, moradores
+pnpm db:seed-demo    # demo cheia por cima: encomendas, leituras, tarifas
 pnpm dev:api         # API em http://localhost:3001/v1
 ```
 

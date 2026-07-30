@@ -9,7 +9,8 @@
     "dev:api": "pnpm --filter @pacotes/api start:dev",
     "db:migrate": "pnpm --filter @pacotes/api prisma:migrate",
     "db:rls": "pnpm --filter @pacotes/api prisma:rls",
-    "db:seed": "pnpm --filter @pacotes/api prisma:seed"
+    "db:seed": "pnpm --filter @pacotes/api prisma:seed",
+    "db:seed-demo": "pnpm --filter @pacotes/api prisma:seed-demo"
   },
   "devDependencies": {
     "vitest": "^4.1.10"
