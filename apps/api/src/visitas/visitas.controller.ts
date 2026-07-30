@@ -58,7 +58,10 @@ export class VisitasController {
   @Get("cadastro/visitas")
   historico(
     @CurrentUser() user: JwtPayload,
-    @Query("unidadeId") unidadeId?: string,
+    // `optional: true` porque o filtro é opcional, mas quando vem tem que ser
+    // uuid: a coluna é @db.Uuid e texto solto virava erro de sintaxe do
+    // Postgres, ou seja, 500 para um pedido que o cliente é quem errou.
+    @Query("unidadeId", new ParseUUIDPipe({ optional: true })) unidadeId?: string,
   ) {
     return this.visitas.historico(user, unidadeId);
   }

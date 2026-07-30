@@ -16,7 +16,7 @@ import type {
   SalvarTaxasDto,
   TaxaLinha,
 } from "@pacotes/shared";
-import { soDigitos } from "@pacotes/shared";
+import { CompetenciaSchema, soDigitos } from "@pacotes/shared";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CobrancaProviderService } from "./cobranca.provider";
@@ -382,13 +382,28 @@ export class FinanceiroService {
 
   // ---------- Consulta ----------
 
+  /**
+   * A competência da querystring é texto livre. Sem validar, "xx" ou
+   * "2026-99" viravam `new Date("xx-01T00:00:00Z")` = Invalid Date, e o
+   * Prisma respondia 500. O mesmo valor NO CORPO já era validado pelo
+   * `GerarCobrancasSchema`: era só a porta da query que estava aberta.
+   */
+  private competenciaValida(competencia: string | undefined, timezone: string): string {
+    if (competencia === undefined) return competenciaAtual(timezone);
+    const parsed = CompetenciaSchema.safeParse(competencia);
+    if (!parsed.success) {
+      throw new BadRequestException("competencia deve ser YYYY-MM");
+    }
+    return parsed.data;
+  }
+
   async doGestor(user: JwtPayload, competencia?: string): Promise<CobrancaGestor[]> {
     const cid = this.exigirGestor(user);
     const condominio = await this.prisma.condominio.findUniqueOrThrow({
       where: { id: cid },
       select: { timezone: true },
     });
-    const alvo = competencia ?? competenciaAtual(condominio.timezone);
+    const alvo = this.competenciaValida(competencia, condominio.timezone);
     const linhas = await this.prisma.withTenant(cid, (tx) =>
       tx.cobranca.findMany({
         where: { competencia: inicioDaCompetencia(alvo) },

@@ -2,11 +2,30 @@
 import "./instrument";
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Request, Response, NextFunction } from "express";
 import { AppModule } from "./app.module";
 
+/**
+ * Teto do corpo JSON.
+ *
+ * O padrão do Express é 100 KB, e isso tornava a conciliação bancária
+ * inutilizável: `ImportarExtratoSchema` aceita 2 MB de OFX, mas um extrato de
+ * 900 lançamentos (136 KB, um mês comum) morria com 413 antes de chegar ao
+ * zod. O limite fica um pouco acima do teto do schema para a mensagem de erro
+ * vir do nosso validador, que diz o que está errado, e não do body-parser.
+ *
+ * Foto e PDF não passam por aqui: são multipart, com limite próprio no
+ * interceptor de cada upload (10 MB e 20 MB).
+ */
+const LIMITE_JSON = "3mb";
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
+  app.useBodyParser("json", { limit: LIMITE_JSON });
+  app.useBodyParser("urlencoded", { limit: LIMITE_JSON, extended: true });
   app.setGlobalPrefix("v1");
 
   // CORS: aberto em dev; em produção só as origens explicitamente listadas

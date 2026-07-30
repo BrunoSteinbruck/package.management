@@ -55,7 +55,9 @@ export const RegistrarPacoteSchema = z.object({
 export type RegistrarPacoteDto = z.infer<typeof RegistrarPacoteSchema>;
 
 export const RegistrarRetiradaSchema = z.object({
-  pacoteIds: z.array(z.string().uuid()).min(1),
+  // Teto como nos outros lotes do arquivo: uma retirada real tem unidades,
+  // não milhares de pacotes.
+  pacoteIds: z.array(z.string().uuid()).min(1).max(200),
   fotoSaidaKey: FotoKeySchema.optional(),
   /**
    * Quem recebeu. Morador da unidade (id) ou outra pessoa (nome livre).
@@ -94,7 +96,8 @@ export const EmitirQrSchema = z.object({
 export type EmitirQrDto = z.infer<typeof EmitirQrSchema>;
 
 export const ResolverQrSchema = z.object({
-  qrToken: z.string().min(10),
+  // Teto antes do JWT: sem ele, 1 MB de texto ia inteiro para o verificador.
+  qrToken: z.string().min(10).max(2000),
 });
 export type ResolverQrDto = z.infer<typeof ResolverQrSchema>;
 
@@ -145,6 +148,9 @@ const PLACA_REGEX = /^[A-Z]{3}\d[A-Z0-9]\d{2}$/; // Mercosul ABC1D23 e antiga AB
 
 export const PlacaSchema = z
   .string()
+  // O teto vem ANTES do transform: `normalizarPlaca` varre a string inteira,
+  // e sem limite varria 1 MB duas vezes só para devolver 400 no fim.
+  .max(20)
   .transform(normalizarPlaca)
   .refine((p) => PLACA_REGEX.test(p), "Placa inválida");
 
@@ -229,9 +235,24 @@ export type CriarDocumentoDto = z.infer<typeof CriarDocumentoSchema>;
 // ----- Módulo Visitantes -----
 
 /** Data sem hora: o dia previsto da visita. Nunca vira Date no cliente. */
+/**
+ * Data do calendário como "AAAA-MM-DD".
+ *
+ * O regex sozinho não basta: `\d{2}` aceitava mês 99 e dia 99, e o servidor
+ * montava `new Date("2026-99-99T00:00:00Z")` = Invalid Date, que chegava ao
+ * Prisma e virava 500. O mês entra pelo padrão, e o dia por refinamento,
+ * porque o limite depende do mês (e de ano bissexto): a checagem monta a data
+ * e confirma que o dia sobreviveu, o que reprova 31/04 e 29/02 fora de
+ * bissexto sem tabela de dias.
+ */
 export const DataSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)");
+  .regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Data inválida (use AAAA-MM-DD)")
+  .refine((d) => {
+    const [ano, mes, dia] = d.split("-").map(Number);
+    const data = new Date(Date.UTC(ano, mes - 1, dia));
+    return data.getUTCMonth() === mes - 1 && data.getUTCDate() === dia;
+  }, "Data inexistente no calendário");
 
 /** Hora do dia em 24h. A janela é opcional, mas se vier tem que ser hora. */
 export const HoraSchema = z
@@ -288,6 +309,9 @@ export const SalvarTaxasSchema = z.object({
         responsavelNome: z.string().min(2).max(120).optional(),
         responsavelCpfCnpj: z
           .string()
+          // Teto antes do refine, que limpa a string toda: multiplicado por 2000
+          // linhas, sem limite vira trabalho inútil caro.
+          .max(20)
           .refine(cpfCnpjValido, "CPF ou CNPJ inválido")
           .optional(),
         responsavelEmail: z.string().email().max(160).optional(),
@@ -303,7 +327,7 @@ export const CriarDespesaSchema = z.object({
   descricao: z.string().min(2).max(160),
   valor: z.number().min(0.01).max(1_000_000),
   /** Dia em que o débito deve aparecer no extrato. */
-  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (YYYY-MM-DD)"),
+  data: DataSchema,
 });
 export type CriarDespesaDto = z.infer<typeof CriarDespesaSchema>;
 

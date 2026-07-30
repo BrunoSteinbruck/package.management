@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -13,8 +14,22 @@ import type {
   JwtPayload,
   StatusAviso,
 } from "@pacotes/shared";
-import { itensParaVersao, normalizarPlaca } from "@pacotes/shared";
+import { itensParaVersao, normalizarPlaca, STATUS_AVISO } from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
+
+/**
+ * `status` vem da querystring, que é texto livre do cliente. Sem esta
+ * checagem o valor ia como `status as StatusAviso` direto para o `where` do
+ * Prisma, e `?status=qualquer-coisa` virava erro 500 em vez de 400: o
+ * servidor culpando a si mesmo por um pedido malformado.
+ */
+function filtroDeStatus(status?: string) {
+  if (!status) return {};
+  if (!(STATUS_AVISO as readonly string[]).includes(status)) {
+    throw new BadRequestException("status deve ser ABERTO ou RESOLVIDO");
+  }
+  return { status: status as StatusAviso };
+}
 
 const PLACA_NO_TEXTO = /[A-Z]{3}\d[A-Z0-9]\d{2}/;
 
@@ -170,7 +185,7 @@ export class AvisosService {
     const cid = this.exigirGestor(user);
     const avisos = await this.prisma.withTenant(cid, (tx) =>
       tx.aviso.findMany({
-        where: { via: "OCORRENCIA", ...(status ? { status: status as StatusAviso } : {}) },
+        where: { via: "OCORRENCIA", ...filtroDeStatus(status) },
         include: { unidade: true, criadoPorMorador: true },
         orderBy: { criadoEm: "desc" },
         take: 200,

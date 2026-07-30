@@ -969,6 +969,98 @@ async function main() {
     );
   }
 
+  // ===== Borda: entrada malformada vira 400, nunca 500 =====
+  console.log("\n== Borda: pedido malformado ==");
+  {
+    /**
+     * Todos estes devolviam 500 antes da varredura de QA: querystring é texto
+     * livre do cliente, e ia sem validação para o `where` do Prisma ou para
+     * `new Date()`. 500 é o servidor dizendo "a culpa é minha" quando a culpa
+     * é do pedido, e mascara falha real no monitoramento.
+     */
+    const status = async (metodo: string, caminho: string, corpo?: unknown) => {
+      const res = await fetch(`${API}${caminho}`, {
+        method: metodo,
+        headers: {
+          authorization: `Bearer ${sindico}`,
+          ...(corpo !== undefined ? { "content-type": "application/json" } : {}),
+        },
+        body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
+      });
+      return res.status;
+    };
+
+    checa(
+      "status inválido na query devolve 400",
+      (await status("GET", "/cadastro/ocorrencias?status=DROP")) === 400,
+    );
+    checa(
+      "status com emoji devolve 400",
+      (await status("GET", "/cadastro/ocorrencias?status=%F0%9F%8E%89")) === 400,
+    );
+    checa(
+      "unidadeId não-uuid na query devolve 400",
+      (await status("GET", "/cadastro/visitas?unidadeId=abc")) === 400,
+    );
+    checa(
+      "competência inválida na query devolve 400",
+      (await status("GET", "/cadastro/financeiro/cobrancas?competencia=xx")) === 400,
+    );
+    checa(
+      "competência com mês 99 devolve 400",
+      (await status("GET", "/cadastro/financeiro/resumo?competencia=2026-99")) === 400,
+    );
+    // O regex antigo (`\d{2}`) deixava passar mês e dia impossíveis, que
+    // viravam Invalid Date lá dentro.
+    checa(
+      "data 2026-99-99 devolve 400",
+      (await status("POST", "/cadastro/financeiro/despesas", {
+        descricao: "borda",
+        valor: 10,
+        data: "2026-99-99",
+      })) === 400,
+    );
+    checa(
+      "data 30 de fevereiro devolve 400",
+      (await status("POST", "/cadastro/financeiro/despesas", {
+        descricao: "borda",
+        valor: 10,
+        data: "2026-02-30",
+      })) === 400,
+    );
+
+    // E o caminho feliz continua de pé: validar não pode fechar a porta certa.
+    checa(
+      "filtros válidos continuam respondendo 200",
+      (await status("GET", "/cadastro/ocorrencias?status=ABERTO")) === 200 &&
+        (await status("GET", "/cadastro/visitas")) === 200 &&
+        (await status("GET", "/cadastro/financeiro/cobrancas")) === 200,
+    );
+
+    /**
+     * Extrato de tamanho real. O limite padrão do Express (100 KB) recusava
+     * com 413 um OFX de um mês comum, tornando a conciliação inutilizável em
+     * uso real, embora o schema aceitasse 2 MB.
+     */
+    const linhas = Array.from({ length: 900 }, (_, i) => {
+      // Dia com dois dígitos: o parser exige AAAAMMDD, e "2026091" (sete
+      // dígitos) é lido como ilegível, corretamente.
+      const dia = String((i % 28) + 1).padStart(2, "0");
+      return `<STMTTRN>\n<DTPOSTED>202609${dia}\n<TRNAMT>-${100 + i}.00\n<FITID>e2e-grande-${i}\n<MEMO>LANCAMENTO DE TESTE ${i} COM DESCRICAO LONGA COMO BANCO ESCREVE\n</STMTTRN>`;
+    }).join("\n");
+    const ofxGrande = `OFXHEADER:100\n<OFX><BANKTRANLIST>${linhas}</BANKTRANLIST></OFX>`;
+    checa(
+      "OFX de um mês real (>100 KB) importa",
+      (
+        await req<{ importados?: number }>("POST", "/cadastro/financeiro/extrato", {
+          token: sindico,
+          corpo: { ofx: ofxGrande },
+        })
+      ).importados === 900,
+      `${Math.round(ofxGrande.length / 1024)} KB`,
+    );
+  }
+
   // ===== Onda 4: WhatsApp =====
   console.log("\n== Onda 4: WhatsApp ==");
   if (unidadeIsolada) {
