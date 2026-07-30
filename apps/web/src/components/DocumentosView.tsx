@@ -137,9 +137,9 @@ export function DocumentosView() {
         <div className="linha">
           <input
             placeholder="Título (ex.: Ata da assembleia de março)"
+            maxLength={160}
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
-            maxLength={160}
             style={{ flex: 1, minWidth: 240 }}
           />
           <div className="chips">

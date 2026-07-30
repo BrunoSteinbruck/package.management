@@ -13,3 +13,4 @@ export * from "./dto";
 export * from "./api";
 export * from "./feed";
 export * from "./perfil";
+export * from "./valor";

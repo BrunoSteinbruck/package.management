@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   cpfCnpjValido,
   formatarCpfCnpj,
+  lerValorEmReais,
   type CobrancaGestor,
   type ConfigFinanceiro,
   type ResumoFinanceiro,
@@ -158,15 +159,19 @@ export function FinanceiroView() {
     // o síndico lê "CPF inválido" enquanto o problema real é outro campo.
     setErro(null);
 
+    // `Number(v.replace(",", "."))` recusava "1.500,00", que é como se escreve
+    // mil e quinhentos reais aqui: o síndico digitava a taxa certa e a linha
+    // não salvava. E aceitava "0x10" como 16, que ia direto para a cobrança.
     const valorMensal =
       mudanca.valor !== undefined
-        ? Number(mudanca.valor.replace(",", "."))
+        ? lerValorEmReais(mudanca.valor)
         : (atual.valorMensal ?? 0);
     // Antes isto era um `return` mudo: digitar "abc" no valor não gravava e
     // não avisava, e o número errado seguia na tela parecendo salvo.
-    if (!Number.isFinite(valorMensal) || valorMensal < 0) {
+    if (valorMensal === null) {
       setErro(
-        `Valor inválido em ${rotulo(atual.unidade)}. Use só números, como 450,50.`,
+        `Valor não reconhecido em ${rotulo(atual.unidade)}: "${mudanca.valor}". ` +
+          "Escreva como 450,50 ou 1.500,00.",
       );
       return;
     }
@@ -408,6 +413,7 @@ export function FinanceiroView() {
                     <input
                       defaultValue={t.responsavelNome ?? ""}
                       placeholder="Nome completo"
+                      maxLength={120}
                       style={{ width: 180 }}
                       onBlur={(e) =>
                         salvarTaxa(t.unidadeId, { nome: e.target.value })
@@ -422,6 +428,7 @@ export function FinanceiroView() {
                           : ""
                       }
                       placeholder="000.000.000-00"
+                      maxLength={18}
                       inputMode="numeric"
                       style={{ width: 170 }}
                       onBlur={(e) =>

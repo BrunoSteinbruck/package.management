@@ -6,6 +6,7 @@ import type {
   PainelConciliacao,
   SugestaoConciliacao,
 } from "@pacotes/shared";
+import { lerValorEmReais } from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
 
 function reais(v: number): string {
@@ -150,9 +151,20 @@ export function ConciliacaoView() {
   }
 
   async function criarDespesa() {
-    const valor = Number(valorNovo.replace(",", "."));
-    if (!Number.isFinite(valor) || valor <= 0 || descNova.trim().length < 2) {
-      setErro("Preencha descrição e valor da despesa.");
+    // "Preencha descrição e valor" para todos os casos escondia o motivo: com
+    // `Number("1.500,00".replace(",","."))` dando NaN, o síndico que escreveu
+    // o valor certo levava a mesma mensagem de quem deixou o campo vazio.
+    if (descNova.trim().length < 2) {
+      setErro("A descrição da despesa precisa de pelo menos duas letras.");
+      return;
+    }
+    const valor = lerValorEmReais(valorNovo);
+    if (valor === null) {
+      setErro(`Valor não reconhecido: "${valorNovo}". Escreva como 1.500,00.`);
+      return;
+    }
+    if (valor <= 0) {
+      setErro("O valor da despesa precisa ser maior que zero.");
       return;
     }
     try {
@@ -352,9 +364,9 @@ export function ConciliacaoView() {
         <div className="linha" style={{ marginTop: 10 }}>
           <input
             placeholder="Descrição (ex.: Manutenção elevador)"
+            maxLength={160}
             value={descNova}
             onChange={(e) => setDescNova(e.target.value)}
-            maxLength={160}
             style={{ flex: 1, minWidth: 220 }}
           />
           <input

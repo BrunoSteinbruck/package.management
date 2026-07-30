@@ -56,6 +56,15 @@ export function ComunicadosView() {
   }, [carregar]);
 
   async function publicar() {
+    // Publicar manda push para todo mundo e não tem desfazer: nem aqui nem no
+    // servidor. A confirmação diz o alcance em vez de perguntar "tem certeza?",
+    // porque o erro que ela evita é justamente mandar para o condomínio
+    // inteiro um aviso que era de um bloco só.
+    const alcance =
+      blocos.length === 0
+        ? "TODOS os moradores do condomínio"
+        : `os moradores ${blocos.length === 1 ? "do bloco" : "dos blocos"} ${blocos.join(", ")}`;
+    if (!confirm(`Publicar "${titulo.trim()}" e notificar ${alcance}?`)) return;
     setEnviando(true);
     try {
       await apiFetch("/cadastro/comunicados", {

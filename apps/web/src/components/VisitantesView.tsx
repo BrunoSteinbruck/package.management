@@ -95,6 +95,7 @@ export function VisitantesView() {
         <h2 style={{ fontSize: 15, marginBottom: 10 }}>Histórico</h2>
         <input
           placeholder="Buscar por visitante, unidade ou quem autorizou"
+          maxLength={60}
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           style={{ width: "100%", marginBottom: 12 }}

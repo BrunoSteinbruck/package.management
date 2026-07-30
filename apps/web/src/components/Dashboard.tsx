@@ -92,6 +92,27 @@ export function Dashboard({
       .catch(() => {});
   }, [visao]);
 
+  /**
+   * Visão de módulo desligado volta para a Visão geral.
+   *
+   * Cada visão de módulo é renderizada com `&& ligado(m)`, então se a flag
+   * cair enquanto ela está aberta o `main` fica VAZIO: barra lateral à
+   * esquerda e um retângulo branco, sem título, sem mensagem, sem nada em que
+   * clicar. Acontece quando o módulo é desligado em outra aba, ou quando a
+   * lista de módulos termina de carregar depois da navegação. Encontrado na
+   * varredura de QA, com o painel numa tela em branco.
+   */
+  useEffect(() => {
+    const exigido: Partial<Record<Visao, ModuloCondominio>> = {
+      comunicados: "comunicados",
+      documentos: "documentos",
+      visitantes: "visitantes",
+      financeiro: "financeiro",
+    };
+    const m = exigido[visao];
+    if (m && modulos.length > 0 && !modulos.includes(m)) setVisao("visao-geral");
+  }, [visao, modulos]);
+
   useEffect(() => {
     if (gestor) {
       apiFetch<VinculoPendente[]>("/cadastro/vinculos/pendentes")
@@ -562,6 +583,7 @@ function PacotesView() {
         <input
           style={{ width: 280 }}
           placeholder="Unidade, rastreio, transportadora…"
+          maxLength={60}
           value={busca}
           onChange={(e) => {
             setBusca(e.target.value);
@@ -875,12 +897,14 @@ function EquipeSection() {
         <input
           style={{ width: 200 }}
           placeholder="Nome"
+          maxLength={120}
           value={nome}
           onChange={(e) => setNome(e.target.value)}
         />
         <input
           style={{ width: 160 }}
           placeholder="Telefone (DDD+número)"
+          maxLength={20}
           value={telefone}
           onChange={(e) => setTelefone(e.target.value)}
         />
@@ -938,6 +962,7 @@ function OcorrenciasView() {
         method: "POST",
         body: { status },
       });
+      setErro(null);
       carregar();
     } catch (e) {
       setErro((e as Error).message);
@@ -1195,6 +1220,7 @@ function VagasSection({ aoImportar }: { aoImportar: () => void }) {
 function MoradoresView() {
   const [vinculos, setVinculos] = useState<VinculoPendente[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [emVoo, setEmVoo] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -1209,15 +1235,37 @@ function MoradoresView() {
     carregar();
   }, [carregar]);
 
-  async function aprovar(id: string) {
+  /**
+   * Aprovar dá a uma pessoa acesso aos dados daquela unidade: encomendas,
+   * cobranças, documentos. O painel não tem como revogar depois, então a
+   * confirmação nomeia quem e qual unidade, em vez de perguntar "tem certeza?".
+   *
+   * `emVoo` trava a linha durante a requisição: dois cliques rápidos mandavam
+   * dois POST, e o segundo voltava recusado ("já aprovado") pintando um erro
+   * na tela para uma aprovação que na verdade deu certo.
+   */
+  async function aprovar(v: VinculoPendente) {
+    if (emVoo) return;
+    const onde = rotulo(v.unidade);
+    if (
+      !confirm(
+        `Dar a ${v.morador.nome} (${v.morador.telefone}) acesso à unidade ${onde}?\n\n` +
+          "A pessoa passa a ver encomendas, cobranças e documentos desta unidade.",
+      )
+    ) {
+      return;
+    }
+    setEmVoo(v.id);
     // Sem o try, a rejeição morria no console: o síndico clicava "Aprovar", a
     // linha continuava na lista, e não havia nada dizendo o que houve.
     try {
-      await apiFetch(`/cadastro/vinculos/${id}/aprovar`, { method: "POST" });
+      await apiFetch(`/cadastro/vinculos/${v.id}/aprovar`, { method: "POST" });
       setErro(null);
       carregar();
     } catch (e) {
       setErro((e as Error).message);
+    } finally {
+      setEmVoo(null);
     }
   }
 
@@ -1246,8 +1294,12 @@ function MoradoresView() {
                   <td>{v.morador.telefone}</td>
                   <td>{rotulo(v.unidade)}</td>
                   <td style={{ textAlign: "right" }}>
-                    <button className="acao" onClick={() => aprovar(v.id)}>
-                      Aprovar
+                    <button
+                      className="acao"
+                      onClick={() => aprovar(v)}
+                      disabled={emVoo !== null}
+                    >
+                      {emVoo === v.id ? "Aprovando..." : "Aprovar"}
                     </button>
                   </td>
                 </tr>
