@@ -72,15 +72,35 @@ export const RegistrarRetiradaSchema = z.object({
 });
 export type RegistrarRetiradaDto = z.infer<typeof RegistrarRetiradaSchema>;
 
+/**
+ * Bloco e identificação são CHAVE DE NEGÓCIO, não texto livre: a unidade é
+ * casada por `bloco|identificacao` (no import de moradores e de vagas) e o
+ * banco tem `@@unique([condominioId, bloco, identificacao])`.
+ *
+ * Sem normalizar, "777", "777 " e "777 " (espaço à direita, ou colado de
+ * planilha com espaço não separável) viram TRÊS unidades distintas que a tela
+ * desenha idênticas: o síndico vê "777 · Z" três vezes, e a encomenda entra
+ * na errada. O `@@unique` não protege, porque as strings de fato diferem.
+ *
+ * Então: espaço não separável vira espaço comum, sequências internas viram um
+ * espaço só, e as pontas caem fora.
+ */
+export const ChaveUnidadeSchema = z
+  .string()
+  .max(40)
+  .transform((s) => s.replace(/[   ]/g, " ").trim().replace(/\s+/g, " "));
+
 export const CriarUnidadesSchema = z.object({
   unidades: z
     .array(
       z.object({
-        bloco: z.string().max(40).optional(),
-        identificacao: z.string().min(1).max(40),
+        bloco: ChaveUnidadeSchema.optional(),
+        identificacao: ChaveUnidadeSchema.pipe(z.string().min(1)),
       }),
     )
-    .min(1),
+    .min(1)
+    // Teto como nos outros lotes: import de prédio inteiro cabe bem aqui.
+    .max(2000),
 });
 export type CriarUnidadesDto = z.infer<typeof CriarUnidadesSchema>;
 
@@ -107,8 +127,10 @@ export const ImportarMoradoresSchema = z.object({
       z.object({
         nome: z.string().min(2).max(120),
         telefone: TelefoneSchema,
-        bloco: z.string().max(40).optional(),
-        identificacao: z.string().min(1).max(40),
+        // Mesma normalização do cadastro de unidades: é por este par que a
+        // linha da planilha encontra a unidade.
+        bloco: ChaveUnidadeSchema.optional(),
+        identificacao: ChaveUnidadeSchema.pipe(z.string().min(1)),
       }),
     )
     .min(1)
@@ -158,9 +180,9 @@ export const CriarVagasSchema = z.object({
   vagas: z
     .array(
       z.object({
-        identificacao: z.string().min(1).max(40),
-        bloco: z.string().max(40).optional(),
-        unidade: z.string().min(1).max(40),
+        identificacao: ChaveUnidadeSchema.pipe(z.string().min(1)),
+        bloco: ChaveUnidadeSchema.optional(),
+        unidade: ChaveUnidadeSchema.pipe(z.string().min(1)),
       }),
     )
     .min(1)
