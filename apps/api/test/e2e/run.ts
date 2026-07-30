@@ -27,6 +27,15 @@ const prisma = new PrismaClient();
 
 let falhas: string[] = [];
 
+/**
+ * Prefixo do rastreio das encomendas criadas por esta suíte.
+ *
+ * É o que deixa o `zerar` apagar o que a suíte fez sem tocar no que é real.
+ * Antes as encomendas de teste eram "Correios sem rastreio", indistinguíveis
+ * de um registro legítimo, e por isso ficavam: a demo acumulou 69 delas.
+ */
+const MARCA_E2E = "E2E-";
+
 function checa(rotulo: string, condicao: boolean, detalhe = ""): void {
   const marca = condicao ? "OK   " : "FALHA";
   console.log(`  ${marca} ${rotulo}${detalhe ? `  [${detalhe}]` : ""}`);
@@ -181,6 +190,19 @@ async function zerar(cid: string): Promise<void> {
     await tx.comunicado.deleteMany({});
     await tx.documento.deleteMany({});
     await tx.visita.deleteMany({});
+
+    // As encomendas que a própria suíte criou, e só elas: a retirada primeiro,
+    // que é quem tem a FK. Roda no começo também, para o resíduo de uma
+    // execução que morreu no meio não ficar para sempre.
+    const daSuite = await tx.pacote.findMany({
+      where: { codigoRastreio: { startsWith: MARCA_E2E } },
+      select: { id: true },
+    });
+    if (daSuite.length > 0) {
+      const ids = daSuite.map((p) => p.id);
+      await tx.retirada.deleteMany({ where: { pacoteId: { in: ids } } });
+      await tx.pacote.deleteMany({ where: { id: { in: ids } } });
+    }
   });
   await prisma.eventoWebhookFinanceiro.deleteMany({});
   await prisma.morador.updateMany({ data: { aceitaWhatsapp: false } });
@@ -340,10 +362,24 @@ async function main() {
       )).statusCode === 403,
     );
 
+    /**
+     * O rastreio marcado com E2E- é o que permite ao `zerar` distinguir a
+     * encomenda da suíte de uma encomenda de verdade.
+     *
+     * Sem a marca elas eram indistinguíveis de "Correios sem rastreio", que é
+     * um registro legítimo, então o `zerar` não podia apagá-las: 69 encomendas
+     * de teste tinham se acumulado na demo ao longo desta sessão, e a home do
+     * porteiro mostrava "36 retiradas hoje" que ninguém fez.
+     */
+    let seqPacote = 0;
     const novoPacote = async () =>
       (await req<{ id: string }>("POST", "/portaria/pacotes", {
         token: porteiro,
-        corpo: { unidadeId: unidade.id, transportadora: "Correios" },
+        corpo: {
+          unidadeId: unidade.id,
+          transportadora: "Correios",
+          codigoRastreio: `${MARCA_E2E}${++seqPacote}`,
+        },
       })).id;
 
     const p1 = await novoPacote();
