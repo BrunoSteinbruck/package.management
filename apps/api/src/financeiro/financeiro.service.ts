@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import type {
   CobrancaGestor,
@@ -265,9 +266,22 @@ export class FinanceiroService {
     const vencimento = vencimentoDa(competencia, diaVencimento);
     const inicio = inicioDaCompetencia(competencia);
 
-    const apiKey = integracao?.ativo
-      ? decifrar(integracao.apiKeyCifrada)
-      : "sem-credencial";
+    // `decifrar` lança cru se a FINANCEIRO_CRIPTO_CHAVE do servidor não for
+    // mais a que cifrou a credencial (troca de chave, restauração de backup em
+    // outra máquina). Sem isto o síndico clicava "Gerar boletos" e recebia um
+    // 500 com texto de biblioteca de cripto, que não diz a ninguém o que
+    // fazer. O dado no banco está intacto: falta a chave.
+    let apiKey = "sem-credencial";
+    if (integracao?.ativo) {
+      try {
+        apiKey = decifrar(integracao.apiKeyCifrada);
+      } catch {
+        throw new ServiceUnavailableException(
+          "A credencial de cobrança não pôde ser lida: a chave de criptografia do servidor mudou. " +
+            "Cadastre a credencial do provedor novamente em Financeiro.",
+        );
+      }
+    }
 
     const { criadas, puladas, naoCobradas } = await this.prisma.withTenant(
       condominioId,

@@ -10,6 +10,7 @@ import type {
   RegistrarRetiradaDto,
   ResolverQrDto,
 } from "@pacotes/shared";
+import { termoLiteral } from "../common/busca.util";
 import { PrismaService } from "../prisma/prisma.service";
 import type { QrPayload } from "../morador/morador.service";
 
@@ -236,7 +237,7 @@ export class PortariaService {
       where.recebidoEm = { gte: new Date(Date.now() - filtro.dias * 86_400_000) };
     }
     if (filtro.busca) {
-      const q = filtro.busca.trim();
+      const q = termoLiteral(filtro.busca.trim());
       where.OR = [
         { codigoRastreio: { contains: q, mode: "insensitive" } },
         { transportadora: { contains: q, mode: "insensitive" } },
