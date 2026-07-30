@@ -36,13 +36,17 @@ export function Login({ aoEntrar }: { aoEntrar: (perfil: JwtPayload) => void }) 
         "/auth/otp/verify",
         {
           method: "POST",
-          body: { telefone: telefone.replace(/\D/g, ""), codigo: codigo.trim() },
+          // `somenteEquipe` faz o servidor recusar o morador sem consumir o
+          // código. Antes a recusa era aqui, depois do token já emitido: o
+          // morador que errava de porta queimava o OTP e, com o limite de
+          // três por hora, se trancava fora do próprio aplicativo.
+          body: {
+            telefone: telefone.replace(/\D/g, ""),
+            codigo: codigo.trim(),
+            somenteEquipe: true,
+          },
         },
       );
-      if (res.perfil.tipo !== "usuario") {
-        setErro("Este painel é para a equipe do condomínio.");
-        return;
-      }
       salvarSessao(res.token, res.perfil);
       aoEntrar(res.perfil);
     } catch (e) {
@@ -102,7 +106,15 @@ export function Login({ aoEntrar }: { aoEntrar: (perfil: JwtPayload) => void }) 
             <button
               className="outline"
               style={{ marginTop: 8, width: "100%" }}
-              onClick={() => setFase("telefone")}
+              onClick={() => {
+                // Sem limpar, o código do telefone anterior ficava no campo e
+                // o botão Entrar continuava habilitado: o usuário mandava um
+                // código que nunca viu e levava "código incorreto", gastando
+                // tentativa do desafio novo.
+                setCodigo("");
+                setErro(null);
+                setFase("telefone");
+              }}
             >
               Trocar telefone
             </button>

@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -150,7 +151,7 @@ export class AuthService {
   async verifyOtp(
     telefone: string,
     codigo: string,
-    extra?: { nome?: string; convite?: string },
+    extra?: { nome?: string; convite?: string; somenteEquipe?: boolean },
   ) {
     const challenge = await this.prisma.otpChallenge.findUnique({
       where: { telefone },
@@ -193,6 +194,16 @@ export class AuthService {
       where: { telefone },
     });
     if (morador) {
+      // O painel pede `somenteEquipe`. A recusa vem ANTES de encerrar o
+      // desafio: o morador que errou de porta não perde o código, e não gasta
+      // uma das três solicitações por hora. A checagem só é alcançada por
+      // quem já provou o código, então não vira sonda de "este telefone é da
+      // equipe?".
+      if (extra?.somenteEquipe) {
+        throw new ForbiddenException(
+          "Este painel é para a equipe do condomínio. Moradores usam o aplicativo Convivar.",
+        );
+      }
       await encerrar();
       const payload: JwtPayload = {
         sub: morador.id,

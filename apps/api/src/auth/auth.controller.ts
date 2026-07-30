@@ -33,6 +33,7 @@ export class AuthController {
     return this.auth.verifyOtp(body.telefone, body.codigo, {
       nome: body.nome,
       convite: body.convite,
+      somenteEquipe: body.somenteEquipe,
     });
   }
 }

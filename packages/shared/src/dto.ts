@@ -36,6 +36,16 @@ export const VerifyOtpSchema = z.object({
   // criam o morador e o vínculo na hora (confiança transitiva).
   nome: z.string().min(2).max(120).optional(),
   convite: z.string().min(4).max(12).optional(),
+  /**
+   * O painel só aceita a equipe do condomínio.
+   *
+   * Sem isto o servidor entregava o token ao morador e a recusa acontecia no
+   * cliente, depois do código já ter sido consumido: o morador que digitasse
+   * o telefone no painel por engano queimava o OTP e, com o limite de 3 por
+   * hora, se trancava fora do proprio app. Com a flag, a checagem acontece
+   * antes de encerrar o desafio, e o código continua valendo.
+   */
+  somenteEquipe: z.boolean().optional(),
 });
 export type VerifyOtpDto = z.infer<typeof VerifyOtpSchema>;
 

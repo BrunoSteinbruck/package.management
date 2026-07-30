@@ -70,6 +70,68 @@ async function login(telefone: string): Promise<string> {
   return r.token;
 }
 
+/** Pede o OTP e devolve o status do envio, sem verificar ainda. */
+async function pedirOtp(telefone: string): Promise<void> {
+  const pedido = await req<{ statusCode?: number }>("POST", "/auth/otp/request", {
+    corpo: { telefone },
+  });
+  if (pedido.statusCode === 429) {
+    throw new Error(
+      `Rate limit de OTP atingido para ${telefone}. ` +
+        "São 3 execuções por hora; reinicie a API de dev para zerar o contador.",
+    );
+  }
+}
+
+/** Verifica pela porta do painel, que só aceita a equipe do condomínio. */
+async function verificarPelaPortaDoPainel(
+  telefone: string,
+  jaPediu = false,
+): Promise<{ status: number; token?: string; tipo?: string }> {
+  if (!jaPediu) await pedirOtp(telefone);
+  const res = await fetch(`${API}/auth/otp/verify`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ telefone, codigo: "246810", somenteEquipe: true }),
+  });
+  const corpo = (await res.json().catch(() => ({}))) as {
+    token?: string;
+    perfil?: { tipo?: string };
+  };
+  if (!jaPediu) {
+    checa(`${telefone} entra pelo painel`, !!corpo.token && corpo.perfil?.tipo === "usuario");
+  }
+  return { status: res.status, token: corpo.token, tipo: corpo.perfil?.tipo };
+}
+
+/**
+ * O morador erra de porta, é recusado, e o código dele CONTINUA valendo.
+ *
+ * O painel checava o perfil depois de verificar o OTP, no cliente: o morador
+ * que digitasse o telefone ali por engano recebia a recusa com o código já
+ * consumido e, com o limite de três envios por hora, se trancava fora do
+ * próprio aplicativo. A recusa passou a acontecer antes de encerrar o
+ * desafio, e é isto que a sequência abaixo prova.
+ *
+ * Também é como o morador loga para o resto da suíte: um OTP só.
+ */
+async function loginDeMoradorRecusadoNoPainel(telefone: string): Promise<string> {
+  await pedirOtp(telefone);
+  const recusa = await verificarPelaPortaDoPainel(telefone, true);
+  checa("morador no painel leva 403", recusa.status === 403, String(recusa.status));
+  checa("e nenhum token é emitido", !recusa.token);
+
+  const noApp = await req<{ token?: string; perfil?: { tipo?: string } }>(
+    "POST",
+    "/auth/otp/verify",
+    { corpo: { telefone, codigo: "246810" } },
+  );
+  checa("o código sobrevive à recusa e entra no app", !!noApp.token);
+  checa("e entra como morador", noApp.perfil?.tipo === "morador");
+  if (!noApp.token) throw new Error(`Login do morador falhou: ${JSON.stringify(noApp)}`);
+  return noApp.token;
+}
+
 /** RLS por transação, como a API faz. O cid vem do nosso próprio banco. */
 function comTenant<T>(
   cid: string,
@@ -134,9 +196,14 @@ async function main() {
     process.exit(2);
   }
 
-  const sindico = await login("51900000001");
   const porteiro = await login("51900000002");
-  const morador = await login("51900000003");
+
+  // Síndico e morador entram pelo caminho do painel, de propósito: as
+  // asserções abaixo saem de graça, sem gastar uma segunda solicitação de OTP
+  // dos três que o telefone tem por hora.
+  console.log("\n== Login do painel: morador recusado sem perder o código ==");
+  const { token: sindico } = await verificarPelaPortaDoPainel("51900000001");
+  const morador = await loginDeMoradorRecusadoNoPainel("51900000003");
 
   // O tenant vem do próprio síndico de demo, e não de um findFirst genérico:
   // o seed tem mais de um condomínio com síndico, e olhar o banco pelo tenant
