@@ -320,7 +320,6 @@ function VisaoGeral({
   }, [temFinanceiro, temVisitantes]);
 
   const maxSerie = Math.max(1, ...serie.map((d) => Math.max(d.entradas, d.retiradas)));
-  const clicavel = { cursor: "pointer" } as const;
 
   return (
     <>
@@ -340,10 +339,10 @@ function VisaoGeral({
           inteira, vira o terceiro bloco. */}
       {gestor && (
         <div className="metricas">
-          <div
-            className="metrica"
+          <button
+            type="button"
+            className="metrica metrica-acao"
             onClick={() => aoNavegar("ocorrencias")}
-            style={clicavel}
           >
             <div className={`valor ${ocorrenciasAbertas > 0 ? "" : "verde"}`}>
               {ocorrenciasAbertas}
@@ -352,11 +351,11 @@ function VisaoGeral({
             <div className="sub">
               {ocorrenciasAbertas > 0 ? "aguardando resposta" : "fila limpa"}
             </div>
-          </div>
-          <div
-            className="metrica"
+          </button>
+          <button
+            type="button"
+            className="metrica metrica-acao"
             onClick={() => aoNavegar("moradores")}
-            style={clicavel}
           >
             <div className={`valor ${pendentesAprovacao > 0 ? "" : "verde"}`}>
               {pendentesAprovacao}
@@ -365,12 +364,12 @@ function VisaoGeral({
             <div className="sub">
               {pendentesAprovacao > 0 ? "cadastro aguardando" : "ninguém esperando"}
             </div>
-          </div>
+          </button>
           {temFinanceiro && financeiro && (
-            <div
-              className="metrica"
+            <button
+              type="button"
+              className="metrica metrica-acao"
               onClick={() => aoNavegar("financeiro")}
-              style={clicavel}
             >
               <div
                 className={`valor ${financeiro.inadimplencia > 0 ? "" : "verde"}`}
@@ -386,18 +385,18 @@ function VisaoGeral({
                 {financeiro.unidadesPagas} de {financeiro.unidadesCobradas}{" "}
                 unidades pagaram
               </div>
-            </div>
+            </button>
           )}
           {temVisitantes && (
-            <div
-              className="metrica"
+            <button
+              type="button"
+              className="metrica metrica-acao"
               onClick={() => aoNavegar("visitantes")}
-              style={clicavel}
             >
               <div className="valor">{visitasHoje ?? "-"}</div>
               <div className="rotulo">visitas esperadas hoje</div>
               <div className="sub">pré-autorizadas pelos moradores</div>
-            </div>
+            </button>
           )}
         </div>
       )}
@@ -771,8 +770,9 @@ function RelatoriosView() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <section className="card">
           <h2>Volume por transportadora</h2>
-          {dados?.porTransportadora.map((t) => (
-            <div className="barra-h" key={t.nome}>
+          {dados?.porTransportadora.map((t, i) => (
+            // Índice na chave: o nome vem do banco e já colidiu uma vez.
+            <div className="barra-h" key={`${i}-${t.nome}`}>
               <div className="nome">{t.nome}</div>
               <div className="trilha">
                 <div className="preenchimento" style={{ width: `${t.pct}%` }} />

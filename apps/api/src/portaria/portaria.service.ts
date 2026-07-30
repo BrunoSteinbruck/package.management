@@ -293,12 +293,29 @@ export class PortariaService {
         where: { recebidoEm: { gte: desde } },
         _count: { id: true },
       });
+      /**
+       * Encomenda sem transportadora registrada é "Não informada", e não
+       * "Outras".
+       *
+       * As duas coisas chamavam "Outras": o grupo de `transportadora = null`
+       * (comum, o porteiro registra sem etiqueta) e o balde da cauda depois do
+       * top 4. Quando o grupo nulo caía no top, o relatório mostrava DUAS
+       * linhas "Outras" com números diferentes, e o React avisava de chave
+       * duplicada, cujo efeito documentado é omitir ou duplicar filhos. São
+       * fatos diferentes e agora têm nomes diferentes.
+       */
       const ordenados = grupos
-        .map((g) => ({ nome: g.transportadora ?? "Outras", qtd: g._count.id }))
+        .map((g) => ({ nome: g.transportadora ?? "Não informada", qtd: g._count.id }))
         .sort((a, b) => b.qtd - a.qtd);
       const top = ordenados.slice(0, 4);
       const resto = ordenados.slice(4).reduce((soma, g) => soma + g.qtd, 0);
-      if (resto > 0) top.push({ nome: "Outras", qtd: resto });
+      if (resto > 0) {
+        // Rede de segurança: se uma transportadora se chamar literalmente
+        // "Outras", soma em vez de criar a segunda linha com o mesmo nome.
+        const existente = top.find((g) => g.nome === "Outras");
+        if (existente) existente.qtd += resto;
+        else top.push({ nome: "Outras", qtd: resto });
+      }
       const porTransportadora = top.map((g) => ({
         ...g,
         pct: volume > 0 ? Math.round((g.qtd / volume) * 100) : 0,
