@@ -15,6 +15,27 @@ export const TelefoneSchema = z
   .regex(/^\+?\d{10,14}$/, "Telefone inválido (use DDD + número, só dígitos)");
 
 /**
+ * Texto opcional em que "em branco" quer dizer AUSENTE, não string vazia.
+ *
+ * As telas escrevem `dado ?? "padrão"`, que cobre null e não cobre `""`: uma
+ * encomenda gravada com `transportadora: "   "` aparecia SEM TÍTULO na home
+ * do morador, um cartão em branco com uma data. Reproduzido contra a API, que
+ * aceitava e devolvia os três espaços intactos. O trim na borda faz o `??` do
+ * cliente voltar a funcionar em vez de exigir a mesma defesa em cada tela.
+ *
+ * O `.max()` vem antes do trim: aparar 1 MB de espaço para depois recusar é
+ * trabalho jogado fora.
+ */
+export function textoOpcional(max: number) {
+  return z
+    .string()
+    .max(max)
+    .transform((s) => s.trim())
+    .transform((s) => (s === "" ? undefined : s))
+    .optional();
+}
+
+/**
  * Key de foto como o upload emite (uuid + extensão de imagem). Espelha o
  * KEY_FOTO_SEGURA que a API usa ao servir: validar também na entrada impede
  * gravar lixo ou caminho no lugar de uma key.
@@ -56,11 +77,11 @@ export type EmitirConviteDto = z.infer<typeof EmitirConviteSchema>;
 
 export const RegistrarPacoteSchema = z.object({
   unidadeId: z.string().uuid(),
-  transportadora: z.string().max(120).optional(),
-  codigoRastreio: z.string().max(120).optional(),
-  notaFiscal: z.string().max(120).optional(),
+  transportadora: textoOpcional(120),
+  codigoRastreio: textoOpcional(120),
+  notaFiscal: textoOpcional(120),
   fotoEntradaKey: FotoKeySchema.optional(),
-  localArmazenamento: z.string().max(120).optional(),
+  localArmazenamento: textoOpcional(120),
 });
 export type RegistrarPacoteDto = z.infer<typeof RegistrarPacoteSchema>;
 
@@ -215,8 +236,8 @@ export type CriarVagasDto = z.infer<typeof CriarVagasSchema>;
 export const CriarVeiculoSchema = z.object({
   unidadeId: z.string().uuid(),
   placa: PlacaSchema,
-  modelo: z.string().max(80).optional(),
-  cor: z.string().max(40).optional(),
+  modelo: textoOpcional(80),
+  cor: textoOpcional(40),
 });
 export type CriarVeiculoDto = z.infer<typeof CriarVeiculoSchema>;
 
@@ -229,7 +250,7 @@ export type IdentificarAlvoDto = z.infer<typeof IdentificarAlvoSchema>;
 export const CriarAvisoSchema = z.object({
   unidadeId: z.string().uuid(),
   motivo: z.string().min(1).max(120),
-  descricao: z.string().max(500).optional(),
+  descricao: textoOpcional(500),
   fotoKey: FotoKeySchema.optional(),
 });
 export type CriarAvisoDto = z.infer<typeof CriarAvisoSchema>;
@@ -238,7 +259,7 @@ export type CriarAvisoDto = z.infer<typeof CriarAvisoSchema>;
 export const CriarOcorrenciaSchema = z.object({
   unidadeId: z.string().uuid(),
   categoria: z.string().min(1).max(120),
-  descricao: z.string().max(500).optional(),
+  descricao: textoOpcional(500),
   fotoKey: FotoKeySchema.optional(),
 });
 export type CriarOcorrenciaDto = z.infer<typeof CriarOcorrenciaSchema>;
