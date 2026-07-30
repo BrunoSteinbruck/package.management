@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import eas from "../eas.json";
 
 /**
  * O perfil `production` do eas.json não definia `EXPO_PUBLIC_API_URL`.
@@ -14,14 +13,13 @@ import { describe, expect, it } from "vitest";
  * O erro é invisível em desenvolvimento (onde o `.env` local preenche a
  * variável) e só aparece no aparelho de outra pessoa. Por isso vira teste: é
  * exatamente a classe de defeito que não se descobre rodando o projeto.
+ *
+ * O JSON é importado, e não lido do disco: `apps/mobile` é um app React
+ * Native e o tsconfig dele não tem os tipos de Node de propósito.
  */
-const eas = JSON.parse(
-  readFileSync(join(__dirname, "..", "eas.json"), "utf8"),
-) as {
-  build: Record<string, { env?: Record<string, string>; developmentClient?: boolean }>;
-};
+type Perfil = { env?: Record<string, string>; developmentClient?: boolean };
 
-const distribuiveis = Object.entries(eas.build).filter(
+const distribuiveis = Object.entries(eas.build as Record<string, Perfil>).filter(
   ([nome, perfil]) => !perfil.developmentClient && nome !== "development",
 );
 
