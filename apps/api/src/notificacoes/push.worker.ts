@@ -5,6 +5,7 @@ import {
   OnModuleInit,
 } from "@nestjs/common";
 import { gerarCodigoConvite } from "../common/convite.util";
+import { hojeNoFuso, somarDias } from "../financeiro/competencia.util";
 import { PrismaService } from "../prisma/prisma.service";
 import { SmsService } from "../sms/sms.service";
 import { WhatsAppService } from "../whatsapp/whatsapp.service";
@@ -70,7 +71,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     this.rodando = true;
     try {
       const condominios = await this.prisma.condominio.findMany({
-        select: { id: true, nome: true },
+        select: { id: true, nome: true, timezone: true },
       });
       for (const condominio of condominios) {
         await this.processarCondominio(condominio);
@@ -83,7 +84,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         for (const condominio of condominios) {
           await this.lembretesDoCondominio(condominio.id);
           await this.expurgarDocumentosDeVisita(condominio.id);
-          await this.reguaDeCobranca(condominio.id);
+          await this.reguaDeCobranca(condominio.id, condominio.timezone);
         }
       }
     } catch (e) {
@@ -443,7 +444,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
    *
    * Só roda com a régua ligada na configuração do condomínio.
    */
-  private async reguaDeCobranca(condominioId: string) {
+  private async reguaDeCobranca(condominioId: string, timezone: string) {
     // Dentro do tenant: `config_financeiro` tem RLS, e ler fora devolveria
     // null, o que desligaria a régua em silêncio para todo mundo.
     const cfg = await this.prisma.withTenant(condominioId, (tx) =>
@@ -451,16 +452,27 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     );
     if (!cfg?.reguaAtiva) return;
 
-    const hoje = new Date().toISOString().slice(0, 10);
-    const daquiATres = new Date(Date.now() + 3 * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
+    const hoje = hojeNoFuso(timezone);
+    const daquiATres = somarDias(hoje, 3);
 
     await this.prisma.withTenant(condominioId, async (tx) => {
+      // Janela, e não igualdade exata na data.
+      //
+      // O `vencimento: new Date(daquiATres)` de antes só pegava as cobranças
+      // daquele dia específico. Qualquer dia que o worker não rodasse (deploy,
+      // reinício, a máquina fora do ar) sumia para sempre: no ciclo seguinte a
+      // data já era outra, e aquele lote de moradores nunca recebia o
+      // lembrete. O `hoje` em UTC produzia o mesmo buraco toda noite, das 21h
+      // à meia-noite no horário de Brasília. Com a janela, o ciclo seguinte
+      // recupera o que ficou para trás, e a dedup por COBRANCA_LEMBRETE
+      // continua garantindo um aviso só por cobrança.
       const aVencer = await tx.cobranca.findMany({
         where: {
           status: "PENDENTE",
-          vencimento: new Date(`${daquiATres}T00:00:00.000Z`),
+          vencimento: {
+            gte: new Date(`${hoje}T00:00:00.000Z`),
+            lte: new Date(`${daquiATres}T00:00:00.000Z`),
+          },
           notificacoes: { none: { tipo: "COBRANCA_LEMBRETE" } },
         },
         select: { id: true },

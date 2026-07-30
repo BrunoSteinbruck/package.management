@@ -14,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { perfilDe, type JwtPayload } from "@pacotes/shared";
 import { apiFetch, NetworkError } from "../api/client";
+import { limparEstado } from "../api/estadoLeituras";
 import { drenarFila, tamanhoFila } from "../api/offlineQueue";
 import { relatarDrenagem } from "../api/relatoDrenagem";
 import { excluirConta } from "../api/excluirConta";
@@ -55,6 +56,14 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
       setResumo(await apiFetch<Resumo>("/portaria/resumo"));
       setOnline(true);
       const drenagem = await drenarFila();
+      // O progresso do mês anda no cache local assim que a leitura é salva,
+      // inclusive quando ela só entrou na fila: é o que deixa o zelador saber
+      // o que falta no subsolo, sem sinal. Se o servidor depois recusa, o
+      // cache fica dizendo "lida" para uma unidade que não foi: joga fora e
+      // deixa a tela de Leituras buscar a verdade.
+      if (drenagem.descartadas.some((d) => d.path === "/leituras" && !d.perdeuFoto)) {
+        limparEstado();
+      }
       const relato = relatarDrenagem(drenagem);
       if (relato) {
         setFila(drenagem.restantes);

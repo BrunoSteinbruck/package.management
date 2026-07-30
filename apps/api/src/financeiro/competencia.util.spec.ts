@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   competenciaAtual,
   diasEntre,
+  hojeNoFuso,
   inicioDaCompetencia,
   nomeDaCompetencia,
+  somarDias,
   vencimentoDa,
 } from "./competencia.util";
 
@@ -52,5 +54,33 @@ describe("calendário do financeiro", () => {
   it("nome da competência sai por extenso para a descrição do boleto", () => {
     expect(nomeDaCompetencia("2026-07")).toBe("julho de 2026");
     expect(nomeDaCompetencia("2026-01")).toBe("janeiro de 2026");
+  });
+
+  it("hoje no fuso do condomínio não vira antes da meia-noite dele", () => {
+    // 22h de Brasília já é o dia seguinte em UTC. Era aqui que a régua de
+    // cobrança pulava um dia inteiro de lembretes, todas as noites.
+    const noite = new Date("2026-07-31T01:30:00.000Z");
+    expect(hojeNoFuso("America/Sao_Paulo", noite)).toBe("2026-07-30");
+    expect(hojeNoFuso("UTC", noite)).toBe("2026-07-31");
+  });
+
+  it("hoje no fuso atravessa a virada de ano do lado certo", () => {
+    const reveillon = new Date("2027-01-01T02:00:00.000Z");
+    expect(hojeNoFuso("America/Sao_Paulo", reveillon)).toBe("2026-12-31");
+  });
+
+  it("somar dias atravessa mês, ano e fevereiro bissexto", () => {
+    expect(somarDias("2026-07-30", 3)).toBe("2026-08-02");
+    expect(somarDias("2026-12-30", 3)).toBe("2027-01-02");
+    expect(somarDias("2028-02-27", 3)).toBe("2028-03-01");
+    expect(somarDias("2026-07-30", 0)).toBe("2026-07-30");
+    expect(somarDias("2026-08-02", -3)).toBe("2026-07-30");
+  });
+
+  it("somar dias não escorrega no horário de verão", () => {
+    // A conta é feita em UTC de propósito: um fuso com DST encolheria o dia
+    // e o `+3` cairia no dia anterior às 23h.
+    expect(diasEntre("2026-10-15", somarDias("2026-10-15", 3))).toBe(3);
+    expect(diasEntre("2026-02-12", somarDias("2026-02-12", 3))).toBe(3);
   });
 });

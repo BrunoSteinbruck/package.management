@@ -10,15 +10,34 @@ export function inicioDaCompetencia(competencia: string): Date {
   return new Date(`${competencia}-01T00:00:00.000Z`);
 }
 
-/** A competência do mês corrente no fuso do condomínio. */
-export function competenciaAtual(timezone: string, agora = new Date()): string {
-  const iso = new Intl.DateTimeFormat("en-CA", {
+/**
+ * O dia corrente NO FUSO DO CONDOMÍNIO, em AAAA-MM-DD.
+ *
+ * `new Date().toISOString()` converte para UTC antes de cortar: no Brasil,
+ * das 21h à meia-noite o "hoje" do servidor já é amanhã. Isso adiantava o
+ * atraso mostrado ao morador e, na régua de cobrança, deslocava a data que o
+ * `findMany` compara por igualdade exata: o lote daquele dia não era pego
+ * naquela rodada nem em nenhuma outra, e o lembrete nunca saía.
+ */
+export function hojeNoFuso(timezone: string, agora = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(agora);
-  return iso.slice(0, 7);
+}
+
+/** A competência do mês corrente no fuso do condomínio. */
+export function competenciaAtual(timezone: string, agora = new Date()): string {
+  return hojeNoFuso(timezone, agora).slice(0, 7);
+}
+
+/** Soma dias a uma data AAAA-MM-DD, sem passar por fuso nenhum. */
+export function somarDias(data: string, dias: number): string {
+  const d = new Date(`${data}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
 }
 
 /**

@@ -238,7 +238,8 @@ label { font-size: 13px; color: var(--texto-2); display: block; margin-bottom: 5
 .grafico-horario .coluna { width: 100%; border-radius: 6px 6px 0 0; background: var(--acao); min-height: 3px; }
 .grafico-horario .rotulo { font-size: 11px; color: var(--texto-3); white-space: nowrap; }
 
-.paginacao { display: flex; gap: 6px; margin-top: 14px; justify-content: flex-end; }
+.paginacao { display: flex; gap: 6px; margin-top: 14px; justify-content: flex-end; align-items: center; }
+.paginacao-salto { min-width: 20px; text-align: center; color: var(--texto-3); font-size: 13px; }
 .paginacao button {
   min-width: 34px;
   height: 34px;

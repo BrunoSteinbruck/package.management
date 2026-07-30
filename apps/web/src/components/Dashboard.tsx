@@ -22,6 +22,7 @@ import {
   type VinculoPendente,
 } from "@pacotes/shared";
 import { apiFetch, API_URL, limparSessao } from "@/lib/api";
+import { janelaDePaginas, RETICENCIAS } from "@/lib/paginacao";
 import { ComunicadosView } from "./ComunicadosView";
 import { ConfiguracoesView } from "./ConfiguracoesView";
 import { ConsumosView } from "./ConsumosView";
@@ -577,6 +578,20 @@ function PacotesView() {
           >
             Na portaria{dados && filtroStatus === "ARMAZENADO" ? ` · ${dados.total}` : ""}
           </button>
+          {/* Os três status são excludentes e nenhum desmarca: sem esta opção
+              não havia como ver a lista inteira, e a busca só encontrava
+              dentro do filtro ativo. Procurar uma encomenda já entregue a
+              partir da tela padrão não devolvia nada, como se ela não
+              existisse. */}
+          <button
+            className={`chip ${filtroStatus === "" ? "ativo" : ""}`}
+            onClick={() => {
+              setFiltroStatus("");
+              setPagina(1);
+            }}
+          >
+            Todos{dados && filtroStatus === "" ? ` · ${dados.total}` : ""}
+          </button>
           <button
             className={`chip ${filtroStatus === "ENTREGUE" ? "ativo" : ""}`}
             onClick={() => {
@@ -668,15 +683,21 @@ function PacotesView() {
         </table>
         {totalPaginas > 1 && (
           <div className="paginacao">
-            {Array.from({ length: Math.min(totalPaginas, 8) }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                className={n === pagina ? "ativa" : ""}
-                onClick={() => setPagina(n)}
-              >
-                {n}
-              </button>
-            ))}
+            {janelaDePaginas(pagina, totalPaginas).map((item, i) =>
+              item === RETICENCIAS ? (
+                <span key={`sep-${i}`} className="paginacao-salto">
+                  {RETICENCIAS}
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  className={item === pagina ? "ativa" : ""}
+                  onClick={() => setPagina(item)}
+                >
+                  {item}
+                </button>
+              ),
+            )}
           </div>
         )}
       </section>

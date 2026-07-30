@@ -17,8 +17,19 @@ function dataCurta(iso: string): string {
   return `${dia}/${mes}/${ano.slice(2)}`;
 }
 
+/**
+ * Hoje no fuso de quem está olhando, não em UTC.
+ *
+ * `toISOString()` converte para UTC antes de cortar: no Brasil, a despesa
+ * lançada depois das 21h vinha com a data do dia seguinte já preenchida. O
+ * síndico não repara, e a competência fecha com o lançamento no mês errado
+ * na virada do mês.
+ */
 function hojeIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
 }
 
 /**

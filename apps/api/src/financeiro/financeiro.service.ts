@@ -23,6 +23,7 @@ import { CobrancaProviderService } from "./cobranca.provider";
 import { cifrar, criptoConfigurado, decifrar } from "./cripto.util";
 import {
   competenciaAtual,
+  hojeNoFuso,
   inicioDaCompetencia,
   nomeDaCompetencia,
   vencimentoDa,
@@ -411,7 +412,7 @@ export class FinanceiroService {
         orderBy: [{ status: "asc" }, { unidade: { identificacao: "asc" } }],
       }),
     );
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = hojeNoFuso(condominio.timezone);
     return linhas.map((c) => {
       const base = paraMorador(c);
       const atraso =
