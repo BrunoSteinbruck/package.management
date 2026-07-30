@@ -146,6 +146,15 @@ async function main() {
     select: { condominioId: true },
   });
   const cid = donoDaConta.condominioId;
+  // As flags de módulo voltam como estavam NO FIM da suíte. Zerá-las e não
+  // devolver apagava o menu do painel/app de quem estava explorando a demo:
+  // a pessoa recarregava e "sumiu tudo", três vezes seguidas.
+  const modulosOriginais = (
+    await prisma.condominio.findUniqueOrThrow({
+      where: { id: cid },
+      select: { modulos: true },
+    })
+  ).modulos;
   await zerar(cid);
 
   // ===== Onda 0: flags e capacidades =====
@@ -1066,6 +1075,10 @@ async function main() {
 
   // ---------- fim ----------
   await zerar(cid);
+  await prisma.condominio.update({
+    where: { id: cid },
+    data: { modulos: modulosOriginais },
+  });
   await prisma.$disconnect();
 
   console.log(
