@@ -85,6 +85,7 @@ export function ArmazenadosScreen({
             <TextInput
               style={styles.inputBusca}
               placeholder="Unidade, transportadora…"
+              maxLength={60}
               placeholderTextColor={theme.colors.textFaint}
               value={busca}
               onChangeText={setBusca}

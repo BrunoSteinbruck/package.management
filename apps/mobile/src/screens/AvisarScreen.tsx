@@ -215,6 +215,7 @@ export function AvisarScreen({ navigation }: Props) {
               <TextInput
                 style={styles.campoBusca}
                 placeholder="Buscar: 302, B..."
+                maxLength={60}
                 placeholderTextColor={theme.colors.textFaint}
                 value={busca}
                 onChangeText={setBusca}
@@ -242,6 +243,7 @@ export function AvisarScreen({ navigation }: Props) {
         <TextInput
           style={styles.campo}
           placeholder="Ex.: farol aceso, vaga 42"
+          maxLength={500}
           placeholderTextColor={theme.colors.textFaint}
           value={descricao}
           onChangeText={setDescricao}

@@ -18,6 +18,7 @@ import {
   limparEstado,
   registrarNoCache,
 } from "../api/estadoLeituras";
+import { lerLeituraDigitada } from "../api/medidorParser";
 import { proximasPendentes } from "../api/rodada";
 import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
 import { registrarLimpezaDeSessao } from "../api/session";
@@ -105,10 +106,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
     return { filtradas: unidades.slice(0, 12), sugerindoPendentes: false };
   }, [busca, unidades, tipo]);
 
-  const valor = useMemo(() => {
-    const n = Number(valorTexto.replace(",", "."));
-    return valorTexto.trim() !== "" && Number.isFinite(n) && n >= 0 ? n : null;
-  }, [valorTexto]);
+  const valor = useMemo(() => lerLeituraDigitada(valorTexto), [valorTexto]);
 
   // Anterior e "já lida" vêm do cache do estado carregado na tela Leituras:
   // funciona no subsolo sem sinal.
@@ -226,6 +224,10 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
               placeholder="0000"
               placeholderTextColor={theme.colors.textFaint}
               keyboardType="decimal-pad"
+              // O servidor aceita até 999.999.999: nenhum hidrômetro tem mais
+              // dígitos que isso, e sem teto o campo aceitava um número que só
+              // era recusado no envio, depois da foto tirada.
+              maxLength={13}
               autoFocus={sugestao === null}
             />
             <Text style={styles.hintValor}>
@@ -271,6 +273,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
               <TextInput
                 style={styles.campoBusca}
                 placeholder="Buscar: 302, B..."
+                maxLength={60}
                 placeholderTextColor={theme.colors.textFaint}
                 value={busca}
                 onChangeText={setBusca}

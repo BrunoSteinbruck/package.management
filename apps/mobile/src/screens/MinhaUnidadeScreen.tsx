@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { placaValida } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
@@ -83,8 +84,13 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
     }
   }
 
+  // A mesma regra do servidor, importada e não recopiada: o botão só acende
+  // com uma placa que o `PlacaSchema` vai aceitar. Antes bastavam 6
+  // caracteres, então "ABCDEF" ia ao servidor só para voltar recusado.
+  const placaOk = placaValida(placa.trim());
+
   async function adicionarVeiculo() {
-    if (placa.trim().length < 6) return;
+    if (!placaOk) return;
     setSalvandoVeiculo(true);
     try {
       await apiFetch("/morador/veiculos", {
@@ -231,6 +237,7 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
             <TextInput
               style={[styles.inputVeiculo, { flex: 1.2 }]}
               placeholder="Placa"
+              maxLength={20}
               placeholderTextColor={theme.colors.textFaint}
               autoCapitalize="characters"
               value={placa}
@@ -239,14 +246,15 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
             <TextInput
               style={[styles.inputVeiculo, { flex: 1.5 }]}
               placeholder="Modelo (opcional)"
+              maxLength={80}
               placeholderTextColor={theme.colors.textFaint}
               value={modelo}
               onChangeText={setModelo}
             />
             <Pressable
-              style={[styles.addVeiculo, { opacity: placa.trim().length < 6 ? 0.4 : 1 }]}
+              style={[styles.addVeiculo, { opacity: placaOk ? 1 : 0.4 }]}
               onPress={adicionarVeiculo}
-              disabled={salvandoVeiculo || placa.trim().length < 6}
+              disabled={salvandoVeiculo || !placaOk}
             >
               <Icone nome="mais" tamanho={20} cor="#FFF" traco={2.4} />
             </Pressable>

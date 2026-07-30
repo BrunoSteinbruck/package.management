@@ -216,6 +216,7 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
                 value={transportadora}
                 onChangeText={setTransportadora}
                 placeholder="ex.: Amazon"
+                maxLength={120}
                 placeholderTextColor={theme.colors.textFaint}
               />
             </View>
@@ -226,6 +227,7 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
                 value={rastreio}
                 onChangeText={setRastreio}
                 placeholder="lido pela câmera"
+                maxLength={120}
                 placeholderTextColor={theme.colors.textFaint}
                 autoCapitalize="characters"
               />
@@ -252,6 +254,7 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
               <TextInput
                 style={styles.campoBusca}
                 placeholder="Buscar: 302, B..."
+                maxLength={60}
                 placeholderTextColor={theme.colors.textFaint}
                 value={busca}
                 onChangeText={setBusca}

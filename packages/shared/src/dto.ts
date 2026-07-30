@@ -178,6 +178,18 @@ export function normalizarPlaca(placa: string): string {
 }
 const PLACA_REGEX = /^[A-Z]{3}\d[A-Z0-9]\d{2}$/; // Mercosul ABC1D23 e antiga ABC1234
 
+/**
+ * A mesma regra do schema, para o cliente poder habilitar o botão.
+ *
+ * O app checava só `length >= 6`: "ABCDEF" passava, ia ao servidor e voltava
+ * "Placa inválida" depois do toque. Com a regra exportada, a validação é a
+ * mesma nas duas pontas por construção, e não por duas cópias que combinam
+ * hoje e divergem na próxima mudança de formato.
+ */
+export function placaValida(texto: string): boolean {
+  return texto.length <= 20 && PLACA_REGEX.test(normalizarPlaca(texto));
+}
+
 export const PlacaSchema = z
   .string()
   // O teto vem ANTES do transform: `normalizarPlaca` varre a string inteira,

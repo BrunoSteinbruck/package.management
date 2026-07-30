@@ -156,6 +156,7 @@ export function ReportarScreen({ navigation }: Props) {
         <TextInput
           style={styles.campo}
           placeholder="Ex.: extintor do 3º andar fora do suporte"
+          maxLength={500}
           placeholderTextColor={theme.colors.textFaint}
           value={descricao}
           onChangeText={setDescricao}

@@ -156,6 +156,10 @@ export function LoginScreen(props: {
                 value={telefone}
                 onChangeText={aoDigitarTelefone}
                 placeholder="41 98888 0001"
+                // O servidor aceita 10 a 14 dígitos; com espaço e parêntese
+                // digitados à mão, 20 caracteres cobrem qualquer formato sem
+                // deixar colar um texto inteiro no campo.
+                maxLength={20}
                 placeholderTextColor={theme.colors.textFaint}
               />
             </View>
@@ -229,6 +233,7 @@ export function LoginScreen(props: {
               value={nome}
               onChangeText={setNome}
               placeholder="Nome e sobrenome"
+              maxLength={120}
               placeholderTextColor={theme.colors.textFaint}
             />
             <Rotulo estilo={{ marginTop: 14 }}>Código do convite</Rotulo>

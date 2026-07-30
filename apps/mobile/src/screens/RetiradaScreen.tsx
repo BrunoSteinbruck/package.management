@@ -118,6 +118,9 @@ export function RetiradaScreen({ navigation, route }: Props) {
   }
 
   const restantes = (pendentes?.length ?? 0) - selecionados.size;
+  // Uma letra só é começo de nome, não nome: o `recebidoPorNome` do servidor
+  // pede min(2), e a recusa chegaria depois da foto.
+  const nomeIncompleto = digitandoOutro && outroNome.trim().length === 1;
   const nomesDaUnidade = useMemo(() => moradores.map((m) => m.nome), [moradores]);
 
   return (
@@ -133,6 +136,7 @@ export function RetiradaScreen({ navigation, route }: Props) {
                 <TextInput
                   style={styles.inputBusca}
                   placeholder="Unidade (ex.: 302)"
+                  maxLength={60}
                   placeholderTextColor={theme.colors.textFaint}
                   value={busca}
                   onChangeText={setBusca}
@@ -275,15 +279,25 @@ export function RetiradaScreen({ navigation, route }: Props) {
                 />
               </View>
               {digitandoOutro && (
-                <TextInput
-                  style={styles.campoOutro}
-                  placeholder="Nome de quem retirou"
-                  placeholderTextColor={theme.colors.textFaint}
-                  value={outroNome}
-                  onChangeText={setOutroNome}
-                  maxLength={120}
-                  autoFocus
-                />
+                <>
+                  <TextInput
+                    style={styles.campoOutro}
+                    placeholder="Nome de quem retirou"
+                    placeholderTextColor={theme.colors.textFaint}
+                    value={outroNome}
+                    onChangeText={setOutroNome}
+                    maxLength={120}
+                    autoFocus
+                  />
+                  {nomeIncompleto && (
+                    // O servidor exige duas letras. Sem este aviso o porteiro
+                    // seguia com uma inicial, tirava a foto, e só então a
+                    // retirada era recusada: o fluxo inteiro perdido no fim.
+                    <Text style={styles.avisoOutro}>
+                      Escreva pelo menos duas letras do nome.
+                    </Text>
+                  )}
+                </>
               )}
             </>
           )}
@@ -291,7 +305,7 @@ export function RetiradaScreen({ navigation, route }: Props) {
             titulo={`Foto e entregar (${selecionados.size})`}
             icone="camera"
             altura={66}
-            desabilitado={selecionados.size === 0}
+            desabilitado={selecionados.size === 0 || nomeIncompleto}
             onPress={() =>
               navigation.navigate("SaidaCamera", {
                 pacoteIds: [...selecionados],
@@ -326,6 +340,12 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     fontSize: 15,
     color: theme.colors.text,
+    marginBottom: 12,
+  },
+  avisoOutro: {
+    fontSize: 13,
+    color: theme.colors.alerta,
+    marginTop: -6,
     marginBottom: 12,
   },
   tela: { flex: 1, backgroundColor: theme.colors.bg },

@@ -37,6 +37,24 @@ export function extrairLeituraMedidor(texto: string): {
 }
 
 /**
+ * A leitura que o zelador DIGITOU, com o mesmo rigor do que foi lido da foto.
+ *
+ * O campo usava `Number(texto.replace(",", "."))`, que aceita coisas que um
+ * teclado decimal nunca produz mas um "colar" produz: "0x10" virava 16 e
+ * "1e5" virava 100000, entrando na conta de consumo como se fossem leituras
+ * legítimas. E, do outro lado, "1.234,5" era recusado sem explicação, apesar
+ * de ser exatamente o que o OCR sugere para o mesmo medidor.
+ *
+ * Devolve null para tudo que não seja dígitos com separadores decimais.
+ */
+export function lerLeituraDigitada(texto: string): number | null {
+  const limpo = texto.trim();
+  if (!/^\d[\d.,]*$/.test(limpo)) return null;
+  const valor = normalizar(limpo);
+  return valor !== null && valor >= 0 ? valor : null;
+}
+
+/**
  * "1.234,5" e "1,234.5" viram 1234.5; "00458" vira 458. Com os dois
  * separadores, o que aparece por último é o decimal e o outro é milhar.
  * Separador único com até 3 dígitos à direita é tratado como decimal
