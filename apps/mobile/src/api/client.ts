@@ -19,9 +19,36 @@ export class ApiError extends Error {
 /** Erro de rede (sem resposta do servidor): candidato à fila offline. */
 export class NetworkError extends Error {}
 
+/**
+ * Quem quer saber que a sessão caiu no meio do uso.
+ *
+ * A validade era conferida SÓ na abertura do app. Na portaria, onde o
+ * aparelho fica ligado o turno inteiro sem nunca ser fechado, o token vencia
+ * com o app aberto e a partir dali toda tela respondia "Token inválido ou
+ * expirado" sem oferecer nada: nem o login, nem uma explicação. Agora o
+ * primeiro 401 de uma requisição autenticada devolve a tela de entrada.
+ */
+const ouvintesDeSessao = new Set<() => void>();
+
+export function assinarSessaoExpirada(fn: () => void): () => void {
+  ouvintesDeSessao.add(fn);
+  return () => ouvintesDeSessao.delete(fn);
+}
+
 export async function apiFetch<T>(
   path: string,
-  options: { method?: string; body?: unknown; token?: string } = {},
+  options: {
+    method?: string;
+    body?: unknown;
+    token?: string;
+    /**
+     * Marca as chamadas em que 401 é resposta esperada, e não fim de sessão:
+     * o login manda um código que pode estar errado, e a renovação testa
+     * justamente se o token ainda vale. Derrubar a sessão nesses casos
+     * jogaria fora um login em andamento.
+     */
+    ignorar401?: boolean;
+  } = {},
 ): Promise<T> {
   const token = options.token ?? (await carregarSessao())?.token;
   let res: Response;
@@ -39,6 +66,9 @@ export async function apiFetch<T>(
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401 && token && !options.ignorar401) {
+      for (const fn of ouvintesDeSessao) fn();
+    }
     const msg = mensagemDeErro(data, res.status);
     throw new ApiError(res.status, msg);
   }
@@ -58,7 +88,9 @@ export async function renovarSessao(): Promise<boolean> {
   try {
     const res = await apiFetch<{ token: string; perfil: JwtPayload }>(
       "/auth/refresh",
-      { method: "POST" },
+      // Um 401 aqui é a própria resposta que a função procura, e quem chama
+      // já cuida de derrubar a sessão: avisar os ouvintes seria em dobro.
+      { method: "POST", ignorar401: true },
     );
     await salvarSessao(res);
     return true;

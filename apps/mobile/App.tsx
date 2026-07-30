@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Alert, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { perfilDe, type JwtPayload } from "@pacotes/shared";
-import { renovarSessao, sincronizarModulos } from "./src/api/client";
+import {
+  assinarSessaoExpirada,
+  renovarSessao,
+  sincronizarModulos,
+} from "./src/api/client";
 import { useModulos } from "./src/useModulos";
 import { carregarSessao, limparSessao } from "./src/api/session";
 import type {
@@ -186,6 +190,27 @@ export default function App() {
       setCarregado(true);
     });
   }, []);
+
+  /**
+   * Sessão que cai NO MEIO do uso volta para o login.
+   *
+   * A validade só era checada na abertura. Na portaria, onde o aparelho fica
+   * ligado o turno inteiro, o token vencia com o app aberto e dali em diante
+   * toda tela dizia "Token inválido ou expirado" sem oferecer saída: o
+   * porteiro precisava saber que fechar e reabrir resolvia.
+   */
+  useEffect(
+    () =>
+      assinarSessaoExpirada(() => {
+        limparSessao();
+        setPerfil(null);
+        Alert.alert(
+          "Sessão expirada",
+          "Entre de novo com seu telefone para continuar.",
+        );
+      }),
+    [],
+  );
 
   if (!carregado) {
     return (

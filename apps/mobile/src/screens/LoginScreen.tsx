@@ -109,7 +109,10 @@ export function LoginScreen(props: {
       <View style={[styles.header, { paddingTop: insets.top + 34 }]}>
         <Text style={styles.logo}>convivar</Text>
         <Text style={styles.headline}>Suas encomendas, sem espera na portaria</Text>
-        <Text style={styles.sub}>Avisamos quando chegar. Você retira com um QR.</Text>
+        {/* O QR foi rebaixado a conferência opcional: prometê-lo na primeira
+            tela do app dizia ao morador que ele PRECISA de um QR para
+            retirar, quando na prática ele diz a unidade na portaria. */}
+        <Text style={styles.sub}>Avisamos quando chegar. Você retira na portaria.</Text>
       </View>
 
       <KeyboardAvoidingView
