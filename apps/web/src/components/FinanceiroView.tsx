@@ -153,11 +153,23 @@ export function FinanceiroView() {
     const atual = taxas.find((t) => t.unidadeId === unidadeId);
     if (!atual) return;
 
+    // Limpa o erro anterior antes de tentar de novo: sem isso, uma tentativa
+    // que falha em silêncio deixa na tela a mensagem da tentativa passada, e
+    // o síndico lê "CPF inválido" enquanto o problema real é outro campo.
+    setErro(null);
+
     const valorMensal =
       mudanca.valor !== undefined
         ? Number(mudanca.valor.replace(",", "."))
         : (atual.valorMensal ?? 0);
-    if (!Number.isFinite(valorMensal) || valorMensal < 0) return;
+    // Antes isto era um `return` mudo: digitar "abc" no valor não gravava e
+    // não avisava, e o número errado seguia na tela parecendo salvo.
+    if (!Number.isFinite(valorMensal) || valorMensal < 0) {
+      setErro(
+        `Valor inválido em ${rotulo(atual.unidade)}. Use só números, como 450,50.`,
+      );
+      return;
+    }
 
     const documento =
       mudanca.documento !== undefined

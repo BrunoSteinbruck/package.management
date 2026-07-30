@@ -105,7 +105,21 @@ export function ComunicadosView() {
         }}
       >
         <h1>Comunicados</h1>
-        <button className="acao" onClick={() => setCompondo((c) => !c)}>
+        {/* Cancelar descarta mesmo. Antes só fechava o compositor e o texto
+            voltava na próxima abertura, o que faz o botão mentir: quem cancela
+            espera perder o rascunho, e reencontrá-lo depois assusta mais do
+            que ajuda. */}
+        <button
+          className="acao"
+          onClick={() => {
+            if (compondo) {
+              setTitulo("");
+              setCorpo("");
+              setBlocos([]);
+            }
+            setCompondo((c) => !c);
+          }}
+        >
           {compondo ? "Cancelar" : "Novo comunicado"}
         </button>
       </div>

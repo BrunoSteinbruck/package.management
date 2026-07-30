@@ -8,6 +8,7 @@
 
 export * from "./enums";
 export * from "./documento";
+export * from "./erro-api";
 export * from "./dto";
 export * from "./api";
 export * from "./feed";

@@ -1,4 +1,4 @@
-import type { Capacidades, JwtPayload } from "@pacotes/shared";
+import { mensagemDeErro, type Capacidades, type JwtPayload } from "@pacotes/shared";
 import { carregarSessao, salvarModulos, salvarSessao } from "./session";
 
 // Em dispositivo físico, defina EXPO_PUBLIC_API_URL no .env com o IP da sua
@@ -39,12 +39,7 @@ export async function apiFetch<T>(
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg =
-      typeof data?.message === "string"
-        ? data.message
-        : Array.isArray(data?.message)
-          ? data.message.join(", ")
-          : `Erro ${res.status}`;
+    const msg = mensagemDeErro(data, res.status);
     throw new ApiError(res.status, msg);
   }
   return data as T;

@@ -1,4 +1,4 @@
-import type { JwtPayload } from "@pacotes/shared";
+import { mensagemDeErro, type JwtPayload } from "@pacotes/shared";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
@@ -43,12 +43,7 @@ export async function apiFetch<T>(
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg =
-      typeof data?.message === "string"
-        ? data.message
-        : Array.isArray(data?.message)
-          ? data.message.join(", ")
-          : `Erro ${res.status}`;
+    const msg = mensagemDeErro(data, res.status);
     throw new Error(msg);
   }
   return data as T;
