@@ -15,6 +15,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { perfilDe, type JwtPayload } from "@pacotes/shared";
 import { apiFetch, NetworkError } from "../api/client";
 import { drenarFila, tamanhoFila } from "../api/offlineQueue";
+import { relatarDrenagem } from "../api/relatoDrenagem";
 import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
 import { BotaoModulo } from "../components/ui";
@@ -54,9 +55,10 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
       setResumo(await apiFetch<Resumo>("/portaria/resumo"));
       setOnline(true);
       const drenagem = await drenarFila();
-      if (drenagem.enviadas > 0) {
+      const relato = relatarDrenagem(drenagem);
+      if (relato) {
         setFila(drenagem.restantes);
-        Alert.alert("Sincronizado", `${drenagem.enviadas} registro(s) offline enviados.`);
+        Alert.alert(relato.titulo, relato.corpo);
       }
     } catch (e) {
       if (e instanceof NetworkError) setOnline(false);

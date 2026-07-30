@@ -22,6 +22,11 @@ export async function carregarEstado(tipo: TipoMedidor): Promise<EstadoLeituras>
   return estado;
 }
 
+/** Descarta o progresso guardado: chamado ao sair da sessão. */
+export function limparEstado(): void {
+  for (const k of Object.keys(cacheEstado)) delete cacheEstado[k as TipoMedidor];
+}
+
 /** Marca a unidade como lida no cache local: o progresso anda mesmo offline. */
 export function registrarNoCache(
   tipo: TipoMedidor,

@@ -21,6 +21,18 @@ export interface OperacaoPendente {
   criadaEm: string;
 }
 
+/**
+ * Operação que a fila jogou fora, para a tela poder contar ao porteiro.
+ * O texto que ele lê é montado em `relatoDrenagem.ts`.
+ */
+export interface OperacaoDescartada {
+  path: string;
+  criadaEm: string;
+  motivo: string;
+  /** True quando a operação entrou, mas sem o comprovante fotográfico. */
+  perdeuFoto?: boolean;
+}
+
 async function lerFila(): Promise<OperacaoPendente[]> {
   const raw = await AsyncStorage.getItem(QUEUE_KEY);
   if (!raw) return [];
@@ -60,12 +72,22 @@ export async function tamanhoFila(): Promise<number> {
  * pendente primeiro (se houver) e injeta a key no body antes do POST.
  * Para no primeiro erro de rede (continua offline, tenta de novo depois);
  * erros de negócio (4xx) descartam a operação para não travar a fila.
+ *
+ * Os descartes SÃO devolvidos: até o QA de 2026-07-30 a fila engolia o 4xx em
+ * silêncio, e a encomenda que o porteiro registrou offline simplesmente não
+ * existia depois. Quem some do sistema tem que aparecer na tela de alguém.
  */
-export async function drenarFila(): Promise<{ enviadas: number; restantes: number }> {
+export async function drenarFila(): Promise<{
+  enviadas: number;
+  restantes: number;
+  descartadas: OperacaoDescartada[];
+}> {
   let fila = await lerFila();
   let enviadas = 0;
+  const descartadas: OperacaoDescartada[] = [];
   while (fila.length > 0) {
     const op = fila[0];
+    let perdeuFoto = false;
     try {
       let body = op.body;
       if (op.foto) {
@@ -76,19 +98,33 @@ export async function drenarFila(): Promise<{ enviadas: number; restantes: numbe
           if (e instanceof NetworkError) break; // ainda offline: tenta no próximo flush
           // Falha não-rede ao subir a foto (URI expirou, arquivo sumiu):
           // registra a operação sem a foto em vez de travar a fila para sempre.
+          perdeuFoto = true;
         }
       }
       await apiFetch(op.path, { method: "POST", body });
       enviadas++;
+      if (perdeuFoto) {
+        descartadas.push({
+          path: op.path,
+          criadaEm: op.criadaEm,
+          motivo: "a foto não estava mais no aparelho",
+          perdeuFoto: true,
+        });
+      }
       fila = fila.slice(1);
       await gravarFila(fila);
     } catch (e) {
       if (e instanceof NetworkError) break;
+      descartadas.push({
+        path: op.path,
+        criadaEm: op.criadaEm,
+        motivo: (e as Error).message,
+      });
       fila = fila.slice(1);
       await gravarFila(fila);
     }
   }
-  return { enviadas, restantes: fila.length };
+  return { enviadas, restantes: fila.length, descartadas };
 }
 
 /**

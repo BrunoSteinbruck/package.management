@@ -15,10 +15,12 @@ import { apiFetch, NetworkError, uploadFoto } from "../api/client";
 import {
   cacheEstado,
   competenciaAtual,
+  limparEstado,
   registrarNoCache,
 } from "../api/estadoLeituras";
 import { proximasPendentes } from "../api/rodada";
 import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
+import { registrarLimpezaDeSessao } from "../api/session";
 import { rotuloUnidade, type Unidade } from "../api/types";
 import { BotaoCta, Chip, HeaderTela, Kicker, Tela } from "../components/ui";
 import { Icone } from "../components/icones";
@@ -32,6 +34,12 @@ let ultimoTipo: TipoMedidor = "AGUA";
 // Última unidade registrada na sessão: as sugestões seguem a rodada a partir
 // dela, e o próximo apartamento costuma ser o primeiro chip.
 let ultimaUnidadeId: string | null = null;
+registrarLimpezaDeSessao(() => {
+  cacheUnidades = null;
+  ultimoTipo = "AGUA";
+  ultimaUnidadeId = null;
+  limparEstado();
+});
 
 const NOMES: Record<TipoMedidor, string> = { AGUA: "Água", GAS: "Gás" };
 

@@ -87,18 +87,30 @@ export function ConsumosScreen({ navigation }: Props) {
     }
   }
 
+  /**
+   * Dois passos de propósito, e não os quatro destinos num alerta só.
+   *
+   * `Alert.alert` do Android mostra no máximo TRÊS botões, e descarta o resto
+   * em silêncio: com Cancelar mais quatro opções, "Excel geral" e "PDF geral"
+   * simplesmente não apareciam nesse sistema, deixando a exportação do
+   * histórico inalcançável para metade dos usuários. Quebrado em período e
+   * depois formato, cada passo cabe no limite das duas plataformas.
+   */
   function abrirExportar() {
-    Alert.alert(
-      "Exportar relatório",
-      `${NOMES[tipo]}: escolha o formato e o período.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: `Excel de ${nomeCompetencia(competencia)}`, onPress: () => exportar("xlsx", "mes") },
-        { text: `PDF de ${nomeCompetencia(competencia)}`, onPress: () => exportar("pdf", "mes") },
-        { text: "Excel geral (todos os meses)", onPress: () => exportar("xlsx", "geral") },
-        { text: "PDF geral (todos os meses)", onPress: () => exportar("pdf", "geral") },
-      ],
-    );
+    Alert.alert("Exportar relatório", `${NOMES[tipo]}: qual período?`, [
+      { text: "Cancelar", style: "cancel" },
+      { text: nomeCompetencia(competencia), onPress: () => escolherFormato("mes") },
+      { text: "Todos os meses", onPress: () => escolherFormato("geral") },
+    ]);
+  }
+
+  function escolherFormato(escopo: "mes" | "geral") {
+    const periodo = escopo === "mes" ? nomeCompetencia(competencia) : "todos os meses";
+    Alert.alert("Exportar relatório", `${NOMES[tipo]}, ${periodo}: qual formato?`, [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Excel", onPress: () => exportar("xlsx", escopo) },
+      { text: "PDF", onPress: () => exportar("pdf", escopo) },
+    ]);
   }
 
   const podeAvancar = competencia < competenciaAtual();

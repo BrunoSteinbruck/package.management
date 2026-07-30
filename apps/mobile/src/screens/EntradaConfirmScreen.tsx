@@ -15,6 +15,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { analisarEtiqueta, apiFetch, NetworkError, uploadFoto } from "../api/client";
 import { lerTextoLocal, ocrLocalDisponivel } from "../api/ocrLocal";
 import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
+import { registrarLimpezaDeSessao } from "../api/session";
 import {
   rotuloUnidade,
   type Pacote,
@@ -29,6 +30,9 @@ import type { PortariaStackParamList } from "../navigation";
 const PRATELEIRAS = ["A1", "A2", "B1", "B2", "C1"];
 const PRATELEIRA_KEY = "@entrada/ultima-prateleira";
 let cacheUnidades: Unidade[] | null = null;
+registrarLimpezaDeSessao(() => {
+  cacheUnidades = null;
+});
 
 type Props = NativeStackScreenProps<PortariaStackParamList, "EntradaConfirm">;
 

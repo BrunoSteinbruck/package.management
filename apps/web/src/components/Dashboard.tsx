@@ -473,6 +473,7 @@ function PacotesView() {
   const [pagina, setPagina] = useState(1);
   const [dados, setDados] = useState<ListaPacotes | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [exportando, setExportando] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -492,35 +493,47 @@ function PacotesView() {
     carregar();
   }, [carregar]);
 
+  // O laço faz até 42 requisições. Uma que falhe no meio abortava a exportação
+  // inteira sem baixar nada e sem dizer nada: o síndico clicava e o navegador
+  // ficava parado. Agora o download só sai completo, e a falha aparece na tela.
   async function exportarCsv() {
     const linhas: string[] = [
       "unidade;transportadora;rastreio;prateleira;entrada;retirada;status",
     ];
-    let p = 1;
-    let total = Infinity;
-    while ((p - 1) * 12 < Math.min(total, 500)) {
-      const params = new URLSearchParams();
-      if (filtroStatus) params.set("status", filtroStatus);
-      if (busca.trim()) params.set("busca", busca.trim());
-      if (ultimos30) params.set("dias", "30");
-      params.set("pagina", String(p));
-      const lote = await apiFetch<ListaPacotes>(`/portaria/pacotes?${params}`);
-      total = lote.total;
-      for (const i of lote.itens) {
-        linhas.push(
-          [
-            rotulo(i.unidade),
-            i.transportadora ?? "",
-            i.codigoRastreio ?? "",
-            i.localArmazenamento ?? "",
-            new Date(i.recebidoEm).toLocaleString("pt-BR"),
-            i.retirada ? new Date(i.retirada.retiradoEm).toLocaleString("pt-BR") : "",
-            i.status.toLowerCase(),
-          ].join(";"),
-        );
+    setExportando(true);
+    try {
+      let p = 1;
+      let total = Infinity;
+      while ((p - 1) * 12 < Math.min(total, 500)) {
+        const params = new URLSearchParams();
+        if (filtroStatus) params.set("status", filtroStatus);
+        if (busca.trim()) params.set("busca", busca.trim());
+        if (ultimos30) params.set("dias", "30");
+        params.set("pagina", String(p));
+        const lote = await apiFetch<ListaPacotes>(`/portaria/pacotes?${params}`);
+        total = lote.total;
+        for (const i of lote.itens) {
+          linhas.push(
+            [
+              rotulo(i.unidade),
+              i.transportadora ?? "",
+              i.codigoRastreio ?? "",
+              i.localArmazenamento ?? "",
+              new Date(i.recebidoEm).toLocaleString("pt-BR"),
+              i.retirada ? new Date(i.retirada.retiradoEm).toLocaleString("pt-BR") : "",
+              i.status.toLowerCase(),
+            ].join(";"),
+          );
+        }
+        if (lote.itens.length < 12) break;
+        p++;
       }
-      if (lote.itens.length < 12) break;
-      p++;
+      setErro(null);
+    } catch (e) {
+      setErro(`Exportação interrompida: ${(e as Error).message}`);
+      return;
+    } finally {
+      setExportando(false);
     }
     const blob = new Blob(["﻿" + linhas.join("\n")], {
       type: "text/csv;charset=utf-8",
@@ -539,8 +552,8 @@ function PacotesView() {
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>Pacotes</h1>
-        <button className="outline" onClick={exportarCsv}>
-          Exportar CSV
+        <button className="outline" onClick={exportarCsv} disabled={exportando}>
+          {exportando ? "Exportando..." : "Exportar CSV"}
         </button>
       </div>
 
@@ -1176,8 +1189,15 @@ function MoradoresView() {
   }, [carregar]);
 
   async function aprovar(id: string) {
-    await apiFetch(`/cadastro/vinculos/${id}/aprovar`, { method: "POST" });
-    carregar();
+    // Sem o try, a rejeição morria no console: o síndico clicava "Aprovar", a
+    // linha continuava na lista, e não havia nada dizendo o que houve.
+    try {
+      await apiFetch(`/cadastro/vinculos/${id}/aprovar`, { method: "POST" });
+      setErro(null);
+      carregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    }
   }
 
   return (

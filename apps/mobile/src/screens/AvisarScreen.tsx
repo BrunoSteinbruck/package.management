@@ -15,6 +15,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch, NetworkError, uploadFoto } from "../api/client";
 import { FotoPendente, postOuEnfileirar } from "../api/offlineQueue";
 import { lerTextoLocal, ocrLocalDisponivel } from "../api/ocrLocal";
+import { registrarLimpezaDeSessao } from "../api/session";
 import {
   MOTIVOS_AVISO,
   rotuloUnidade,
@@ -27,6 +28,9 @@ import { theme } from "../theme";
 import type { PortariaStackParamList } from "../navigation";
 
 let cacheUnidades: Unidade[] | null = null;
+registrarLimpezaDeSessao(() => {
+  cacheUnidades = null;
+});
 
 type Props = NativeStackScreenProps<PortariaStackParamList, "Avisar">;
 

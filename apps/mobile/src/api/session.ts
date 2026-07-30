@@ -30,8 +30,24 @@ export async function carregarSessao(): Promise<Sessao | null> {
   }
 }
 
+/**
+ * Caches em memória que morrem junto com a sessão.
+ *
+ * As telas do porteiro guardam a lista de unidades e o progresso do mês em
+ * variáveis de módulo, que o JS mantém vivas enquanto o processo existir. Sair
+ * do app só apagava o token: na portaria, que é um aparelho compartilhado, o
+ * porteiro seguinte abria a tela de entrada e via as unidades do condomínio
+ * anterior. O servidor recusaria o POST, mas a lista errada já estava na tela.
+ */
+const limpezas = new Set<() => void>();
+
+export function registrarLimpezaDeSessao(fn: () => void): void {
+  limpezas.add(fn);
+}
+
 export async function limparSessao(): Promise<void> {
   await AsyncStorage.multiRemove([TOKEN_KEY, PERFIL_KEY, MODULOS_KEY]);
+  for (const fn of limpezas) fn();
   for (const fn of ouvintes) fn([]);
 }
 

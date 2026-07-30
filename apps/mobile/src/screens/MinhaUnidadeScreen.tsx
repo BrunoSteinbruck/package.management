@@ -105,8 +105,11 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
     try {
       await apiFetch(`/morador/veiculos/${id}`, { method: "DELETE" });
       carregarVeiculos();
-    } catch {
-      // ignora
+    } catch (e) {
+      // Antes era `catch {}`: a placa continuava na tela como se nada tivesse
+      // acontecido, e o morador só descobria que não removeu ao reabrir a
+      // tela. Falha de rede é o caso comum aqui.
+      Alert.alert("Não foi possível remover", String((e as Error).message));
     }
   }
 

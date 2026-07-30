@@ -97,6 +97,16 @@ export function ReportarScreen({ navigation }: Props) {
     return (
       <View style={styles.telaCamera}>
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+        {/* Sem este botão não havia como sair da câmera: a foto é opcional,
+            mas quem abrisse sem querer só escapava tirando uma (ou matando o
+            app), porque no iOS não há voltar do sistema e a fase é estado
+            local, não rota. Mesmo desenho da AvisarScreen. */}
+        <View style={[styles.topoCamera, { paddingTop: insets.top + 8 }]}>
+          <Pressable style={styles.botaoRedondo} onPress={() => setFase("form")}>
+            <Icone nome="fechar" tamanho={20} traco={2.2} />
+          </Pressable>
+        </View>
+        <View style={{ flex: 1 }} />
         <View style={[styles.rodapeCamera, { paddingBottom: insets.bottom + 16 }]}>
           <Pressable style={styles.shutterAnel} onPress={capturar}>
             <View style={styles.shutter} />
@@ -180,6 +190,15 @@ export function ReportarScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   tela: { flex: 1, backgroundColor: theme.colors.bg },
   telaCamera: { flex: 1, backgroundColor: theme.colors.cameraBg },
+  topoCamera: { flexDirection: "row", paddingHorizontal: theme.spacing.md },
+  botaoRedondo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   rodapeCamera: { alignItems: "center", marginTop: "auto" },
   sub: { fontSize: 14, color: theme.colors.textSecondary, marginBottom: 14 },
   grade: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10, marginBottom: 4 },

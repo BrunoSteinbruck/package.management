@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MoradorDaUnidade } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
+import { registrarLimpezaDeSessao } from "../api/session";
 import {
   diasAtras,
   rotuloUnidade,
@@ -26,6 +27,9 @@ import { useModulos } from "../useModulos";
 import type { PortariaStackParamList } from "../navigation";
 
 let cacheUnidades: Unidade[] | null = null;
+registrarLimpezaDeSessao(() => {
+  cacheUnidades = null;
+});
 
 function diasArmazenado(iso: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
