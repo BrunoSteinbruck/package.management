@@ -1,5 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
+import { EmailService } from "../email/email.service";
 import { SmsService } from "../sms/sms.service";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
@@ -24,6 +25,6 @@ import { AuthService } from "./auth.service";
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, SmsService],
+  providers: [AuthService, SmsService, EmailService],
 })
 export class AuthModule {}

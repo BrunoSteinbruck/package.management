@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -14,6 +15,9 @@ import type {
 } from "@pacotes/shared";
 import { MODULOS_CONDOMINIO } from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
+
+/** Quem entra no painel por senha precisa do e-mail para recuperá-la. */
+const PRECISA_DE_EMAIL: CriarUsuarioDto["papel"][] = ["SINDICO"];
 
 @Injectable()
 export class CadastroService {
@@ -163,7 +167,14 @@ export class CadastroService {
     this.exigirGestor(user);
     return this.prisma.usuario.findMany({
       where: { condominioId },
-      select: { id: true, nome: true, telefone: true, papel: true, ativo: true },
+      select: {
+        id: true,
+        nome: true,
+        telefone: true,
+        email: true,
+        papel: true,
+        ativo: true,
+      },
       orderBy: [{ ativo: "desc" }, { papel: "asc" }, { nome: "asc" }],
     });
   }
@@ -180,9 +191,46 @@ export class CadastroService {
     if (existente) {
       throw new ConflictException("Este telefone já pertence a alguém da equipe");
     }
+
+    /**
+     * Síndico sem e-mail nasce sem caminho de volta.
+     *
+     * Ele entra no painel por senha, e a única forma de recuperá-la é o link
+     * por e-mail. Sem e-mail, a conta depende de outro gestor para existir, e
+     * num condomínio com um síndico só isso é um beco. A regra é do negócio e
+     * não do formato, por isso vive aqui: o mesmo schema cria porteiro, que
+     * não tem senha e não precisa de e-mail.
+     */
+    if (PRECISA_DE_EMAIL.includes(dto.papel) && !dto.email) {
+      throw new BadRequestException(
+        "Síndico precisa de e-mail: é por ele que a senha do painel é definida e recuperada.",
+      );
+    }
+    if (dto.email) {
+      const comEmail = await this.prisma.usuario.findUnique({
+        where: { email: dto.email },
+      });
+      if (comEmail) {
+        throw new ConflictException("Este e-mail já pertence a alguém da equipe");
+      }
+    }
+
     return this.prisma.usuario.create({
-      data: { condominioId, nome: dto.nome.trim(), telefone, papel: dto.papel },
-      select: { id: true, nome: true, telefone: true, papel: true, ativo: true },
+      data: {
+        condominioId,
+        nome: dto.nome.trim(),
+        telefone,
+        papel: dto.papel,
+        email: dto.email ?? null,
+      },
+      select: {
+        id: true,
+        nome: true,
+        telefone: true,
+        email: true,
+        papel: true,
+        ativo: true,
+      },
     });
   }
 

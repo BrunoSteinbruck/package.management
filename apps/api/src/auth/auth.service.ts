@@ -3,14 +3,24 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import type { JwtPayload } from "@pacotes/shared";
+import type { JwtPayload, PapelUsuario } from "@pacotes/shared";
 import { createHmac, randomInt } from "node:crypto";
+import { EmailService, textoRedefinicao } from "../email/email.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { SmsService } from "../sms/sms.service";
+import {
+  gerarHash,
+  gerarTokenRedefinicao,
+  hashDoToken,
+  HASH_FANTASMA,
+  verificarHash,
+} from "./senha.util";
+import { validadeDaSessao } from "./sessao.util";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_TENTATIVAS = 5;
@@ -19,6 +29,27 @@ const MAX_TENTATIVAS = 5;
 const JANELA_ENVIO_MS = 60 * 60 * 1000;
 const MAX_ENVIOS_POR_TELEFONE = 3;
 const MAX_ENVIOS_POR_IP = 10;
+
+// Senha do painel: bloqueio depois de 5 erros seguidos, por 15 minutos.
+// Persistido no banco, ao contrário do contador de OTP: um restart do
+// processo zeraria o bloqueio em memória, e restart é justamente o que um
+// deploy faz várias vezes por dia.
+const MAX_ERROS_SENHA = 5;
+const BLOQUEIO_SENHA_MS = 15 * 60 * 1000;
+const REDEFINICAO_TTL_MS = 60 * 60 * 1000;
+const MAX_ESQUECI_POR_HORA = 3;
+
+/** Quem entra por senha. Porteiro e apoio seguem por SMS. */
+const PAPEIS_COM_SENHA: PapelUsuario[] = ["SINDICO", "ADMIN"];
+
+/**
+ * A mesma frase para senha errada e para usuário inexistente.
+ *
+ * Distinguir os dois transformaria a tela de login numa lista de quem tem
+ * conta: basta tentar e-mails até a mensagem mudar. Vale para o texto e para
+ * o código HTTP.
+ */
+const CREDENCIAL_INVALIDA = "E-mail, celular ou senha incorretos";
 
 // HMAC com o segredo do servidor: um dump do banco sozinho não permite
 // derivar códigos válidos (o espaço de 6 dígitos é pequeno demais para
@@ -64,11 +95,28 @@ function soDigitos(valor: string) {
 export class AuthService {
   private enviosPorChave = new Map<string, number[]>();
 
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly sms: SmsService,
+    private readonly email: EmailService,
   ) {}
+
+  /**
+   * Assina com a validade da porta por onde a pessoa entrou.
+   *
+   * Único lugar que chama `signAsync` para sessão: se cada caminho assinasse
+   * por conta própria, bastaria um esquecer o `expiresIn` para emitir um
+   * token de painel com os 30 dias do padrão do módulo.
+   */
+  private async assinarSessao(payload: JwtPayload) {
+    const token = await this.jwt.signAsync(payload, {
+      expiresIn: validadeDaSessao(payload.sessao),
+    });
+    return { token, perfil: payload };
+  }
 
   private registrarEnvio(chave: string, maximo: number): boolean {
     const agora = Date.now();
@@ -178,6 +226,23 @@ export class AuthService {
       include: { condominio: true },
     });
     if (usuario) {
+      /**
+       * Gestor não entra no painel por SMS.
+       *
+       * Sem esta recusa, a senha seria decorativa: quem clonasse o chip do
+       * síndico continuaria entrando pelo caminho antigo, e o SIM swap
+       * contornaria justamente a proteção das contas que mexem em dinheiro.
+       * O porteiro segue por aqui, porque a visão de Visitantes é da portaria
+       * e ele não tem senha.
+       *
+       * Antes de encerrar o desafio, como as demais recusas: quem errou de
+       * porta não perde o código que acabou de receber.
+       */
+      if (extra?.somenteEquipe && PAPEIS_COM_SENHA.includes(usuario.papel)) {
+        throw new ForbiddenException(
+          "Sua conta entra no painel com e-mail e senha. Use a opção de senha, ou 'Esqueci a senha' para definir a primeira.",
+        );
+      }
       await encerrar();
       const payload: JwtPayload = {
         sub: usuario.id,
@@ -186,8 +251,9 @@ export class AuthService {
         condominioId: usuario.condominioId,
         condominioNome: usuario.condominio.nome,
         papel: usuario.papel,
+        ...(extra?.somenteEquipe ? { sessao: "painel" as const } : {}),
       };
-      return { token: await this.jwt.signAsync(payload), perfil: payload };
+      return this.assinarSessao(payload);
     }
 
     const morador = await this.prisma.morador.findUnique({
@@ -210,7 +276,7 @@ export class AuthService {
         tipo: "morador",
         nome: morador.nome,
       };
-      return { token: await this.jwt.signAsync(payload), perfil: payload };
+      return this.assinarSessao(payload);
     }
 
     if (extra?.convite) {
@@ -284,7 +350,7 @@ export class AuthService {
       tipo: "morador",
       nome: morador.nome,
     };
-    return { token: await this.jwt.signAsync(payload), perfil: payload };
+    return this.assinarSessao(payload);
   }
 
   /**
@@ -305,10 +371,202 @@ export class AuthService {
           });
     if (!existe) throw new UnauthorizedException("Conta não encontrada");
 
+    // O strip de exp/iat é obrigatório: o jsonwebtoken recusa um payload que
+    // já traga `exp` quando `expiresIn` vem nas opções. E o spread preserva o
+    // claim `sessao`, que é o que faz o painel renovar 24h e o app 30d sem
+    // um `if` a mais aqui.
     const { exp, iat, ...payload } = user as JwtPayload & {
       exp?: number;
       iat?: number;
     };
-    return { token: await this.jwt.signAsync(payload), perfil: payload };
+    return this.assinarSessao(payload);
+  }
+
+  // ---------- senha do painel (só gestor) ----------
+
+  /**
+   * Login por e-mail ou celular, mais senha.
+   *
+   * Todo caminho de falha sai pela MESMA porta: mesma mensagem, mesmo 401.
+   * Usuário inexistente, papel sem senha, senha nunca definida e senha errada
+   * são indistinguíveis de fora. Distinguir qualquer um deles transformaria a
+   * tela de login numa consulta de "quem é síndico neste sistema".
+   *
+   * O `verificarHash` contra o HASH_FANTASMA nos caminhos sem senha existe
+   * para o tempo de resposta também não contar essa história: sem ele,
+   * "e-mail não cadastrado" responderia instantaneamente e "senha errada"
+   * levaria os ~50 ms do scrypt.
+   */
+  async loginComSenha(identificador: string, senha: string) {
+    const digitos = soDigitos(identificador);
+    const usuario = await this.prisma.usuario.findFirst({
+      where: {
+        ativo: true,
+        OR: [
+          { email: identificador.toLowerCase() },
+          ...(digitos.length >= 10 ? [{ telefone: digitos }] : []),
+        ],
+      },
+      include: { condominio: true },
+    });
+
+    if (!usuario || !PAPEIS_COM_SENHA.includes(usuario.papel)) {
+      verificarHash(senha, HASH_FANTASMA);
+      throw new UnauthorizedException(CREDENCIAL_INVALIDA);
+    }
+
+    if (usuario.senhaBloqueadaAte && usuario.senhaBloqueadaAte > new Date()) {
+      const minutos = Math.ceil(
+        (usuario.senhaBloqueadaAte.getTime() - Date.now()) / 60000,
+      );
+      throw new HttpException(
+        `Muitas tentativas. Tente de novo em ${minutos} minuto(s), ou use "Esqueci a senha".`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    if (!verificarHash(senha, usuario.senhaHash)) {
+      const tentativas = usuario.senhaTentativas + 1;
+      const estourou = tentativas >= MAX_ERROS_SENHA;
+      await this.prisma.usuario.update({
+        where: { id: usuario.id },
+        data: {
+          senhaTentativas: estourou ? 0 : tentativas,
+          senhaBloqueadaAte: estourou
+            ? new Date(Date.now() + BLOQUEIO_SENHA_MS)
+            : null,
+        },
+      });
+      this.logger.warn(
+        `Senha incorreta para usuario ${usuario.id} (tentativa ${tentativas})`,
+      );
+      throw new UnauthorizedException(CREDENCIAL_INVALIDA);
+    }
+
+    if (usuario.senhaTentativas > 0 || usuario.senhaBloqueadaAte) {
+      await this.prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { senhaTentativas: 0, senhaBloqueadaAte: null },
+      });
+    }
+
+    this.logger.log(`Login por senha: usuario ${usuario.id}`);
+    return this.assinarSessao({
+      sub: usuario.id,
+      tipo: "usuario",
+      nome: usuario.nome,
+      condominioId: usuario.condominioId,
+      condominioNome: usuario.condominio.nome,
+      papel: usuario.papel,
+      sessao: "painel",
+    });
+  }
+
+  /**
+   * Pede o link de redefinição. Serve também para o primeiro acesso: não
+   * existe senha temporária, o gestor novo define a dele pelo mesmo caminho.
+   *
+   * A resposta é SEMPRE a mesma, exista ou não a conta. Um "e-mail não
+   * encontrado" aqui seria um verificador de e-mails de síndicos, e o
+   * atacante nem precisa de senha para usá-lo.
+   */
+  async esqueciSenha(email: string, ip?: string) {
+    const neutra = {
+      enviado: true,
+      mensagem:
+        "Se este e-mail estiver cadastrado, você receberá o link em instantes.",
+    };
+
+    // O rate limit vem ANTES da busca: sem ele, o custo de sondar e-mails é
+    // zero e o gestor legítimo vira alvo de inundação de e-mail.
+    const dentroDoLimite =
+      this.registrarEnvio(`esq:${email}`, MAX_ESQUECI_POR_HORA) &&
+      (!ip || this.registrarEnvio(`esq-ip:${ip}`, MAX_ENVIOS_POR_IP));
+    if (!dentroDoLimite) return neutra;
+
+    const usuario = await this.prisma.usuario.findFirst({
+      where: { email, ativo: true },
+    });
+    if (!usuario || !PAPEIS_COM_SENHA.includes(usuario.papel)) return neutra;
+
+    const { token, hash: tokenHash } = gerarTokenRedefinicao();
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        redefinicaoTokenHash: tokenHash,
+        redefinicaoExpiraEm: new Date(Date.now() + REDEFINICAO_TTL_MS),
+      },
+    });
+
+    const base = (process.env.PAINEL_URL ?? "http://localhost:3002").replace(
+      /\/$/,
+      "",
+    );
+    const link = `${base}/redefinir-senha?token=${token}`;
+    try {
+      await this.email.enviar(
+        email,
+        "Redefinir sua senha do Convivar",
+        textoRedefinicao(usuario.nome, link),
+      );
+    } catch (e) {
+      // Falha de envio não vaza para a resposta: contar "não consegui mandar
+      // para este e-mail" confirmaria que ele existe. Fica no log do servidor.
+      this.logger.error(
+        `Falha ao enviar redefinição para usuario ${usuario.id}: ${(e as Error).message.slice(0, 120)}`,
+      );
+    }
+
+    this.logger.log(`Link de redefinição emitido para usuario ${usuario.id}`);
+    // O link só volta na resposta com opt-in explícito, como o devCodigo do
+    // OTP: sem isso, qualquer um pediria a redefinição de qualquer gestor e
+    // leria o link na própria resposta.
+    if (process.env.EMAIL_DEV_ECHO === "1") {
+      console.log(`[dev] link de redefinição para ${email}: ${link}`);
+      return { ...neutra, devLink: link };
+    }
+    return neutra;
+  }
+
+  /** Consome o link e já devolve a sessão: quem redefiniu acabou de provar quem é. */
+  async redefinirSenha(token: string, novaSenha: string) {
+    const usuario = await this.prisma.usuario.findFirst({
+      where: {
+        redefinicaoTokenHash: hashDoToken(token),
+        redefinicaoExpiraEm: { gt: new Date() },
+        ativo: true,
+      },
+      include: { condominio: true },
+    });
+    if (!usuario) {
+      throw new UnauthorizedException(
+        "Este link expirou ou já foi usado. Peça um novo em 'Esqueci a senha'.",
+      );
+    }
+
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        senhaHash: gerarHash(novaSenha),
+        // Uso único: o token morre aqui. E o bloqueio por tentativas cai
+        // junto, senão quem redefiniu a senha por estar bloqueado
+        // continuaria bloqueado com a senha nova.
+        redefinicaoTokenHash: null,
+        redefinicaoExpiraEm: null,
+        senhaTentativas: 0,
+        senhaBloqueadaAte: null,
+      },
+    });
+
+    this.logger.log(`Senha redefinida: usuario ${usuario.id}`);
+    return this.assinarSessao({
+      sub: usuario.id,
+      tipo: "usuario",
+      nome: usuario.nome,
+      condominioId: usuario.condominioId,
+      condominioNome: usuario.condominio.nome,
+      papel: usuario.papel,
+      sessao: "painel",
+    });
   }
 }

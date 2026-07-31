@@ -13,6 +13,8 @@ import type { JwtPayload } from "@pacotes/shared";
  * relogar é digitar, não esperar um SMS. E o painel renova ao abrir, então
  * quem entra todo dia nunca vê a tela de login; quem some por um dia, sim.
  */
-export function validadeDaSessao(sessao?: JwtPayload["sessao"]): string {
+export function validadeDaSessao(
+  sessao?: JwtPayload["sessao"],
+): "24h" | "30d" {
   return sessao === "painel" ? "24h" : "30d";
 }

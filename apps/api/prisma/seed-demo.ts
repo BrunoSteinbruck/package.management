@@ -9,6 +9,7 @@
  *   pnpm --filter @pacotes/api exec ts-node prisma/seed-demo.ts
  */
 import { PrismaClient } from "@prisma/client";
+import { gerarHash } from "../src/auth/senha.util";
 
 const prisma = new PrismaClient();
 
@@ -18,6 +19,11 @@ const SINDICO_NOME = process.env.SINDICO_NOME ?? "Síndico Demo";
 const SINDICO_TELEFONE = (process.env.SINDICO_TELEFONE ?? "51900000001").replace(/\D/g, "");
 const PORTEIRO_TELEFONE = (process.env.PORTEIRO_TELEFONE ?? "51900000002").replace(/\D/g, "");
 const MORADOR_DEMO_TELEFONE = (process.env.MORADOR_DEMO_TELEFONE ?? "51900000003").replace(/\D/g, "");
+// O síndico da demo entra no painel por senha, então precisa de e-mail e de
+// uma senha já definida: sem isso, abrir o painel local exigiria configurar
+// um provedor de e-mail só para receber o link do primeiro acesso.
+const SINDICO_EMAIL = (process.env.SINDICO_EMAIL ?? "sindico@convivar.demo").trim().toLowerCase();
+const SINDICO_SENHA = process.env.SINDICO_SENHA ?? "convivar246810";
 
 function diasAtras(dias: number, horas = 10): Date {
   const d = new Date();
@@ -49,10 +55,25 @@ async function main() {
     update: { ativo: true },
     create: { condominioId: cid, nome: "Carlos Mendes", telefone: PORTEIRO_TELEFONE, papel: "PORTEIRO" },
   });
+  const senhaDoSindico = gerarHash(SINDICO_SENHA);
   await prisma.usuario.upsert({
     where: { telefone: SINDICO_TELEFONE },
-    update: { ativo: true, nome: SINDICO_NOME },
-    create: { condominioId: cid, nome: SINDICO_NOME, telefone: SINDICO_TELEFONE, papel: "SINDICO" },
+    update: {
+      ativo: true,
+      nome: SINDICO_NOME,
+      email: SINDICO_EMAIL,
+      senhaHash: senhaDoSindico,
+      senhaTentativas: 0,
+      senhaBloqueadaAte: null,
+    },
+    create: {
+      condominioId: cid,
+      nome: SINDICO_NOME,
+      telefone: SINDICO_TELEFONE,
+      email: SINDICO_EMAIL,
+      senhaHash: senhaDoSindico,
+      papel: "SINDICO",
+    },
   });
 
   await prisma.$transaction(async (tx) => {
@@ -240,6 +261,7 @@ async function main() {
   console.log(`  Pacotes: ${totais.naPortaria} na portaria (3 parados 3+ dias) | ${totais.entregues} entregues`);
   console.log("  Leituras: 4 meses fechados + mês atual ~70% lido (água e gás), tarifas definidas");
   console.log(`  Síndico: ${SINDICO_TELEFONE} | Porteiro: ${PORTEIRO_TELEFONE} | Morador demo: ${MORADOR_DEMO_TELEFONE}`);
+  console.log(`  Painel (senha): ${SINDICO_EMAIL} / ${SINDICO_SENHA}`);
 }
 
 main()

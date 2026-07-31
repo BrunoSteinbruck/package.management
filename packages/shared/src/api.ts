@@ -434,6 +434,8 @@ export interface MembroEquipe {
   id: string;
   nome: string;
   telefone: string;
+  /** Só quem entra no painel por senha tem: porteiro e apoio ficam nulos. */
+  email: string | null;
   papel: PapelUsuario | string;
   ativo: boolean;
 }

@@ -1,6 +1,12 @@
 import { Body, Controller, Ip, Post, UseGuards } from "@nestjs/common";
 import {
+  EsqueciSenhaDto,
+  EsqueciSenhaSchema,
   JwtPayload,
+  LoginSenhaDto,
+  LoginSenhaSchema,
+  RedefinirSenhaDto,
+  RedefinirSenhaSchema,
   RequestOtpDto,
   RequestOtpSchema,
   VerifyOtpDto,
@@ -35,5 +41,27 @@ export class AuthController {
       convite: body.convite,
       somenteEquipe: body.somenteEquipe,
     });
+  }
+
+  // ---------- senha do painel ----------
+
+  @Post("senha/login")
+  loginComSenha(@Body(new ZodPipe(LoginSenhaSchema)) body: LoginSenhaDto) {
+    return this.auth.loginComSenha(body.identificador, body.senha);
+  }
+
+  @Post("senha/esqueci")
+  esqueciSenha(
+    @Body(new ZodPipe(EsqueciSenhaSchema)) body: EsqueciSenhaDto,
+    @Ip() ip: string,
+  ) {
+    return this.auth.esqueciSenha(body.email, ip);
+  }
+
+  @Post("senha/redefinir")
+  redefinirSenha(
+    @Body(new ZodPipe(RedefinirSenhaSchema)) body: RedefinirSenhaDto,
+  ) {
+    return this.auth.redefinirSenha(body.token, body.novaSenha);
   }
 }
