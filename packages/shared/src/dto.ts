@@ -70,6 +70,50 @@ export const VerifyOtpSchema = z.object({
 });
 export type VerifyOtpDto = z.infer<typeof VerifyOtpSchema>;
 
+/**
+ * E-mail como identificador: minúsculo e aparado.
+ *
+ * "Sindico@Convivar.com " e "sindico@convivar.com" são a mesma pessoa, e o
+ * gestor digita do jeito que o teclado do celular capitalizou. A comparação
+ * no banco é exata, então a normalização tem que acontecer na borda, nos dois
+ * sentidos: ao cadastrar e ao procurar.
+ */
+export const EmailSchema = z
+  .string()
+  .max(160)
+  .transform((s) => s.trim().toLowerCase())
+  .pipe(z.string().email("E-mail inválido"));
+
+/**
+ * Senha do painel: mínimo oito, sem aparar as pontas.
+ *
+ * Aparar seria destrutivo aqui. O gerenciador de senhas gera valores com
+ * espaço, e uma senha que o navegador salvou com espaço no fim deixaria de
+ * funcionar no dia em que o servidor decidisse apará-la. Oito caracteres é o
+ * piso do NIST 800-63B; não exigimos combinação de tipos, que comprovadamente
+ * produz "Senha@123" e não senha melhor.
+ */
+export const SenhaSchema = z
+  .string()
+  .min(8, "A senha precisa de pelo menos 8 caracteres")
+  .max(100);
+
+export const LoginSenhaSchema = z.object({
+  /** E-mail ou celular: quem digita não deveria precisar saber qual dos dois. */
+  identificador: z.string().min(1).max(160).transform((s) => s.trim()),
+  senha: SenhaSchema,
+});
+export type LoginSenhaDto = z.infer<typeof LoginSenhaSchema>;
+
+export const EsqueciSenhaSchema = z.object({ email: EmailSchema });
+export type EsqueciSenhaDto = z.infer<typeof EsqueciSenhaSchema>;
+
+export const RedefinirSenhaSchema = z.object({
+  token: z.string().min(20).max(100),
+  novaSenha: SenhaSchema,
+});
+export type RedefinirSenhaDto = z.infer<typeof RedefinirSenhaSchema>;
+
 export const EmitirConviteSchema = z.object({
   unidadeId: z.string().uuid(),
 });
@@ -178,6 +222,16 @@ export const CriarUsuarioSchema = z.object({
   nome: z.string().min(2).max(120),
   telefone: TelefoneSchema,
   papel: z.enum(["PORTEIRO", "APOIO", "SINDICO"]),
+  /**
+   * Opcional no schema e OBRIGATÓRIO para SINDICO, cobrado no serviço.
+   *
+   * A regra é do negócio, não do formato: o gestor entra no painel por senha
+   * e a única forma de recuperá-la é o link por e-mail, então um síndico sem
+   * e-mail nasce sem caminho de volta. O porteiro não tem senha e não precisa
+   * de e-mail. Um zod que exigisse sempre recusaria o cadastro de porteiro;
+   * um que nunca exigisse deixaria o síndico se trancar para fora.
+   */
+  email: EmailSchema.optional(),
 });
 export type CriarUsuarioDto = z.infer<typeof CriarUsuarioSchema>;
 

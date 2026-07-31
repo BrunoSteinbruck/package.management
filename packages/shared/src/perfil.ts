@@ -7,6 +7,14 @@ export interface JwtPayload {
   condominioId?: string;
   condominioNome?: string;
   papel?: PapelUsuario;
+  /**
+   * Por qual porta a sessão entrou, e não em qual cliente ela está sendo
+   * usada. Existe para o refresh saber a INTENÇÃO original: olhar só o `exp`
+   * seria ambíguo, porque um token de app perto do vencimento pareceria um
+   * token de painel. Opcional para o app antigo, que ignora campos extras,
+   * continuar valendo.
+   */
+  sessao?: "painel";
 }
 
 /**
