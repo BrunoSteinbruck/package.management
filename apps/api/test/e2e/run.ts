@@ -261,12 +261,19 @@ async function zerar(cid: string): Promise<void> {
   await prisma.morador.updateMany({ data: { aceitaWhatsapp: false } });
   await prisma.condominio.update({ where: { id: cid }, data: { modulos: [] } });
 
-  // A senha do gestor volta para a do seed, e o bloqueio por tentativas cai.
-  // Sem isto, uma execução que terminasse com a conta bloqueada deixaria o
-  // painel de demo inacessível até o bloqueio vencer.
+  /**
+   * O gestor volta a ser o do seed: senha, contador e link pendente.
+   *
+   * A suíte troca a senha dele pela de teste, e sem devolver a original quem
+   * abrisse o painel de demo em seguida usaria a senha impressa no seed e
+   * levaria "credencial inválida", sem nenhuma pista do porquê. O bloqueio
+   * também cai: uma execução que terminasse travada deixaria a demo
+   * inacessível por 15 minutos.
+   */
   await prisma.usuario.updateMany({
     where: { papel: { in: ["SINDICO", "ADMIN"] } },
     data: {
+      senhaHash: gerarHash(process.env.SINDICO_SENHA ?? "convivar246810"),
       senhaTentativas: 0,
       senhaBloqueadaAte: null,
       redefinicaoTokenHash: null,

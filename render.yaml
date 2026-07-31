@@ -37,6 +37,15 @@ services:
       #   OBRIGATÓRIO: sem isso as fotos vão para o disco EFÊMERO daqui e
       #   somem a cada deploy.
       # DEMO_TELEFONES / DEMO_CODIGO (contas de review das lojas)
+      # RESEND_API_KEY / EMAIL_REMETENTE
+      #   OBRIGATÓRIO para o painel: o síndico entra por senha e o único
+      #   caminho de volta é o link de redefinição por e-mail. Sem estas, o
+      #   serviço roda em stub e o link fica só no log do servidor, ou seja,
+      #   um gestor que esqueça a senha não tem como voltar.
+      #   O remetente precisa de domínio verificado (SPF/DKIM) no provedor.
+      # PAINEL_URL
+      #   Base do link do e-mail. Sem ela o link aponta para localhost: o
+      #   e-mail chega e não abre nada.
 
   # Backup diário do Postgres para o R2 (retenção de 30 dias por padrão).
   # Complementa o backup do plano pago do Render: aquele mora na mesma conta e
