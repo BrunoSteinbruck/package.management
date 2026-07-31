@@ -284,3 +284,18 @@ label { font-size: 13px; color: var(--texto-2); display: block; margin-bottom: 5
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 .login-logo { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; color: var(--marca); }
+/* Ação secundária da tela de login ("esqueci a senha", "entrar como
+   portaria"): é botão de verdade, e não um <a>, porque não navega para lugar
+   nenhum. O visual de link é o que mantém a senha como caminho principal. */
+button.link {
+  background: none;
+  border: none;
+  padding: 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--marca);
+  cursor: pointer;
+  text-align: center;
+}
+button.link:hover { text-decoration: underline; }
+a.link { font-size: 14px; font-weight: 600; color: var(--marca); }

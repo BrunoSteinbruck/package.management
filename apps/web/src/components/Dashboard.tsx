@@ -813,9 +813,13 @@ function EquipeSection() {
   const [equipe, setEquipe] = useState<MembroEquipe[]>([]);
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
   const [papel, setPapel] = useState("PORTEIRO");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Só quem entra no painel por senha precisa de e-mail: é por ele que a
+  // primeira senha é definida e recuperada.
+  const exigeEmail = papel === "SINDICO";
 
   const carregar = useCallback(async () => {
     try {
@@ -835,10 +839,16 @@ function EquipeSection() {
     try {
       await apiFetch("/cadastro/equipe", {
         method: "POST",
-        body: { nome, telefone: telefone.replace(/\D/g, ""), papel },
+        body: {
+          nome,
+          telefone: telefone.replace(/\D/g, ""),
+          papel,
+          ...(email.trim() ? { email: email.trim() } : {}),
+        },
       });
       setNome("");
       setTelefone("");
+      setEmail("");
       carregar();
     } catch (e) {
       setErro((e as Error).message);
@@ -860,14 +870,16 @@ function EquipeSection() {
     <section className="card">
       <h2>Equipe da portaria</h2>
       <p className="aviso" style={{ marginBottom: 10 }}>
-        O telefone cadastrado aqui passa a entrar direto no app da portaria
-        (porteiro/apoio) ou neste painel (síndico).
+        Porteiro e apoio entram no app e neste painel pelo código por SMS.
+        Síndico entra por e-mail e senha: no primeiro acesso, ele usa
+        "Esqueci a senha" para criar a dele.
       </p>
       <table>
         <thead>
           <tr>
             <th>Nome</th>
             <th>Telefone</th>
+            <th>E-mail</th>
             <th>Papel</th>
             <th>Status</th>
             <th></th>
@@ -878,6 +890,7 @@ function EquipeSection() {
             <tr key={m.id}>
               <td className="unidade">{m.nome}</td>
               <td>{m.telefone}</td>
+              <td>{m.email ?? "-"}</td>
               <td>{m.papel.toLowerCase()}</td>
               <td>
                 <span className={`selo ${m.ativo ? "ok" : "alerta"}`}>
@@ -908,6 +921,14 @@ function EquipeSection() {
           value={telefone}
           onChange={(e) => setTelefone(e.target.value)}
         />
+        <input
+          style={{ width: 220 }}
+          type="email"
+          placeholder={exigeEmail ? "E-mail (obrigatório)" : "E-mail (opcional)"}
+          maxLength={160}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         <select
           value={papel}
           onChange={(e) => setPapel(e.target.value)}
@@ -926,7 +947,12 @@ function EquipeSection() {
         <button
           className="acao"
           onClick={adicionar}
-          disabled={enviando || nome.trim().length < 2 || telefone.replace(/\D/g, "").length < 10}
+          disabled={
+            enviando ||
+            nome.trim().length < 2 ||
+            telefone.replace(/\D/g, "").length < 10 ||
+            (exigeEmail && !email.includes("@"))
+          }
         >
           Adicionar à equipe
         </button>

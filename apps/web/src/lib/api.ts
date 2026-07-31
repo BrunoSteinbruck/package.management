@@ -3,7 +3,10 @@ import { mensagemDeErro, type JwtPayload } from "@pacotes/shared";
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
-const TOKEN_KEY = "painel/token";
+// O ".v2" invalida as sessões de 30 dias emitidas antes da senha existir.
+// Sem o bump, um síndico que estivesse logado continuaria com um token longo
+// e nunca passaria pela cerimônia nova. Custa um relogin, uma vez.
+const TOKEN_KEY = "painel/token.v2";
 const PERFIL_KEY = "painel/perfil";
 
 export function salvarSessao(token: string, perfil: JwtPayload) {
@@ -39,6 +42,30 @@ const ouvintesDeSessao = new Set<() => void>();
 export function assinarSessaoExpirada(fn: () => void): () => void {
   ouvintesDeSessao.add(fn);
   return () => ouvintesDeSessao.delete(fn);
+}
+
+/**
+ * Renovação silenciosa da sessão do painel, chamada ao abrir.
+ *
+ * A sessão do painel dura 24 horas, e sem isto quem trabalha nele o dia
+ * inteiro seria derrubado no meio do expediente do dia seguinte. Com a
+ * renovação, quem entra todo dia nunca vê a tela de login, e quem some por
+ * mais de um dia entra de novo com a senha, que é digitar e não esperar SMS.
+ *
+ * Falha em silêncio de propósito: sem rede, o painel abre com o token que já
+ * tem. Se o token estiver morto, o primeiro 401 de qualquer tela derruba a
+ * sessão pela via de `assinarSessaoExpirada`.
+ */
+export async function renovarSessao(): Promise<void> {
+  try {
+    const r = await apiFetch<{ token: string; perfil: JwtPayload }>(
+      "/auth/refresh",
+      { method: "POST" },
+    );
+    salvarSessao(r.token, r.perfil);
+  } catch {
+    // Silêncio proposital: ver acima.
+  }
 }
 
 export async function apiFetch<T>(

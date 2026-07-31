@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { JwtPayload } from "@pacotes/shared";
-import { assinarSessaoExpirada, carregarPerfil } from "@/lib/api";
+import { assinarSessaoExpirada, carregarPerfil, renovarSessao } from "@/lib/api";
 import { Dashboard } from "@/components/Dashboard";
 import { Login } from "@/components/Login";
 
@@ -12,7 +12,13 @@ export default function Pagina() {
 
   useEffect(() => {
     const salvo = carregarPerfil();
-    if (salvo?.tipo === "usuario") setPerfil(salvo);
+    if (salvo?.tipo === "usuario") {
+      setPerfil(salvo);
+      // Sessão deslizante: a do painel vale 24h, e sem renovar ao abrir quem
+      // trabalha nele todo dia seria derrubado no meio do expediente
+      // seguinte. Sem `await`: o painel desenha com o token que já tem.
+      void renovarSessao();
+    }
     setCarregado(true);
   }, []);
 
