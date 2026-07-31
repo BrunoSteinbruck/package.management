@@ -2,10 +2,16 @@
 CREATE TYPE "TipoMedidor" AS ENUM ('AGUA', 'GAS');
 
 -- DropForeignKey
-ALTER TABLE "devices" DROP CONSTRAINT "devices_morador_id_fkey";
+ALTER TABLE "devices" DROP CONSTRAINT IF EXISTS "devices_morador_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "devices" DROP CONSTRAINT "devices_usuario_id_fkey";
+--
+-- IF EXISTS porque esta migração foi APLICADA depois da 20260726120000
+-- (que cria `devices.usuario_id`), mas o nome dela ordena ANTES. Num banco
+-- novo, que replica pela ordem dos nomes, a coluna e a constraint ainda não
+-- existem aqui: sem o IF EXISTS, `prisma migrate deploy` aborta na primeira
+-- subida, que é exatamente o que o Render roda no primeiro deploy.
+ALTER TABLE "devices" DROP CONSTRAINT IF EXISTS "devices_usuario_id_fkey";
 
 -- CreateTable
 CREATE TABLE "leituras_medidor" (
@@ -47,7 +53,23 @@ CREATE UNIQUE INDEX "tarifas_consumo_condominio_id_tipo_key" ON "tarifas_consumo
 ALTER TABLE "devices" ADD CONSTRAINT "devices_morador_id_fkey" FOREIGN KEY ("morador_id") REFERENCES "moradores"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "devices" ADD CONSTRAINT "devices_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuarios"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+--
+-- Condicional pelo mesmo motivo do DROP acima: num banco novo a coluna
+-- `usuario_id` só nasce na 20260726120000, que roda DEPOIS desta pela ordem
+-- dos nomes. Lá a constraint já é criada com ON DELETE SET NULL, que é o que
+-- o schema do Prisma declara (relação opcional), então os dois caminhos
+-- terminam no mesmo estado.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'devices' AND column_name = 'usuario_id'
+  ) THEN
+    ALTER TABLE "devices" ADD CONSTRAINT "devices_usuario_id_fkey"
+      FOREIGN KEY ("usuario_id") REFERENCES "usuarios"("id")
+      ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
 ALTER TABLE "leituras_medidor" ADD CONSTRAINT "leituras_medidor_condominio_id_fkey" FOREIGN KEY ("condominio_id") REFERENCES "condominios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -236,6 +236,29 @@ model Usuario {
   ativo        Boolean      @default(true)
   criadoEm     DateTime     @default(now()) @map("criado_em")
 
+  /**
+   * Identificador e canal de recuperação do painel.
+   *
+   * Único como o telefone, e por um motivo a mais: se duas contas
+   * compartilhassem o e-mail, o "esqueci a senha" escolheria uma delas por
+   * ordem de tabela e mandaria o link para a conta errada. Nulo é permitido
+   * e não colide (o Postgres não compara NULLs no índice único), que é o que
+   * deixa o porteiro existir sem e-mail.
+   */
+  email String? @unique
+
+  /**
+   * Só gestor tem senha. Porteiro e morador seguem entrando por SMS, onde a
+   * fricção de digitar senha no corredor não se paga.
+   */
+  senhaHash          String?   @map("senha_hash")
+  /** Bloqueio persistente: em memória, um restart do processo zeraria. */
+  senhaTentativas    Int       @default(0) @map("senha_tentativas")
+  senhaBloqueadaAte  DateTime? @map("senha_bloqueada_ate")
+  /** Só o SHA-256: o token inteiro vive no link do e-mail e em mais lugar nenhum. */
+  redefinicaoTokenHash String?  @map("redefinicao_token_hash")
+  redefinicaoExpiraEm  DateTime? @map("redefinicao_expira_em")
+
   condominio         Condominio @relation(fields: [condominioId], references: [id])
   pacotesRecebidos   Pacote[]   @relation("recebidoPor")
   retiradasEntregues Retirada[]       @relation("entreguePor")
