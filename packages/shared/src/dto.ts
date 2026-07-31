@@ -10,9 +10,39 @@ import {
 // Corpos de request validados na borda da API. O que a API devolve fica em
 // api.ts.
 
+/**
+ * Telefone só com dígitos, sem o código do país.
+ *
+ * O `+55` que a pessoa digita naturalmente quebrava o login em silêncio: o
+ * telefone é chave de busca exata, e "5551900000001" não encontra o cadastro
+ * gravado como "51900000001". No app isso aparecia como "Código expirado",
+ * que manda a pessoa pedir outro código e falhar de novo. Já produziu dado
+ * ruim: existe morador no banco gravado com o 55 na frente, que hoje só
+ * consegue entrar se digitar o país toda vez.
+ *
+ * O código do país só cai quando o que sobra tem tamanho de telefone
+ * brasileiro (12 ou 13 dígitos no total). O DDD 55, de Santa Maria, tem 10
+ * ou 11 dígitos ao todo e não é tocado: sem essa condição, "5599999999"
+ * viraria "99999999" e perderia o próprio DDD.
+ */
+export function normalizarTelefone(bruto: string): string {
+  const digitos = bruto.replace(/\D/g, "");
+  const comPais =
+    (digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55");
+  return comPais ? digitos.slice(2) : digitos;
+}
+
 export const TelefoneSchema = z
   .string()
-  .regex(/^\+?\d{10,14}$/, "Telefone inválido (use DDD + número, só dígitos)");
+  .max(24)
+  .transform(normalizarTelefone)
+  // A faixa continua a mesma de antes da normalização: apertar aqui recusaria
+  // cadastros que hoje funcionam, e não é isso que este ajuste resolve.
+  .pipe(
+    z
+      .string()
+      .regex(/^\d{10,14}$/, "Telefone inválido (use DDD + número, só dígitos)"),
+  );
 
 /**
  * Texto opcional em que "em branco" quer dizer AUSENTE, não string vazia.

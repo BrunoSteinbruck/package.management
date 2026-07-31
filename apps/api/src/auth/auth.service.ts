@@ -8,7 +8,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import type { JwtPayload, PapelUsuario } from "@pacotes/shared";
+import { normalizarTelefone, type JwtPayload, type PapelUsuario } from "@pacotes/shared";
 import { createHmac, randomInt } from "node:crypto";
 import { EmailService, textoRedefinicao } from "../email/email.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -85,11 +85,11 @@ function contasDemo(): { telefones: Set<string>; codigo: string } | null {
   return { telefones, codigo };
 }
 
-// O schema aceita o telefone com ou sem "+"; compara sempre pelos dígitos
-// para o revisor não errar o login por causa do formato.
-function soDigitos(valor: string) {
-  return valor.replace(/\D/g, "");
-}
+// Os dois lados da comparação passam pela MESMA normalização: a env é escrita
+// à mão (e costuma vir com +55), e o que chega do cliente já foi normalizado
+// pelo schema. Comparar formatos diferentes desligaria as contas de demo
+// justamente no review da loja, sem nenhum erro visível.
+const soDigitos = normalizarTelefone;
 
 @Injectable()
 export class AuthService {
