@@ -19,6 +19,7 @@
  */
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { MODULOS_CONDOMINIO } from "@pacotes/shared";
+import { gerarHash } from "../../src/auth/senha.util";
 
 const API = process.env.E2E_API_URL ?? "http://localhost:3001/v1";
 const prisma = new PrismaClient();
@@ -92,7 +93,13 @@ async function pedirOtp(telefone: string): Promise<void> {
   }
 }
 
-/** Verifica pela porta do painel, que só aceita a equipe do condomínio. */
+/**
+ * A porta de SMS do painel, que hoje só aceita PORTARIA.
+ *
+ * O gestor foi movido para senha, e esta porta o recusa de propósito: sem
+ * isso a senha seria decorativa, porque um chip clonado continuaria entrando
+ * por aqui nas contas que mexem em dinheiro.
+ */
 async function verificarPelaPortaDoPainel(
   telefone: string,
   jaPediu = false,
@@ -107,10 +114,56 @@ async function verificarPelaPortaDoPainel(
     token?: string;
     perfil?: { tipo?: string };
   };
-  if (!jaPediu) {
-    checa(`${telefone} entra pelo painel`, !!corpo.token && corpo.perfil?.tipo === "usuario");
-  }
   return { status: res.status, token: corpo.token, tipo: corpo.perfil?.tipo };
+}
+
+/** Quanto tempo o token vale, e por qual porta ele entrou. */
+function leToken(token: string): { horas: number; sessao?: string; papel?: string } {
+  const p = JSON.parse(
+    Buffer.from(token.split(".")[1], "base64url").toString("utf8"),
+  ) as { exp: number; iat: number; sessao?: string; papel?: string };
+  return { horas: (p.exp - p.iat) / 3600, sessao: p.sessao, papel: p.papel };
+}
+
+/**
+ * O gestor entra no painel por senha, e é assim que ele loga para a suíte
+ * inteira. NÃO gasta OTP, e também não gasta uma das três solicitações de
+ * "esqueci a senha" por hora: a senha é gravada direto no banco, com o mesmo
+ * `gerarHash` que a API usa.
+ *
+ * O fluxo completo do link (pedir, redefinir, uso único, destravar) é
+ * exercitado no bloco de bloqueio, no fim da suíte: fazê-lo aqui também
+ * estouraria o limite de 3 por hora na segunda execução seguida.
+ */
+const SENHA_E2E = "e2e-senha-do-sindico";
+const EMAIL_SINDICO_E2E = "sindico@convivar.demo";
+
+async function loginDeGestorPorSenha(
+  telefone: string,
+  email: string,
+): Promise<string> {
+  await prisma.usuario.update({
+    where: { telefone },
+    data: {
+      email,
+      senhaHash: gerarHash(SENHA_E2E),
+      senhaTentativas: 0,
+      senhaBloqueadaAte: null,
+    },
+  });
+
+  const r = await req<{ token?: string; perfil?: { papel?: string } }>(
+    "POST",
+    "/auth/senha/login",
+    { corpo: { identificador: email, senha: SENHA_E2E } },
+  );
+  checa("gestor entra no painel por e-mail e senha", !!r.token);
+  if (!r.token) throw new Error(`Login por senha falhou: ${JSON.stringify(r)}`);
+
+  const sessao = leToken(r.token);
+  checa("sessão do painel vale 24 horas", sessao.horas === 24, `${sessao.horas}h`);
+  checa("e carrega a marca da porta", sessao.sessao === "painel", String(sessao.sessao));
+  return r.token;
 }
 
 /**
@@ -207,6 +260,19 @@ async function zerar(cid: string): Promise<void> {
   await prisma.eventoWebhookFinanceiro.deleteMany({});
   await prisma.morador.updateMany({ data: { aceitaWhatsapp: false } });
   await prisma.condominio.update({ where: { id: cid }, data: { modulos: [] } });
+
+  // A senha do gestor volta para a do seed, e o bloqueio por tentativas cai.
+  // Sem isto, uma execução que terminasse com a conta bloqueada deixaria o
+  // painel de demo inacessível até o bloqueio vencer.
+  await prisma.usuario.updateMany({
+    where: { papel: { in: ["SINDICO", "ADMIN"] } },
+    data: {
+      senhaTentativas: 0,
+      senhaBloqueadaAte: null,
+      redefinicaoTokenHash: null,
+      redefinicaoExpiraEm: null,
+    },
+  });
 }
 
 // ---------- a suíte ----------
@@ -218,14 +284,112 @@ async function main() {
     process.exit(2);
   }
 
-  const porteiro = await login("51900000002");
-
-  // Síndico e morador entram pelo caminho do painel, de propósito: as
-  // asserções abaixo saem de graça, sem gastar uma segunda solicitação de OTP
-  // dos três que o telefone tem por hora.
-  console.log("\n== Login do painel: morador recusado sem perder o código ==");
-  const { token: sindico } = await verificarPelaPortaDoPainel("51900000001");
+  // O login de cada perfil já é o teste da porta dele, de propósito: as
+  // asserções saem de graça e nenhuma delas gasta um segundo OTP dos três que
+  // o telefone tem por hora.
+  console.log("\n== Entrada do painel: senha para gestor, SMS para a portaria ==");
+  const sindico = await loginDeGestorPorSenha("51900000001", EMAIL_SINDICO_E2E);
   const morador = await loginDeMoradorRecusadoNoPainel("51900000003");
+
+  {
+    // Login por senha, pelas duas formas de se identificar.
+    const porCelular = await req<{ token?: string }>("POST", "/auth/senha/login", {
+      corpo: { identificador: "51900000001", senha: SENHA_E2E },
+    });
+    checa("e pelo celular com a mesma senha", !!porCelular.token);
+
+    /**
+     * As duas recusas têm que ser indistinguíveis. Se a mensagem mudasse
+     * conforme a conta existe, a tela de login viraria uma lista de quem é
+     * síndico neste sistema, e o atacante nem precisaria da senha para
+     * consultá-la.
+     */
+    const status = async (corpo: unknown) =>
+      (
+        await fetch(`${API}/auth/senha/login`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(corpo),
+        })
+      ).json() as Promise<{ message?: string; statusCode?: number }>;
+    const senhaErrada = await status({
+      identificador: EMAIL_SINDICO_E2E,
+      senha: "senha-errada-mesmo",
+    });
+    const naoExiste = await status({
+      identificador: "ninguem@lugar-nenhum.invalido",
+      senha: "senha-errada-mesmo",
+    });
+    checa(
+      "senha errada e conta inexistente devolvem a MESMA resposta",
+      senhaErrada.message === naoExiste.message &&
+        senhaErrada.statusCode === naoExiste.statusCode,
+      `${senhaErrada.message} / ${naoExiste.message}`,
+    );
+
+    // Porteiro não tem senha: tentar entrar por ela cai na mesma recusa
+    // genérica, sem revelar que o papel dele é outro.
+    const porteiroPorSenha = await status({
+      identificador: "51900000002",
+      senha: SENHA_E2E,
+    });
+    checa(
+      "porteiro não entra por senha, e a recusa não entrega o motivo",
+      porteiroPorSenha.message === senhaErrada.message,
+      String(porteiroPorSenha.message),
+    );
+  }
+
+  {
+    // O gestor é recusado na porta de SMS do painel, SEM perder o código: ele
+    // ainda usa o app, onde o login continua sendo por SMS.
+    await pedirOtp("51900000001");
+    const recusa = await verificarPelaPortaDoPainel("51900000001", true);
+    checa("gestor no painel por SMS leva 403", recusa.status === 403, String(recusa.status));
+    checa("e nenhum token é emitido", !recusa.token);
+
+    const noApp = await req<{ token?: string }>("POST", "/auth/otp/verify", {
+      corpo: { telefone: "51900000001", codigo: "246810" },
+    });
+    checa("o código do gestor sobrevive e entra no app", !!noApp.token);
+    if (noApp.token) {
+      const t = leToken(noApp.token);
+      checa("e no app a sessão dele segue de 30 dias", t.horas === 720, `${t.horas}h`);
+    }
+  }
+
+  // A portaria continua entrando por SMS, e é assim que ela loga para o resto
+  // da suíte: um OTP só, que também serve de asserção da porta. O token de
+  // painel autoriza os mesmos endpoints da portaria que o do app.
+  const portaPorteiro = await verificarPelaPortaDoPainel("51900000002");
+  checa("porteiro entra no painel por SMS", !!portaPorteiro.token, String(portaPorteiro.status));
+  if (!portaPorteiro.token) {
+    throw new Error("Login do porteiro falhou; o resto da suíte depende dele.");
+  }
+  const porteiro = portaPorteiro.token;
+  {
+    const t = leToken(porteiro);
+    checa("com a mesma sessão curta de painel", t.horas === 24 && t.sessao === "painel");
+  }
+
+  {
+    // O refresh preserva a validade de cada porta. Um painel que renovasse
+    // para 30 dias desfaria a sessão curta no primeiro dia de uso.
+    const painelRenovado = await req<{ token?: string }>("POST", "/auth/refresh", {
+      token: sindico,
+    });
+    checa(
+      "refresh do painel continua valendo 24h",
+      !!painelRenovado.token && leToken(painelRenovado.token).horas === 24,
+    );
+    const appRenovado = await req<{ token?: string }>("POST", "/auth/refresh", {
+      token: morador,
+    });
+    checa(
+      "refresh do app continua valendo 30 dias",
+      !!appRenovado.token && leToken(appRenovado.token).horas === 720,
+    );
+  }
 
   // O tenant vem do próprio síndico de demo, e não de um findFirst genérico:
   // o seed tem mais de um condomínio com síndico, e olhar o banco pelo tenant
@@ -1266,6 +1430,82 @@ async function main() {
     );
   } else {
     console.log("  (pulada: sem unidade 100% sem app no seed)");
+  }
+
+  // ===== Bloqueio por tentativas =====
+  //
+  // Fica no FIM porque termina com a conta do síndico bloqueada por 15
+  // minutos, e o `zerar` logo abaixo é quem devolve o acesso.
+  console.log("\n== Senha: bloqueio por tentativas ==");
+  {
+    const tentar = async (senha: string) =>
+      (
+        await fetch(`${API}/auth/senha/login`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ identificador: EMAIL_SINDICO_E2E, senha }),
+        })
+      ).status;
+
+    for (let i = 0; i < 5; i++) await tentar("chute-errado-numero-" + i);
+
+    checa(
+      "depois de 5 erros, até a senha certa é recusada",
+      (await tentar(SENHA_E2E)) === 429,
+    );
+
+    const bloqueado = await prisma.usuario.findFirstOrThrow({
+      where: { email: EMAIL_SINDICO_E2E },
+      select: { senhaBloqueadaAte: true },
+    });
+    checa(
+      "e o bloqueio está no banco, não em memória",
+      !!bloqueado.senhaBloqueadaAte && bloqueado.senhaBloqueadaAte > new Date(),
+    );
+
+    /**
+     * O bloqueio não pode virar armadilha: quem esqueceu a senha e errou
+     * cinco vezes precisa conseguir sair pelo "esqueci a senha", senão a
+     * conta fica presa por 15 minutos sem saída nenhuma.
+     */
+    const link = await req<{ devLink?: string; mensagem?: string }>(
+      "POST",
+      "/auth/senha/esqueci",
+      { corpo: { email: EMAIL_SINDICO_E2E } },
+    );
+    checa(
+      "esqueci a senha responde sem confirmar se a conta existe",
+      link.mensagem?.startsWith("Se este e-mail") === true,
+      link.mensagem ?? "(sem mensagem)",
+    );
+    const tokenNovo = (link.devLink ?? "").split("token=")[1];
+    if (!tokenNovo) {
+      throw new Error(
+        "Sem devLink: suba a API com EMAIL_DEV_ECHO=1 para a suíte pegar o link.",
+      );
+    }
+
+    const redefinido = await req<{ token?: string }>("POST", "/auth/senha/redefinir", {
+      corpo: { token: tokenNovo, novaSenha: SENHA_E2E },
+    });
+    checa("redefinir pelo link já devolve a sessão do painel", !!redefinido.token);
+    if (redefinido.token) {
+      const t = leToken(redefinido.token);
+      checa("com a validade curta", t.horas === 24 && t.sessao === "painel");
+    }
+
+    // Uso único: o mesmo link não serve duas vezes.
+    const repetido = await fetch(`${API}/auth/senha/redefinir`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: tokenNovo, novaSenha: "outra-senha-qualquer" }),
+    });
+    checa("o link de redefinição é de uso único", repetido.status === 401, String(repetido.status));
+
+    checa(
+      "redefinir a senha destrava a conta bloqueada",
+      (await tentar(SENHA_E2E)) === 201,
+    );
   }
 
   // ---------- fim ----------
