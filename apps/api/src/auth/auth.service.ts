@@ -227,7 +227,7 @@ export class AuthService {
     });
     if (usuario) {
       /**
-       * Gestor não entra no painel por SMS.
+       * Gestor que JÁ TEM senha não entra no painel por SMS.
        *
        * Sem esta recusa, a senha seria decorativa: quem clonasse o chip do
        * síndico continuaria entrando pelo caminho antigo, e o SIM swap
@@ -235,10 +235,22 @@ export class AuthService {
        * O porteiro segue por aqui, porque a visão de Visitantes é da portaria
        * e ele não tem senha.
        *
-       * Antes de encerrar o desafio, como as demais recusas: quem errou de
-       * porta não perde o código que acabou de receber.
+       * O `senhaHash` no teste é a rampa de transição, e ela se fecha
+       * sozinha. Um síndico cadastrado ANTES desta mudança não tem e-mail nem
+       * senha: recusá-lo aqui o trancaria fora do painel sem nenhum caminho
+       * de volta, porque a redefinição depende do e-mail que ele não tem.
+       * Enquanto não define a senha, ele entra como entrava, o que não é
+       * regressão nenhuma: era a única porta que existia. No instante em que
+       * a senha nasce, esta porta fecha para ele.
+       *
+       * A recusa vem antes de encerrar o desafio, como as demais: quem errou
+       * de porta não perde o código que acabou de receber.
        */
-      if (extra?.somenteEquipe && PAPEIS_COM_SENHA.includes(usuario.papel)) {
+      if (
+        extra?.somenteEquipe &&
+        PAPEIS_COM_SENHA.includes(usuario.papel) &&
+        usuario.senhaHash
+      ) {
         throw new ForbiddenException(
           "Sua conta entra no painel com e-mail e senha. Use a opção de senha, ou 'Esqueci a senha' para definir a primeira.",
         );

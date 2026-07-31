@@ -137,6 +137,7 @@ function leToken(token: string): { horas: number; sessao?: string; papel?: strin
  */
 const SENHA_E2E = "e2e-senha-do-sindico";
 const EMAIL_SINDICO_E2E = "sindico@convivar.demo";
+const TELEFONE_SINDICO_E2E = "51900000001";
 
 async function loginDeGestorPorSenha(
   telefone: string,
@@ -270,8 +271,11 @@ async function zerar(cid: string): Promise<void> {
    * também cai: uma execução que terminasse travada deixaria a demo
    * inacessível por 15 minutos.
    */
-  await prisma.usuario.updateMany({
-    where: { papel: { in: ["SINDICO", "ADMIN"] } },
+  await prisma.usuario.update({
+    // A CONTA que a suíte usou, e só ela. `usuarios` é tabela global, sem
+    // RLS: filtrar por papel, ou mesmo por condomínio, alcança os gestores
+    // reais que dividem o tenant da demo e planta neles a senha de teste.
+    where: { telefone: TELEFONE_SINDICO_E2E },
     data: {
       senhaHash: gerarHash(process.env.SINDICO_SENHA ?? "convivar246810"),
       senhaTentativas: 0,
@@ -295,7 +299,7 @@ async function main() {
   // asserções saem de graça e nenhuma delas gasta um segundo OTP dos três que
   // o telefone tem por hora.
   console.log("\n== Entrada do painel: senha para gestor, SMS para a portaria ==");
-  const sindico = await loginDeGestorPorSenha("51900000001", EMAIL_SINDICO_E2E);
+  const sindico = await loginDeGestorPorSenha(TELEFONE_SINDICO_E2E, EMAIL_SINDICO_E2E);
   const morador = await loginDeMoradorRecusadoNoPainel("51900000003");
 
   {
@@ -348,21 +352,45 @@ async function main() {
   }
 
   {
-    // O gestor é recusado na porta de SMS do painel, SEM perder o código: ele
-    // ainda usa o app, onde o login continua sendo por SMS.
-    await pedirOtp("51900000001");
-    const recusa = await verificarPelaPortaDoPainel("51900000001", true);
-    checa("gestor no painel por SMS leva 403", recusa.status === 403, String(recusa.status));
-    checa("e nenhum token é emitido", !recusa.token);
+    /**
+     * As três asserções da porta de SMS, com UM código só.
+     *
+     * O gestor com senha é recusado (senão a senha seria decorativa: um chip
+     * clonado continuaria entrando pela porta antiga nas contas que mexem em
+     * dinheiro). A recusa NÃO consome o desafio, e é o passo seguinte que
+     * prova isso, usando o mesmo código. E o passo seguinte é a rampa: sem
+     * senha, o gestor ainda entra, porque um síndico cadastrado antes desta
+     * mudança não tem e-mail para redefinir e ficaria trancado fora do painel
+     * para sempre. A rampa se fecha sozinha quando a senha nasce.
+     */
+    await pedirOtp(TELEFONE_SINDICO_E2E);
 
-    const noApp = await req<{ token?: string }>("POST", "/auth/otp/verify", {
-      corpo: { telefone: "51900000001", codigo: "246810" },
+    const comSenha = await verificarPelaPortaDoPainel(TELEFONE_SINDICO_E2E, true);
+    checa("gestor com senha no painel por SMS leva 403", comSenha.status === 403, String(comSenha.status));
+    checa("e nenhum token é emitido", !comSenha.token);
+
+    const original = await prisma.usuario.findFirstOrThrow({
+      where: { telefone: TELEFONE_SINDICO_E2E },
+      select: { senhaHash: true },
     });
-    checa("o código do gestor sobrevive e entra no app", !!noApp.token);
-    if (noApp.token) {
-      const t = leToken(noApp.token);
-      checa("e no app a sessão dele segue de 30 dias", t.horas === 720, `${t.horas}h`);
-    }
+    await prisma.usuario.update({
+      where: { telefone: TELEFONE_SINDICO_E2E },
+      data: { senhaHash: null },
+    });
+    const semSenha = await verificarPelaPortaDoPainel(TELEFONE_SINDICO_E2E, true);
+    checa(
+      "gestor SEM senha ainda entra por SMS (rampa de transição)",
+      !!semSenha.token,
+      String(semSenha.status),
+    );
+    checa(
+      "e isso prova que o 403 não consumiu o código",
+      !!semSenha.token,
+    );
+    await prisma.usuario.update({
+      where: { telefone: TELEFONE_SINDICO_E2E },
+      data: { senhaHash: original.senhaHash },
+    });
   }
 
   // A portaria continua entrando por SMS, e é assim que ela loga para o resto
