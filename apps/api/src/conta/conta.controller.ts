@@ -1,5 +1,12 @@
-import { Controller, Delete, Get, UseGuards } from "@nestjs/common";
-import type { JwtPayload } from "@pacotes/shared";
+import { Body, Controller, Delete, Get, Post, UseGuards } from "@nestjs/common";
+import {
+  AlterarEmailSchema,
+  AlterarSenhaSchema,
+  type AlterarEmailDto,
+  type AlterarSenhaDto,
+  type JwtPayload,
+} from "@pacotes/shared";
+import { ZodPipe } from "../common/zod.pipe";
 import { AuthGuard, CurrentUser } from "../auth/auth.guard";
 import { ContaService } from "./conta.service";
 
@@ -23,5 +30,28 @@ export class ContaController {
   @Delete()
   excluir(@CurrentUser() user: JwtPayload) {
     return this.conta.excluir(user);
+  }
+
+  // ---------- conta do gestor (painel) ----------
+
+  @Get("perfil")
+  minhaConta(@CurrentUser() user: JwtPayload) {
+    return this.conta.minhaConta(user);
+  }
+
+  @Post("senha")
+  alterarSenha(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(AlterarSenhaSchema)) body: AlterarSenhaDto,
+  ) {
+    return this.conta.alterarSenha(user, body);
+  }
+
+  @Post("email")
+  alterarEmail(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(AlterarEmailSchema)) body: AlterarEmailDto,
+  ) {
+    return this.conta.alterarEmail(user, body);
   }
 }

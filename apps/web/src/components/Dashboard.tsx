@@ -30,6 +30,7 @@ import { DocumentosView } from "./DocumentosView";
 import { VisitantesView } from "./VisitantesView";
 import { FinanceiroView } from "./FinanceiroView";
 import { Importar } from "./Importar";
+import { MinhaContaView } from "./MinhaContaView";
 
 type Visao =
   | "visao-geral"
@@ -42,7 +43,8 @@ type Visao =
   | "documentos"
   | "visitantes"
   | "financeiro"
-  | "configuracoes";
+  | "configuracoes"
+  | "minha-conta";
 
 function rotulo(u?: UnidadeRotulo) {
   if (!u) return "-";
@@ -223,6 +225,12 @@ export function Dashboard({
               Configurações
             </button>
           )}
+          <button
+            className={`item ${visao === "minha-conta" ? "ativo" : ""}`}
+            onClick={() => setVisao("minha-conta")}
+          >
+            Minha conta
+          </button>
           <button className="item" onClick={() => { limparSessao(); aoSair(); }}>
             Sair
           </button>
@@ -261,6 +269,7 @@ export function Dashboard({
           <FinanceiroView />
         )}
         {visao === "configuracoes" && gestor && <ConfiguracoesView />}
+        {visao === "minha-conta" && <MinhaContaView />}
       </main>
     </div>
   );
@@ -820,6 +829,11 @@ function EquipeSection() {
   // Só quem entra no painel por senha precisa de e-mail: é por ele que a
   // primeira senha é definida e recuperada.
   const exigeEmail = papel === "SINDICO";
+  // Preenchimento do e-mail de quem foi cadastrado antes da senha existir.
+  // Só para quem NÃO tem: trocar o de quem já tem seria tomada de conta, e o
+  // servidor recusa.
+  const [completando, setCompletando] = useState<string | null>(null);
+  const [emailDoMembro, setEmailDoMembro] = useState("");
 
   const carregar = useCallback(async () => {
     try {
@@ -857,6 +871,21 @@ function EquipeSection() {
     }
   }
 
+  async function completarEmail(id: string) {
+    setErro(null);
+    try {
+      await apiFetch(`/cadastro/equipe/${id}/email`, {
+        method: "POST",
+        body: { email: emailDoMembro.trim() },
+      });
+      setCompletando(null);
+      setEmailDoMembro("");
+      carregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    }
+  }
+
   async function alternar(id: string) {
     try {
       await apiFetch(`/cadastro/equipe/${id}/alternar-ativo`, { method: "POST" });
@@ -890,7 +919,40 @@ function EquipeSection() {
             <tr key={m.id}>
               <td className="unidade">{m.nome}</td>
               <td>{m.telefone}</td>
-              <td>{m.email ?? "-"}</td>
+              <td>
+                {m.email ? (
+                  m.email
+                ) : completando === m.id ? (
+                  <span className="linha" style={{ gap: 6 }}>
+                    <input
+                      type="email"
+                      style={{ width: 190 }}
+                      placeholder="email@exemplo.com"
+                      maxLength={160}
+                      value={emailDoMembro}
+                      onChange={(e) => setEmailDoMembro(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      className="acao"
+                      onClick={() => completarEmail(m.id)}
+                      disabled={!emailDoMembro.includes("@")}
+                    >
+                      Salvar
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    className="link"
+                    onClick={() => {
+                      setCompletando(m.id);
+                      setEmailDoMembro("");
+                    }}
+                  >
+                    Adicionar
+                  </button>
+                )}
+              </td>
               <td>{m.papel.toLowerCase()}</td>
               <td>
                 <span className={`selo ${m.ativo ? "ok" : "alerta"}`}>

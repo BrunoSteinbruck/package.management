@@ -518,3 +518,21 @@ export interface HistoricoConsumoMes {
   valorTotal: number | null;
   unidadesLidas: number;
 }
+
+// ----- Conta do gestor (painel) -----
+
+/**
+ * O que a tela "Minha conta" mostra sobre quem está logado.
+ *
+ * `temSenha` é falso para o gestor cadastrado antes da senha existir: é o que
+ * deixa a tela pedir só o e-mail em vez de cobrar uma senha atual que ele
+ * nunca teve.
+ */
+export interface MinhaConta {
+  nome: string;
+  telefone: string;
+  email: string | null;
+  papel: PapelUsuario | string;
+  condominioNome: string;
+  temSenha: boolean;
+}

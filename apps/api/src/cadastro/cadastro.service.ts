@@ -234,6 +234,53 @@ export class CadastroService {
     });
   }
 
+  /**
+   * O síndico completa o cadastro de quem AINDA NÃO tem e-mail.
+   *
+   * Trocar o e-mail de quem já tem seria tomada de conta: bastaria apontar a
+   * recuperação para a própria caixa e pedir "esqueci a senha". Síndicos são
+   * pares, com o mesmo poder sobre o condomínio, então um não pode virar dono
+   * da conta do outro. Quem já tem e-mail troca sozinho, em Minha conta, e lá
+   * a senha atual é cobrada.
+   *
+   * Existe porque as contas criadas antes da senha não têm e-mail nenhum, e
+   * sem este caminho a única saída seria mexer no banco à mão.
+   */
+  async definirEmailDeMembro(
+    user: JwtPayload,
+    usuarioId: string,
+    email: string,
+  ) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    const alvo = await this.prisma.usuario.findFirst({
+      where: { id: usuarioId, condominioId },
+    });
+    if (!alvo) throw new ForbiddenException("Usuário não encontrado");
+    if (alvo.email) {
+      throw new ConflictException(
+        `${alvo.nome} já tem e-mail cadastrado. Só a própria pessoa pode trocá-lo, em Minha conta.`,
+      );
+    }
+    const jaUsado = await this.prisma.usuario.findUnique({ where: { email } });
+    if (jaUsado) {
+      throw new ConflictException("Este e-mail já pertence a alguém da equipe");
+    }
+    const atualizado = await this.prisma.usuario.update({
+      where: { id: alvo.id },
+      data: { email },
+      select: {
+        id: true,
+        nome: true,
+        telefone: true,
+        email: true,
+        papel: true,
+        ativo: true,
+      },
+    });
+    return atualizado;
+  }
+
   async alternarAtivoUsuario(user: JwtPayload, usuarioId: string) {
     const condominioId = this.tenantDe(user);
     this.exigirGestor(user);

@@ -144,6 +144,38 @@ export const RedefinirSenhaSchema = z.object({
 });
 export type RedefinirSenhaDto = z.infer<typeof RedefinirSenhaSchema>;
 
+/**
+ * Trocar a própria senha, já dentro do painel.
+ *
+ * A senha atual é exigida mesmo com a sessão aberta: um navegador esquecido
+ * aberto no computador da administração não pode virar troca de senha, que
+ * expulsaria o dono da própria conta.
+ */
+export const AlterarSenhaSchema = z.object({
+  senhaAtual: z.string().min(1).max(100),
+  novaSenha: SenhaSchema,
+});
+export type AlterarSenhaDto = z.infer<typeof AlterarSenhaSchema>;
+
+/**
+ * Definir ou trocar o próprio e-mail de recuperação.
+ *
+ * `senhaAtual` é opcional porque o gestor cadastrado antes da senha existir
+ * não tem nenhuma: é justamente ele que precisa deste endpoint para sair da
+ * rampa. Quem JÁ tem senha precisa informá-la, e o serviço cobra: trocar o
+ * e-mail de recuperação sem prova é redirecionar o "esqueci a senha" para a
+ * caixa de outra pessoa, que é tomar a conta.
+ */
+export const AlterarEmailSchema = z.object({
+  email: EmailSchema,
+  senhaAtual: z.string().min(1).max(100).optional(),
+});
+export type AlterarEmailDto = z.infer<typeof AlterarEmailSchema>;
+
+/** O síndico completa o cadastro de quem ainda não tem e-mail nenhum. */
+export const DefinirEmailDeMembroSchema = z.object({ email: EmailSchema });
+export type DefinirEmailDeMembroDto = z.infer<typeof DefinirEmailDeMembroSchema>;
+
 export const EmitirConviteSchema = z.object({
   unidadeId: z.string().uuid(),
 });

@@ -12,6 +12,8 @@ import {
   CriarUnidadesSchema,
   CriarUsuarioDto,
   CriarUsuarioSchema,
+  DefinirEmailDeMembroSchema,
+  type DefinirEmailDeMembroDto,
   CriarVagasDto,
   CriarVagasSchema,
   ImportarMoradoresDto,
@@ -92,6 +94,15 @@ export class CadastroController {
     @Body(new ZodPipe(CriarUsuarioSchema)) dto: CriarUsuarioDto,
   ) {
     return this.cadastro.criarUsuario(user, dto);
+  }
+
+  @Post("equipe/:usuarioId/email")
+  definirEmailDeMembro(
+    @CurrentUser() user: JwtPayload,
+    @Param("usuarioId", ParseUUIDPipe) usuarioId: string,
+    @Body(new ZodPipe(DefinirEmailDeMembroSchema)) body: DefinirEmailDeMembroDto,
+  ) {
+    return this.cadastro.definirEmailDeMembro(user, usuarioId, body.email);
   }
 
   @Post("equipe/:usuarioId/alternar-ativo")

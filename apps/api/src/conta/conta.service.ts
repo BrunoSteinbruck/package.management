@@ -1,11 +1,21 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import type { Capacidades, JwtPayload, ModuloCondominio } from "@pacotes/shared";
+import type {
+  AlterarEmailDto,
+  AlterarSenhaDto,
+  Capacidades,
+  JwtPayload,
+  MinhaConta,
+  ModuloCondominio,
+} from "@pacotes/shared";
 import { MODULOS_CONDOMINIO } from "@pacotes/shared";
 import { randomUUID } from "node:crypto";
+import { gerarHash, verificarHash } from "../auth/senha.util";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
@@ -230,5 +240,107 @@ export class ContaService {
     return outrosGestores > 0
       ? null
       : "Você é o último síndico deste condomínio. Cadastre outro síndico antes de excluir sua conta, senão o condomínio fica sem administrador.";
+  }
+
+  // ---------- conta do gestor (painel) ----------
+
+  /** Só a equipe tem conta de painel; morador não passa por aqui. */
+  private async gestorDaSessao(user: JwtPayload) {
+    if (user.tipo !== "usuario") {
+      throw new ForbiddenException("Apenas a equipe do condomínio");
+    }
+    return this.prisma.usuario.findUniqueOrThrow({
+      where: { id: user.sub },
+      include: { condominio: true },
+    });
+  }
+
+  async minhaConta(user: JwtPayload): Promise<MinhaConta> {
+    const u = await this.gestorDaSessao(user);
+    return {
+      nome: u.nome,
+      telefone: u.telefone,
+      email: u.email,
+      papel: u.papel,
+      condominioNome: u.condominio.nome,
+      // O hash NUNCA sai daqui: a tela só precisa saber se existe, para pedir
+      // (ou não) a senha atual.
+      temSenha: u.senhaHash !== null,
+    };
+  }
+
+  /**
+   * Trocar a própria senha.
+   *
+   * A senha atual é exigida mesmo com a sessão aberta: o painel vive no
+   * computador da administração, e um navegador esquecido aberto não pode
+   * virar troca de senha, que expulsaria o dono da própria conta.
+   */
+  async alterarSenha(user: JwtPayload, dto: AlterarSenhaDto) {
+    const u = await this.gestorDaSessao(user);
+    if (!u.senhaHash) {
+      throw new BadRequestException(
+        "Sua conta ainda não tem senha. Use 'Esqueci a senha' na tela de entrada para criar a primeira.",
+      );
+    }
+    /**
+     * 400, e não 401: a SESSÃO está válida, o que está errado é um campo do
+     * corpo. O painel trata todo 401 como sessão expirada e devolve a tela de
+     * login, então um 401 aqui expulsaria do painel quem só errou a digitação
+     * da senha atual, perdendo o que ele estivesse fazendo.
+     */
+    if (!verificarHash(dto.senhaAtual, u.senhaHash)) {
+      throw new BadRequestException("A senha atual está incorreta");
+    }
+    await this.prisma.usuario.update({
+      where: { id: u.id },
+      data: {
+        senhaHash: gerarHash(dto.novaSenha),
+        senhaTentativas: 0,
+        senhaBloqueadaAte: null,
+        // Um link de redefinição pendente perde a validade: quem trocou a
+        // senha sabendo a atual não deveria continuar alcançável por um
+        // e-mail antigo parado numa caixa de entrada.
+        redefinicaoTokenHash: null,
+        redefinicaoExpiraEm: null,
+      },
+    });
+    return { alterada: true };
+  }
+
+  /**
+   * Definir ou trocar o próprio e-mail de recuperação.
+   *
+   * Quem JÁ tem senha precisa informá-la. Trocar o e-mail de recuperação sem
+   * prova nenhuma é redirecionar o "esqueci a senha" para a caixa de outra
+   * pessoa: com a sessão sequestrada, seria tomar a conta em definitivo, e o
+   * dono descobriria só quando não conseguisse mais entrar.
+   *
+   * Quem ainda NÃO tem senha é o gestor cadastrado antes desta funcionalidade
+   * existir: é justamente ele que precisa deste endpoint, e cobrar dele uma
+   * senha que nunca teve seria trancá-lo do lado de fora para sempre.
+   */
+  async alterarEmail(user: JwtPayload, dto: AlterarEmailDto) {
+    const u = await this.gestorDaSessao(user);
+    if (u.senhaHash) {
+      // 400 pelo mesmo motivo do método acima: a sessão está boa, o campo é
+      // que não confere.
+      if (!dto.senhaAtual || !verificarHash(dto.senhaAtual, u.senhaHash)) {
+        throw new BadRequestException(
+          "Informe sua senha atual para trocar o e-mail de recuperação",
+        );
+      }
+    }
+    const jaUsado = await this.prisma.usuario.findFirst({
+      where: { email: dto.email, id: { not: u.id } },
+    });
+    if (jaUsado) {
+      throw new ConflictException("Este e-mail já pertence a outra conta");
+    }
+    await this.prisma.usuario.update({
+      where: { id: u.id },
+      data: { email: dto.email },
+    });
+    return { email: dto.email };
   }
 }
