@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import {
   AceitarConciliacaoDto,
   AceitarConciliacaoSchema,
@@ -179,6 +180,13 @@ export class FinanceiroController {
  * controller separado justamente para o `@UseGuards` do outro não valer aqui
  * por descuido, e para a exceção ficar visível em vez de escondida.
  */
+/**
+ * Fora do limite: o provedor manda rajada legítima quando liquida um lote de
+ * boletos, e um 429 aqui derruba a confirmação de pagamento de moradores que
+ * já pagaram. A rota tem defesa própria e melhor: o segredo por condomínio,
+ * comparado em tempo constante, mais idempotência por evento.
+ */
+@SkipThrottle()
 @Controller("webhooks")
 export class WebhookFinanceiroController {
   constructor(private readonly webhook: WebhookFinanceiroService) {}

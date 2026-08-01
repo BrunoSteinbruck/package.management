@@ -28,6 +28,22 @@ async function bootstrap() {
   app.useBodyParser("urlencoded", { limit: LIMITE_JSON, extended: true });
   app.setGlobalPrefix("v1");
 
+  /**
+   * Confia no primeiro salto do proxy para ler o IP real do cliente.
+   *
+   * Em produção a API fica atrás do proxy da hospedagem, e sem isto TODA
+   * requisição chega com o IP dele: os limites por IP virariam um balde único
+   * para o mundo inteiro, e o primeiro usuário a estourá-lo derrubaria todos
+   * os outros. Também conserta o rate limit de envio de OTP, que já lia o IP.
+   *
+   * O `1` é o número de saltos confiáveis, e não um booleano por um motivo:
+   * confiar no cabeçalho inteiro deixaria qualquer um forjar o próprio IP e
+   * escapar de todos os limites trocando um header.
+   */
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   // CORS: aberto em dev; em produção só as origens explicitamente listadas
   // (apps nativos não enviam Origin: isto afeta apenas navegadores/painel).
   const origins = (process.env.CORS_ORIGINS ?? "")
