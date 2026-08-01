@@ -7,9 +7,28 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:656399942296:android:c704100ef5f5c915cf86ed",
+        "mobilesdk_app_id": "1:656399942296:android:4549c0dc2f60eaf8cf86ed",
         "android_client_info": {
           "package_name": "br.com.convivar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtnsQhWkLqDOTuXkAV1pUwZQN3aqUu0RU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:656399942296:android:c704100ef5f5c915cf86ed",
+        "android_client_info": {
+          "package_name": "br.com.pacotes.guarita"
         }
       },
       "oauth_client": [],
