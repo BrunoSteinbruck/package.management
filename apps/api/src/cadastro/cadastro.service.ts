@@ -14,6 +14,7 @@ import type {
   SalvarModulosDto,
 } from "@pacotes/shared";
 import { MODULOS_CONDOMINIO } from "@pacotes/shared";
+import { registrarAcao } from "../common/auditoria.util";
 import { PrismaService } from "../prisma/prisma.service";
 
 /** Quem entra no painel por senha precisa do e-mail para recuperá-la. */
@@ -368,6 +369,22 @@ export class CadastroService {
     if (count === 0) {
       throw new ForbiddenException("Vínculo não encontrado ou já tratado");
     }
+    /**
+     * O registro precisa do `withTenant` PRÓPRIO.
+     *
+     * O `updateMany` acima roda fora de transação de tenant porque `vinculos`
+     * é tabela global. Já `registros_acao` tem RLS com FORCE: um insert nela
+     * sem `app.condominio_id` definido viola a policy `WITH CHECK` e devolve
+     * erro cru de banco, não uma linha faltando em silêncio.
+     */
+    await this.prisma.withTenant(condominioId, (tx) =>
+      registrarAcao(tx, {
+        condominioId,
+        usuarioId: user.sub,
+        acao: "cadastro.aprovar_vinculo",
+        detalhe: { vinculoId },
+      }),
+    );
     return { aprovado: true };
   }
 }

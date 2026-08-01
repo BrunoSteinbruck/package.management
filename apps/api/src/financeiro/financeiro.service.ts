@@ -19,6 +19,7 @@ import type {
 } from "@pacotes/shared";
 import { CompetenciaSchema, soDigitos } from "@pacotes/shared";
 import { randomBytes } from "node:crypto";
+import { mascararCpfCnpj, registrarAcao } from "../common/auditoria.util";
 import { PrismaService } from "../prisma/prisma.service";
 import { CobrancaProviderService } from "./cobranca.provider";
 import { cifrar, criptoConfigurado, decifrar } from "./cripto.util";
@@ -118,13 +119,19 @@ export class FinanceiroService {
 
   async salvarConfig(user: JwtPayload, dto: SalvarConfigFinanceiroDto) {
     const cid = this.exigirGestor(user);
-    await this.prisma.withTenant(cid, (tx) =>
-      tx.configFinanceiro.upsert({
+    await this.prisma.withTenant(cid, async (tx) => {
+      await tx.configFinanceiro.upsert({
         where: { condominioId: cid },
         create: { condominioId: cid, ...dto },
         update: dto,
-      }),
-    );
+      });
+      await registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.salvar_config",
+        detalhe: { ...dto },
+      });
+    });
     return this.config(user);
   }
 
@@ -150,13 +157,22 @@ export class FinanceiroService {
       webhookSegredo,
       ativo: true,
     };
-    await this.prisma.withTenant(cid, (tx) =>
-      tx.integracaoFinanceira.upsert({
+    await this.prisma.withTenant(cid, async (tx) => {
+      await tx.integracaoFinanceira.upsert({
         where: { condominioId: cid },
         create: { condominioId: cid, ...dados },
         update: dados,
-      }),
-    );
+      });
+      // SÓ o id da conta no provedor. A apiKey e o segredo do webhook nunca
+      // entram aqui: a trilha existe para dizer quem trocou a credencial, e
+      // guardá-la de novo em texto anularia a cifragem da tabela original.
+      await registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.salvar_integracao",
+        detalhe: { contaExternaId: dto.contaExternaId },
+      });
+    });
     // A apiKey NUNCA volta na resposta; o segredo do webhook volta uma vez
     // porque não há outro jeito de o síndico configurá-lo no provedor.
     return { webhookSegredo, emissaoReal: this.cobrancas.real };
@@ -199,6 +215,14 @@ export class FinanceiroService {
       if (validas !== new Set(dto.taxas.map((t) => t.unidadeId)).size) {
         throw new BadRequestException("Unidade inexistente na lista de taxas");
       }
+      // O que mudou de pagador, para a trilha. Só o par de documentos, e
+      // mascarado: a auditoria precisa mostrar QUE trocou, não repetir o CPF
+      // inteiro numa segunda tabela.
+      const trocasDePagador: Array<{
+        unidadeId: string;
+        de: string | null;
+        para: string | null;
+      }> = [];
       for (const t of dto.taxas) {
         const responsavel = {
           responsavelNome: t.responsavelNome?.trim() || null,
@@ -215,6 +239,13 @@ export class FinanceiroService {
         });
         const mudouPagador =
           anterior?.responsavelCpfCnpj !== responsavel.responsavelCpfCnpj;
+        if (mudouPagador) {
+          trocasDePagador.push({
+            unidadeId: t.unidadeId,
+            de: mascararCpfCnpj(anterior?.responsavelCpfCnpj),
+            para: mascararCpfCnpj(responsavel.responsavelCpfCnpj),
+          });
+        }
         await tx.taxaUnidade.upsert({
           where: { unidadeId: t.unidadeId },
           create: {
@@ -230,6 +261,12 @@ export class FinanceiroService {
           },
         });
       }
+      await registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.salvar_taxas",
+        detalhe: { unidades: dto.taxas.length, trocasDePagador },
+      });
       return { salvas: dto.taxas.length };
     });
   }
@@ -247,7 +284,33 @@ export class FinanceiroService {
    */
   async gerar(user: JwtPayload, dto: GerarCobrancasDto) {
     const cid = this.exigirGestor(user);
-    return this.gerarDoCondominio(cid, dto.competencia);
+    const r = await this.gerarDoCondominio(cid, dto.competencia);
+    /**
+     * Registrado DEPOIS e fora da transação da geração, e não dentro.
+     *
+     * A geração fala com o provedor de cobrança no meio do caminho: prender
+     * uma transação aberta durante chamadas de rede seguraria conexão do pool
+     * pelo tempo do boleto mais lento. E é seguro registrar pós-fato porque a
+     * geração é idempotente: repetir não duplica cobrança, então a trilha não
+     * precisa ser a barreira.
+     *
+     * `gerarDoCondominio` também é chamado pelo worker, que não tem usuário:
+     * por isso a auditoria mora aqui, no caminho que tem um humano atrás.
+     */
+    await this.prisma.withTenant(cid, (tx) =>
+      registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.gerar_cobrancas",
+        detalhe: {
+          competencia: r.competencia,
+          criadas: r.criadas,
+          puladas: r.puladas,
+          naoCobradas: r.naoCobradas.length,
+        },
+      }),
+    );
+    return r;
   }
 
   async gerarDoCondominio(condominioId: string, competencia: string) {

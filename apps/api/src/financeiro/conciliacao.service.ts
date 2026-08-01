@@ -15,6 +15,7 @@ import type {
   PainelConciliacao,
   ResultadoImportacaoExtrato,
 } from "@pacotes/shared";
+import { registrarAcao } from "../common/auditoria.util";
 import { PrismaService } from "../prisma/prisma.service";
 import { conciliar, type Alvo, type LinhaExtrato } from "./conciliacao.util";
 import { lerOfx } from "./ofx.parser";
@@ -62,8 +63,8 @@ export class ConciliacaoService {
 
   criarDespesa(user: JwtPayload, dto: CriarDespesaDto) {
     const cid = this.exigirGestor(user);
-    return this.prisma.withTenant(cid, (tx) =>
-      tx.despesa.create({
+    return this.prisma.withTenant(cid, async (tx) => {
+      const criada = await tx.despesa.create({
         data: {
           condominioId: cid,
           descricao: dto.descricao.trim(),
@@ -71,8 +72,18 @@ export class ConciliacaoService {
           data: new Date(`${dto.data}T00:00:00.000Z`),
           criadoPorUsuarioId: user.sub,
         },
-      }),
-    );
+      });
+      // A despesa já guarda o autor na própria linha, mas ela some quando é
+      // removida. A trilha é o que sobrevive à remoção, e é nela que se lê a
+      // sequência inteira de mexidas na prestação de contas.
+      await registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.criar_despesa",
+        detalhe: { descricao: criada.descricao, valor: Number(criada.valor), data: dto.data },
+      });
+      return criada;
+    });
   }
 
   async listarDespesas(user: JwtPayload): Promise<DespesaLinha[]> {
@@ -109,6 +120,16 @@ export class ConciliacaoService {
         );
       }
       await tx.despesa.delete({ where: { id } });
+      await registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.remover_despesa",
+        detalhe: {
+          descricao: despesa.descricao,
+          valor: Number(despesa.valor),
+          data: iso(despesa.data),
+        },
+      });
       return { removida: true };
     });
   }
@@ -276,6 +297,12 @@ export class ConciliacaoService {
         });
         aceitas++;
       }
+      await registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.aceitar_conciliacao",
+        detalhe: { aceitas, recusadas: dto.itens.length - aceitas },
+      });
       return { aceitas, recusadas: dto.itens.length - aceitas };
     });
   }
@@ -289,6 +316,12 @@ export class ConciliacaoService {
         data: { ignoradoEm: new Date(), ignoradoObs: dto.motivo.trim() },
       });
       if (count === 0) throw new NotFoundException("Linha não encontrada");
+      await registrarAcao(tx, {
+        condominioId: cid,
+        usuarioId: user.sub,
+        acao: "financeiro.ignorar_extrato",
+        detalhe: { extratoItemId: id, motivo: dto.motivo },
+      });
       return { ignorada: true };
     });
   }

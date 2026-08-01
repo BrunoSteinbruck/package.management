@@ -234,6 +234,7 @@ async function zerar(cid: string): Promise<void> {
       },
     });
     // Extrato antes de cobranças e despesas: as FKs apontam para elas.
+    await tx.registroAcao.deleteMany({});
     await tx.extratoItem.deleteMany({});
     await tx.despesa.deleteMany({});
     await tx.cobranca.deleteMany({});
@@ -1268,6 +1269,64 @@ async function main() {
         token: porteiro,
         corpo: { descricao: "indevida", valor: 10, data: "2026-07-10" },
       })).statusCode === 403,
+    );
+  }
+
+  // ===== Trilha de auditoria =====
+  console.log("\n== Auditoria: quem fez o quê ==");
+  {
+    const registros = await comTenant(cid, (tx) =>
+      tx.registroAcao.findMany({ orderBy: { criadoEm: "asc" } }),
+    );
+    const acoes = registros.map((r) => r.acao);
+
+    // As ações que a suíte acabou de exercitar precisam ter deixado rastro.
+    for (const esperada of [
+      "financeiro.salvar_config",
+      "financeiro.salvar_integracao",
+      "financeiro.salvar_taxas",
+      "financeiro.gerar_cobrancas",
+      "financeiro.criar_despesa",
+      "financeiro.aceitar_conciliacao",
+    ]) {
+      checa(`${esperada} deixou registro`, acoes.includes(esperada));
+    }
+
+    const doSindico = await prisma.usuario.findFirstOrThrow({
+      where: { telefone: TELEFONE_SINDICO_E2E },
+      select: { id: true },
+    });
+    checa(
+      "todo registro tem autor, e é quem agiu",
+      registros.length > 0 && registros.every((r) => r.usuarioId === doSindico.id),
+    );
+
+    /**
+     * O que a trilha NÃO pode conter. Guardar a credencial de novo em texto
+     * anularia a cifragem da tabela original, e repetir o CPF do responsável
+     * duplicaria dado pessoal numa tabela que ninguém pensa em proteger ao
+     * exportar.
+     */
+    const tudo = JSON.stringify(registros);
+    for (const segredo of ["apiKey", "apiKeyCifrada", "webhookSegredo", "scrypt"]) {
+      checa(`a trilha não guarda ${segredo}`, !tudo.includes(segredo));
+    }
+    const comCpf = registros.find((r) => r.acao === "financeiro.salvar_taxas");
+    const detalhe = JSON.stringify(comCpf?.detalhe ?? {});
+    checa(
+      "o documento do responsável aparece mascarado, se aparecer",
+      !/\d{11}/.test(detalhe),
+      detalhe.slice(0, 90),
+    );
+
+    // O porteiro levou 403 acima: recusa não pode virar linha na trilha.
+    const doPorteiro = await prisma.usuario.findFirstOrThrow({
+      where: { telefone: "51900000002" },
+      select: { id: true },
+    });
+    checa(
+      "ação recusada não deixa registro",
+      !registros.some((r) => r.usuarioId === doPorteiro.id),
     );
   }
 

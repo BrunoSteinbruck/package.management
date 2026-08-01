@@ -155,6 +155,7 @@ model Condominio {
   taxas        TaxaUnidade[]
   integracao   IntegracaoFinanceira?
   configFinanceiro ConfigFinanceiro?
+  registrosAcao RegistroAcao[]
 
   @@map("condominios")
 }
@@ -270,6 +271,7 @@ model Usuario {
   documentosEnviados Documento[]
   despesasCriadas    Despesa[]
   visitasConferidas  Visita[]
+  acoesRegistradas   RegistroAcao[]
 
   @@index([condominioId])
   @@map("usuarios")
@@ -802,4 +804,37 @@ model Aviso {
   @@index([condominioId, via, status])
   @@index([unidadeId])
   @@map("avisos")
+}
+
+/**
+ * Quem fez o quê no dinheiro e no cadastro.
+ *
+ * Nasce da pergunta que ninguém conseguia responder: quem gerou aquelas
+ * cobranças, quem trocou o CPF do responsável de uma unidade, quem cadastrou
+ * a credencial do provedor. Nenhuma dessas ações gravava autor, e numa disputa
+ * ("eu não alterei isso") não havia resposta nenhuma.
+ *
+ * `usuarioId` é NOT NULL de propósito: toda ação auditada aqui tem um humano
+ * atrás. O que roda sozinho (worker de push, régua de cobrança) não passa por
+ * este caminho, e o dia em que passar vai precisar decidir o que gravar em vez
+ * de aceitar um nulo em silêncio.
+ *
+ * `detalhe` guarda o que a ação mudou, e NUNCA um segredo: a credencial do
+ * provedor não entra, e CPF entra mascarado.
+ */
+model RegistroAcao {
+  id           String   @id @default(uuid()) @db.Uuid
+  condominioId String   @map("condominio_id") @db.Uuid
+  usuarioId    String   @map("usuario_id") @db.Uuid
+  /** Verbo curto e estável, tipo "financeiro.gerar_cobrancas". */
+  acao         String
+  detalhe      Json?
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  condominio Condominio @relation(fields: [condominioId], references: [id])
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id])
+
+  @@index([condominioId, criadoEm])
+  @@index([condominioId, acao])
+  @@map("registros_acao")
 }
