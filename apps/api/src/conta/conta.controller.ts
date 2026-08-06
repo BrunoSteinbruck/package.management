@@ -32,6 +32,12 @@ export class ContaController {
     return this.conta.excluir(user);
   }
 
+  /** Vale para morador e equipe: quem perde o telefone é qualquer um. */
+  @Post("sair-outros-aparelhos")
+  sairDosOutrosAparelhos(@CurrentUser() user: JwtPayload) {
+    return this.conta.sairDosOutrosAparelhos(user);
+  }
+
   // ---------- conta do gestor (painel) ----------
 
   @Get("perfil")

@@ -26,5 +26,8 @@ import { AuthService } from "./auth.service";
   ],
   controllers: [AuthController],
   providers: [AuthService, SmsService, EmailService],
+  // Exportado para a conta poder reemitir a sessão de quem acabou de revogar
+  // as outras. Assinar continua acontecendo num lugar só.
+  exports: [AuthService],
 })
 export class AuthModule {}

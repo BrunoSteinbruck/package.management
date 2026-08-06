@@ -15,6 +15,7 @@ import type {
 } from "@pacotes/shared";
 import { MODULOS_CONDOMINIO } from "@pacotes/shared";
 import { randomUUID } from "node:crypto";
+import { AuthService } from "../auth/auth.service";
 import { gerarHash, verificarHash } from "../auth/senha.util";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -38,7 +39,10 @@ import { PrismaService } from "../prisma/prisma.service";
  */
 @Injectable()
 export class ContaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auth: AuthService,
+  ) {}
 
   /**
    * Módulos que esta sessão enxerga. O app chama ao abrir e guarda o
@@ -308,9 +312,51 @@ export class ContaService {
         // e-mail antigo parado numa caixa de entrada.
         redefinicaoTokenHash: null,
         redefinicaoExpiraEm: null,
+        /**
+         * As outras sessões caem junto.
+         *
+         * Trocar a senha é o que a pessoa faz quando desconfia que entraram na
+         * conta dela, e até aqui não tirava ninguém de lugar nenhum: o token é
+         * a sessão, e os antigos seguiam válidos por até 90 dias, renovando a
+         * cada abertura do app.
+         */
+        sessoesValidasApos: new Date(),
       },
     });
-    return { alterada: true };
+    // Reemitido DEPOIS do carimbo, então o `iat` novo passa no corte e quem
+    // trocou a senha continua dentro. Sem isto a pessoa se expulsaria sozinha.
+    const sessao = await this.auth.reassinar(user);
+    return { alterada: true, ...sessao };
+  }
+
+  /**
+   * Derruba as sessões dos outros aparelhos, mantendo esta.
+   *
+   * É a alavanca que faltava para o celular perdido. Sem ela, as únicas
+   * saídas eram o síndico desativar a conta (que também derruba a pessoa no
+   * aparelho novo) ou, para o morador, excluir a própria conta.
+   *
+   * Vale para morador e para equipe: quem perde o telefone é qualquer um, e
+   * no app o morador autoriza visita, ou seja, o aparelho abre a porta do
+   * prédio.
+   */
+  async sairDosOutrosAparelhos(user: JwtPayload) {
+    const agora = new Date();
+    if (user.tipo === "morador") {
+      await this.prisma.morador.update({
+        where: { id: user.sub },
+        data: { sessoesValidasApos: agora },
+      });
+    } else {
+      await this.prisma.usuario.update({
+        where: { id: user.sub },
+        data: { sessoesValidasApos: agora },
+      });
+    }
+    // O device do outro aparelho fica: ele para de conseguir chamar a API, e
+    // apagá-lo aqui exigiria saber QUAL device é este, que o token não diz.
+    // Sem sessão, o push que chegar lá não abre nada.
+    return this.auth.reassinar(user);
   }
 
   /**

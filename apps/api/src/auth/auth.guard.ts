@@ -8,6 +8,7 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import type { JwtPayload } from "@pacotes/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import { sessaoRevogada } from "./sessao.util";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -21,9 +22,11 @@ export class AuthGuard implements CanActivate {
     const header: string | undefined = req.headers.authorization;
     const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
     if (!token) throw new UnauthorizedException("Token ausente");
-    let payload: JwtPayload;
+    // `iat` vem do próprio JWT e não é declarado no `JwtPayload` do shared,
+    // que descreve o que NÓS assinamos. Aqui ele é lido para a revogação.
+    let payload: JwtPayload & { iat?: number };
     try {
-      payload = await this.jwt.verifyAsync<JwtPayload>(token);
+      payload = await this.jwt.verifyAsync<JwtPayload & { iat?: number }>(token);
     } catch {
       throw new UnauthorizedException("Token inválido ou expirado");
     }
@@ -37,14 +40,27 @@ export class AuthGuard implements CanActivate {
     // operando a portaria (code review provou: registro de pacote com 201
     // usando token de conta excluída). Vale também para o porteiro que o
     // síndico desativa no painel. Custo: 1 lookup por PK por request.
-    const contaViva =
+    //
+    // O mesmo lookup traz o corte de revogação: era um `count`, virou um
+    // `findUnique` com um campo, então a checagem de sessão revogada não
+    // custa uma segunda ida ao banco.
+    const conta =
       payload.tipo === "usuario"
-        ? await this.prisma.usuario.count({
+        ? await this.prisma.usuario.findFirst({
             where: { id: payload.sub, ativo: true },
+            select: { sessoesValidasApos: true },
           })
-        : await this.prisma.morador.count({ where: { id: payload.sub } });
-    if (!contaViva) {
+        : await this.prisma.morador.findUnique({
+            where: { id: payload.sub },
+            select: { sessoesValidasApos: true },
+          });
+    if (!conta) {
       throw new UnauthorizedException("Conta desativada ou excluída");
+    }
+    // Trocar a senha, redefinir a senha ou pedir para sair dos outros
+    // aparelhos carimba a data. Todo token anterior morre aqui.
+    if (sessaoRevogada(payload.iat, conta.sessoesValidasApos)) {
+      throw new UnauthorizedException("Sessão encerrada em outro aparelho");
     }
     req.user = payload;
     return true;

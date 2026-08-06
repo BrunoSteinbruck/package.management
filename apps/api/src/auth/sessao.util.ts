@@ -24,3 +24,34 @@ export function validadeDaSessao(
 ): "24h" | "90d" {
   return sessao === "painel" ? "24h" : "90d";
 }
+
+/**
+ * Este token nasceu antes de a conta ter suas sessões revogadas?
+ *
+ * O token É a sessão: não há tabela, não há `jti`, e o servidor não sabe
+ * quantas sessões cada conta tem abertas. Uma data por conta é o que dá para
+ * revogar sem inventar esse registro todo: quem trocou a senha carimba
+ * "agora", e todo token assinado antes disso morre na requisição seguinte.
+ *
+ * Isso importa porque o app renova a sessão a cada abertura. Os 90 dias não
+ * são teto para quem está COM o aparelho: quem levou o celular e continua
+ * abrindo o app renova para sempre. Sem revogação, trocar a senha não tirava
+ * ninguém de lugar nenhum, que é justo o que a pessoa faz quando desconfia
+ * que entraram na conta dela.
+ *
+ * A comparação é em segundos porque o `iat` do JWT é em segundos (RFC 7519).
+ * Consequência assumida: um token assinado no MESMO segundo do carimbo
+ * sobrevive. É o que mantém viva a sessão de quem acabou de trocar a senha,
+ * e a brecha exigiria que o invasor tivesse entrado no mesmo segundo.
+ */
+export function sessaoRevogada(
+  iat: number | undefined,
+  revogadasEm: Date | null | undefined,
+): boolean {
+  if (!revogadasEm) return false;
+  // Token sem `iat` não tem como provar que é posterior ao carimbo. Recusar é
+  // a única resposta segura, e na prática não acontece: quem assina é o
+  // `assinarSessao`, e o jsonwebtoken sempre põe `iat`.
+  if (typeof iat !== "number") return true;
+  return iat < Math.floor(revogadasEm.getTime() / 1000);
+}

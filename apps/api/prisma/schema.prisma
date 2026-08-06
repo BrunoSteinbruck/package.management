@@ -204,6 +204,14 @@ model Morador {
    * desinstalar.
    */
   aceitaPush Boolean @default(true) @map("aceita_push")
+  /**
+   * Corte de revogação: todo token assinado ANTES desta data é recusado.
+   *
+   * O token é a sessão (não há tabela nem `jti`), então uma data por conta é
+   * o que permite derrubar sessões sem inventar esse registro. Nulo é o
+   * normal: significa que nunca se revogou nada nesta conta.
+   */
+  sessoesValidasApos DateTime? @map("sessoes_validas_apos")
   criadoEm DateTime @default(now()) @map("criado_em")
 
   vinculos           Vinculo[]
@@ -272,6 +280,8 @@ model Usuario {
   /** Só o SHA-256: o token inteiro vive no link do e-mail e em mais lugar nenhum. */
   redefinicaoTokenHash String?  @map("redefinicao_token_hash")
   redefinicaoExpiraEm  DateTime? @map("redefinicao_expira_em")
+  /** Corte de revogação; ver o campo homônimo em `Morador`. */
+  sessoesValidasApos   DateTime? @map("sessoes_validas_apos")
 
   condominio         Condominio @relation(fields: [condominioId], references: [id])
   pacotesRecebidos   Pacote[]   @relation("recebidoPor")

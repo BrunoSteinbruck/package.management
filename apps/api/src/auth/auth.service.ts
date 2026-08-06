@@ -382,11 +382,22 @@ export class AuthService {
             where: { id: user.sub, ativo: true },
           });
     if (!existe) throw new UnauthorizedException("Conta não encontrada");
+    return this.reassinar(user);
+  }
 
-    // O strip de exp/iat é obrigatório: o jsonwebtoken recusa um payload que
-    // já traga `exp` quando `expiresIn` vem nas opções. E o spread preserva o
-    // claim `sessao`, que é o que faz o painel renovar 24h e o app 90d sem
-    // um `if` a mais aqui.
+  /**
+   * Emite um token novo para a sessão que já está autenticada.
+   *
+   * Existe separado do `refresh` porque quem revoga as sessões da conta
+   * precisa manter viva a de quem pediu a revogação: sem isto, trocar a
+   * senha expulsaria a própria pessoa, e no app cada relogin custa um SMS.
+   *
+   * O strip de exp/iat é obrigatório: o jsonwebtoken recusa um payload que já
+   * traga `exp` quando `expiresIn` vem nas opções. E o spread preserva o
+   * claim `sessao`, que é o que faz o painel renovar 24h e o app 90d sem um
+   * `if` a mais aqui.
+   */
+  async reassinar(user: JwtPayload) {
     const { exp, iat, ...payload } = user as JwtPayload & {
       exp?: number;
       iat?: number;
@@ -567,6 +578,15 @@ export class AuthService {
         redefinicaoExpiraEm: null,
         senhaTentativas: 0,
         senhaBloqueadaAte: null,
+        /**
+         * Toda sessão anterior morre aqui.
+         *
+         * Este é o caminho de quem PERDEU o acesso, e a hipótese de trabalho é
+         * que alguém pode ter entrado. Redefinir a senha e deixar a sessão do
+         * invasor de pé faria do link de recuperação teatro. O token novo é
+         * assinado logo abaixo, então quem redefiniu continua dentro.
+         */
+        sessoesValidasApos: new Date(),
       },
     });
 
