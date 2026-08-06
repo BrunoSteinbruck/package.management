@@ -3,6 +3,7 @@
     "name": "Convivar",
     "slug": "convivar",
     "version": "0.0.1",
+    "scheme": "convivar",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

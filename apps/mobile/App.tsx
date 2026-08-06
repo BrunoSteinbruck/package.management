@@ -11,6 +11,7 @@ import {
   sincronizarModulos,
 } from "./src/api/client";
 import { useModulos } from "./src/useModulos";
+import { navegacaoRef, useNavegacaoPorPush } from "./src/api/pushNavegacao";
 import { carregarSessao, limparSessao } from "./src/api/session";
 import type {
   MoradorStackParamList,
@@ -67,14 +68,16 @@ const Morador = createNativeStackNavigator<MoradorStackParamList>();
 interface PropsPilha {
   perfil: JwtPayload;
   aoSair: () => void;
+  /** Avisa o App que o container montou: ver `useNavegacaoPorPush`. */
+  aoFicarPronto: () => void;
 }
 
-function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
+function PilhaPortaria({ perfil, aoSair, aoFicarPronto }: PropsPilha) {
   // Lido aqui e não dentro da tela porque quem monta `ArmazenadosScreen` com
   // as ações é esta pilha: a tela recebe o que pode fazer, não decide.
   const qrLigado = useModulos().includes("qr_retirada");
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navegacaoRef} onReady={aoFicarPronto}>
       <StatusBar style="light" />
       <Portaria.Navigator screenOptions={{ headerShown: false }}>
         <Portaria.Screen name="Home">
@@ -117,9 +120,9 @@ function PilhaPortaria({ perfil, aoSair }: PropsPilha) {
   );
 }
 
-function PilhaSindico({ perfil, aoSair }: PropsPilha) {
+function PilhaSindico({ perfil, aoSair, aoFicarPronto }: PropsPilha) {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navegacaoRef} onReady={aoFicarPronto}>
       <StatusBar style="light" />
       <Sindico.Navigator screenOptions={{ headerShown: false }}>
         <Sindico.Screen name="Home">
@@ -180,9 +183,9 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
   );
 }
 
-function PilhaMorador({ perfil, aoSair }: PropsPilha) {
+function PilhaMorador({ perfil, aoSair, aoFicarPronto }: PropsPilha) {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navegacaoRef} onReady={aoFicarPronto}>
       <StatusBar style="dark" />
       <Morador.Navigator screenOptions={{ headerShown: false }}>
         <Morador.Screen name="Home">
@@ -210,6 +213,11 @@ function PilhaMorador({ perfil, aoSair }: PropsPilha) {
 export default function App() {
   const [carregado, setCarregado] = useState(false);
   const [perfil, setPerfil] = useState<JwtPayload | null>(null);
+  const [navPronta, setNavPronta] = useState(false);
+
+  // Toque na notificação leva à tela do assunto. Fica no App e não dentro das
+  // pilhas porque o arranque frio chega aqui antes de qualquer pilha montar.
+  useNavegacaoPorPush(perfil, navPronta);
 
   useEffect(() => {
     carregarSessao().then(async (sessao) => {
@@ -283,13 +291,25 @@ export default function App() {
   // Um app, uma experiência por perfil: o servidor devolve a identidade no
   // login e `perfilDe` a projeta no vocabulário do produto. Cada perfil só
   // enxerga as suas telas.
-  const sair = () => setPerfil(null);
+  // Sair desmonta o container: a bandeira volta a falso para o próximo login
+  // não achar que a navegação já está de pé.
+  const sair = () => {
+    setNavPronta(false);
+    setPerfil(null);
+  };
+  const pronta = () => setNavPronta(true);
   switch (perfilDe(perfil)) {
     case "morador":
-      return <PilhaMorador perfil={perfil} aoSair={sair} />;
+      return (
+        <PilhaMorador perfil={perfil} aoSair={sair} aoFicarPronto={pronta} />
+      );
     case "sindico":
-      return <PilhaSindico perfil={perfil} aoSair={sair} />;
+      return (
+        <PilhaSindico perfil={perfil} aoSair={sair} aoFicarPronto={pronta} />
+      );
     case "porteiro":
-      return <PilhaPortaria perfil={perfil} aoSair={sair} />;
+      return (
+        <PilhaPortaria perfil={perfil} aoSair={sair} aoFicarPronto={pronta} />
+      );
   }
 }
