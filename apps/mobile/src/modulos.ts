@@ -99,6 +99,13 @@ export const MODULOS_SINDICO: readonly Modulo<
     slot: "secundario",
   },
   {
+    id: "Unidades",
+    titulo: "Unidades e moradores",
+    icone: "casa",
+    perfis: ["sindico"],
+    slot: "secundario",
+  },
+  {
     id: "Armazenados",
     titulo: "Encomendas na portaria",
     icone: "pacote",

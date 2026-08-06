@@ -21,6 +21,7 @@ import { AprovacoesScreen } from "./src/screens/AprovacoesScreen";
 import { OcorrenciaDetalheScreen } from "./src/screens/OcorrenciaDetalheScreen";
 import { OcorrenciasScreen } from "./src/screens/OcorrenciasScreen";
 import { SindicoHomeScreen } from "./src/screens/SindicoHomeScreen";
+import { UnidadesScreen } from "./src/screens/UnidadesScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
@@ -125,6 +126,16 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
           component={OcorrenciaDetalheScreen}
         />
         <Sindico.Screen name="Aprovacoes" component={AprovacoesScreen} />
+        {/* O nome do condomínio vem do perfil: é ele que assina o texto do
+            convite por WhatsApp. */}
+        <Sindico.Screen name="Unidades">
+          {(props) => (
+            <UnidadesScreen
+              {...props}
+              condominio={perfil.condominioNome ?? "condomínio"}
+            />
+          )}
+        </Sindico.Screen>
         {/* Portaria em modo leitura: sem as ações, a lista de encomendas não
             leva a lugar nenhum. O síndico acompanha, não movimenta. */}
         <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
