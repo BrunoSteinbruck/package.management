@@ -8,10 +8,36 @@
  *   SINDICO_TELEFONE=SEU_NUMERO SINDICO_NOME="Seu Nome" \
  *   pnpm --filter @pacotes/api exec ts-node prisma/seed-demo.ts
  */
+import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import PDFDocument from "pdfkit";
 import { gerarHash } from "../src/auth/senha.util";
+import { StorageService } from "../src/uploads/storage.service";
 
 const prisma = new PrismaClient();
+// O mesmo backend que a API usa: R2 quando as credenciais existem, disco
+// local caso contrário. Sem isto os documentos da demo apareceriam na lista e
+// dariam erro ao abrir, que é pior do que não existirem.
+const storage = new StorageService();
+
+/** PDF de uma página, de verdade: a demo precisa abrir, não só listar. */
+function pdfDemo(titulo: string, corpo: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 56 });
+    const pedacos: Buffer[] = [];
+    doc.on("data", (p: Buffer) => pedacos.push(p));
+    doc.on("end", () => resolve(Buffer.concat(pedacos)));
+    doc.on("error", reject);
+    doc.fontSize(18).text(titulo);
+    doc.moveDown();
+    doc.fontSize(11).text(corpo, { align: "justify" });
+    doc.moveDown(2);
+    doc.fontSize(9).fillColor("#666").text(
+      "Documento de demonstração do Convivar. Não tem valor legal.",
+    );
+    doc.end();
+  });
+}
 
 // Números reais (do síndico/porteiro/morador da demo) são passados por ENV na
 // hora de semear: NUNCA hardcoded (repo público). Defaults são placeholders.
@@ -33,10 +59,23 @@ function diasAtras(dias: number, horas = 10): Date {
 }
 
 async function main() {
+  // Todos os módulos ligados: é uma demo, e módulo desligado esconde a porta
+  // de entrada dele no app e no painel.
+  const MODULOS_DEMO = [
+    "comunicados",
+    "documentos",
+    "visitantes",
+    "financeiro",
+  ];
   const condominio = await prisma.condominio.upsert({
     where: { slug: "residencial-aurora" },
-    update: {},
-    create: { nome: "Residencial Aurora", slug: "residencial-aurora", plano: "ENTERPRISE" },
+    update: { modulos: MODULOS_DEMO },
+    create: {
+      nome: "Residencial Aurora",
+      slug: "residencial-aurora",
+      plano: "ENTERPRISE",
+      modulos: MODULOS_DEMO,
+    },
   });
   const cid = condominio.id;
 
@@ -247,11 +286,225 @@ async function main() {
     }
   });
 
+  // Moradores por telefone, para amarrar leituras de comunicado e visitas.
+  const moradorPorTelefone = new Map(
+    (
+      await prisma.morador.findMany({
+        where: { telefone: { in: moradores.map((m) => m.telefone) } },
+        select: { id: true, telefone: true },
+      })
+    ).map((m) => [m.telefone, m.id]),
+  );
+  const M = (tel: string) => moradorPorTelefone.get(tel)!;
+  const sindico = await prisma.usuario.findUniqueOrThrow({
+    where: { telefone: SINDICO_TELEFONE },
+    select: { id: true },
+  });
+
+  // Comunicados: três publicados, com recibos de leitura parciais (é o "N de
+  // M leram" que o síndico procura depois de publicar).
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+    if ((await tx.comunicado.count()) > 0) {
+      console.log("Comunicados já existem, pulando.");
+      return;
+    }
+    const specs = [
+      {
+        titulo: "Manutenção da piscina",
+        corpo:
+          "A piscina fica fechada de 15 a 19 deste mês para troca do sistema de filtragem. A área de churrasqueiras segue aberta no período.",
+        dias: 3,
+        blocos: [] as string[],
+        leram: ["51988880002", "51988880003", MORADOR_DEMO_TELEFONE],
+      },
+      {
+        titulo: "Dedetização nos blocos A e B",
+        corpo:
+          "Na próxima quarta-feira, das 8h às 12h, haverá dedetização nas áreas comuns. Mantenha portas e janelas fechadas durante o procedimento.",
+        dias: 10,
+        blocos: [],
+        leram: ["51988880002", "51988880004", "51988880007"],
+      },
+      {
+        titulo: "Assembleia geral ordinária",
+        corpo:
+          "Convocamos todos os condôminos para a assembleia geral ordinária, no salão de festas. Pauta: prestação de contas e previsão orçamentária.",
+        dias: 24,
+        blocos: [],
+        leram: [MORADOR_DEMO_TELEFONE, "51988880003", "51988880006", "51988880009"],
+      },
+    ];
+    for (const s of specs) {
+      const c = await tx.comunicado.create({
+        data: {
+          condominioId: cid,
+          titulo: s.titulo,
+          corpo: s.corpo,
+          blocos: s.blocos,
+          criadoPorUsuarioId: sindico.id,
+          criadoEm: diasAtras(s.dias, 9),
+        },
+      });
+      for (const tel of s.leram) {
+        await tx.comunicadoLeitura.create({
+          data: {
+            condominioId: cid,
+            comunicadoId: c.id,
+            moradorId: M(tel),
+            lidoEm: diasAtras(s.dias - 1, 20),
+          },
+        });
+      }
+    }
+  });
+
+  // Documentos: PDF de verdade em cada um, para a lista abrir.
+  const jaTemDoc = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+    return tx.documento.count();
+  });
+  if (jaTemDoc > 0) {
+    console.log("Documentos já existem, pulando.");
+  } else {
+    const docs = [
+      {
+        titulo: "Ata da assembleia · junho",
+        categoria: "ATA" as const,
+        dias: 40,
+        corpo:
+          "Aos vinte dias do mês de junho reuniram-se os condôminos do Residencial Aurora em assembleia geral ordinária, para deliberar sobre a prestação de contas do exercício e a previsão orçamentária do período seguinte. Aprovadas ambas por maioria.",
+      },
+      {
+        titulo: "Regimento interno",
+        categoria: "REGIMENTO" as const,
+        dias: 400,
+        corpo:
+          "Capítulo I - Do uso das áreas comuns. O salão de festas pode ser reservado na portaria com até trinta dias de antecedência. A piscina funciona das 8h às 22h. Capítulo II - Dos ruídos. É vedado o uso de equipamentos sonoros entre 22h e 8h.",
+      },
+      {
+        titulo: "Convenção do condomínio",
+        categoria: "CONVENCAO" as const,
+        dias: 2200,
+        corpo:
+          "A presente convenção regula os direitos e deveres dos condôminos do Residencial Aurora, nos termos da Lei 4.591/64 e do Código Civil, e vincula todos os titulares de unidades autônomas, seus sucessores e ocupantes a qualquer título.",
+      },
+    ];
+    for (const d of docs) {
+      const buffer = await pdfDemo(d.titulo, d.corpo);
+      const key = `${randomUUID()}.pdf`;
+      await storage.salvar(key, buffer, "application/pdf");
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+        await tx.documento.create({
+          data: {
+            condominioId: cid,
+            titulo: d.titulo,
+            categoria: d.categoria,
+            arquivoKey: key,
+            tamanhoBytes: buffer.length,
+            criadoPorUsuarioId: sindico.id,
+            criadoEm: diasAtras(d.dias, 11),
+          },
+        });
+      });
+    }
+  }
+
+  // Visitas: duas esperadas hoje, uma que já chegou e duas de dias passados.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+    if ((await tx.visita.count()) > 0) {
+      console.log("Visitas já existem, pulando.");
+      return;
+    }
+    const dia = (n: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() - n);
+      return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    };
+    const specs = [
+      { nome: "Ricardo Alves", tel: MORADOR_DEMO_TELEFONE, uni: "B-302", dias: 0, ini: "14:00", fim: "22:00", status: "AUTORIZADA" as const },
+      { nome: "Técnica Vivo", tel: "51988880002", uni: "A-101", dias: 0, ini: "14:00", fim: "18:00", status: "AUTORIZADA" as const },
+      { nome: "Fernanda Lima", tel: "51988880007", uni: "B-101", dias: 0, ini: "09:00", fim: null, status: "CHEGOU" as const },
+      { nome: "Paulo Ribeiro", tel: MORADOR_DEMO_TELEFONE, uni: "B-302", dias: 4, ini: "19:00", fim: null, status: "CHEGOU" as const },
+      { nome: "Entrega de móveis", tel: "51988880003", uni: "A-102", dias: 9, ini: "08:00", fim: "12:00", status: "CHEGOU" as const },
+    ];
+    for (const [i, s] of specs.entries()) {
+      await tx.visita.create({
+        data: {
+          condominioId: cid,
+          unidadeId: U(s.uni).id,
+          moradorId: M(s.tel),
+          nomeVisitante: s.nome,
+          // Mesmo padrão de `gerarCodigoVisita` no serviço, com número fixo
+          // para a demo não trocar de código a cada semeadura.
+          codigo: `V-${4200 + i * 137}`,
+          dataPrevista: dia(s.dias),
+          janelaInicio: s.ini,
+          janelaFim: s.fim,
+          status: s.status,
+          chegadaEm: s.status === "CHEGOU" ? diasAtras(s.dias, 15) : null,
+          baixaPorId: s.status === "CHEGOU" ? porteiro.id : null,
+          criadoEm: diasAtras(s.dias + 1, 20),
+        },
+      });
+    }
+  });
+
+  // Cobranças: o mês corrente em aberto para todos, e três meses pagos atrás.
+  // O morador da demo tem o histórico completo, que é a tela de Boletos.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+    if ((await tx.cobranca.count()) > 0) {
+      console.log("Cobranças já existem, pulando.");
+      return;
+    }
+    const comMorador = moradores.map((m) => U(m.unidade).id);
+    for (let m = 3; m >= 0; m--) {
+      const competenciaMes = competencia(m);
+      const venc = new Date(
+        Date.UTC(competenciaMes.getUTCFullYear(), competenciaMes.getUTCMonth(), 10),
+      );
+      for (const unidadeId of comMorador) {
+        // Mês corrente em aberto; meses fechados pagos, menos uma unidade que
+        // fica devendo, para a inadimplência do painel não ser sempre zero.
+        const inadimplente = unidadeId === U("A-401").id && m === 1;
+        const paga = m > 0 && !inadimplente;
+        await tx.cobranca.create({
+          data: {
+            condominioId: cid,
+            unidadeId,
+            competencia: competenciaMes,
+            valor: 480,
+            vencimento: venc,
+            status: paga ? "PAGA" : inadimplente ? "VENCIDA" : "PENDENTE",
+            // Sem provedor real: a linha digitável é de demonstração e o
+            // "Copiar" copia isto mesmo. Nenhum banco reconhece.
+            linhaDigitavel:
+              "34191.79001 01043.510047 91020.150008 1 99999999999999",
+            pagoEm: paga
+              ? new Date(Date.UTC(venc.getUTCFullYear(), venc.getUTCMonth(), 8))
+              : null,
+            valorPago: paga ? 480 : null,
+            criadoEm: new Date(
+              Date.UTC(competenciaMes.getUTCFullYear(), competenciaMes.getUTCMonth(), 1, 9),
+            ),
+          },
+        });
+      }
+    }
+  });
+
   const totais = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
     return {
       naPortaria: await tx.pacote.count({ where: { status: "ARMAZENADO" } }),
       entregues: await tx.pacote.count({ where: { status: "ENTREGUE" } }),
+      comunicados: await tx.comunicado.count(),
+      documentos: await tx.documento.count(),
+      visitas: await tx.visita.count(),
+      cobrancas: await tx.cobranca.count(),
     };
   });
 
@@ -260,6 +513,10 @@ async function main() {
   console.log(`  Unidades: ${unidades.length} | Moradores: ${moradores.length} (7 com app ≈ 70% adoção)`);
   console.log(`  Pacotes: ${totais.naPortaria} na portaria (3 parados 3+ dias) | ${totais.entregues} entregues`);
   console.log("  Leituras: 4 meses fechados + mês atual ~70% lido (água e gás), tarifas definidas");
+  console.log(
+    `  Comunicados: ${totais.comunicados} | Documentos: ${totais.documentos} (PDF real) | Visitas: ${totais.visitas} | Cobranças: ${totais.cobrancas}`,
+  );
+  console.log(`  Módulos ligados: ${MODULOS_DEMO.join(", ")}`);
   console.log(`  Síndico: ${SINDICO_TELEFONE} | Porteiro: ${PORTEIRO_TELEFONE} | Morador demo: ${MORADOR_DEMO_TELEFONE}`);
   console.log(`  Painel (senha): ${SINDICO_EMAIL} / ${SINDICO_SENHA}`);
 }
