@@ -22,7 +22,8 @@ export type NomeIcone =
   | "chama"
   | "boleto"
   | "megafone"
-  | "alerta";
+  | "alerta"
+  | "ajustes";
 
 const DESENHOS: Record<NomeIcone, React.ReactNode> = {
   camera: (
@@ -71,6 +72,16 @@ const DESENHOS: Record<NomeIcone, React.ReactNode> = {
     <>
       <Path d="M12 3l10 18H2z" />
       <Path d="M12 10v4M12 17.5v.5" />
+    </>
+  ),
+  // Controles deslizantes, não engrenagem: o que a tela faz é ligar e
+  // desligar módulo, não abrir um painel de opções técnicas.
+  ajustes: (
+    <>
+      <Path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2" />
+      <Circle cx={16} cy={6} r={2} />
+      <Circle cx={10} cy={12} r={2} />
+      <Circle cx={16} cy={18} r={2} />
     </>
   ),
   casa: (

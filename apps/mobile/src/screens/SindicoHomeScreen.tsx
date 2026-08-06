@@ -122,21 +122,10 @@ export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
           </View>
           <Pressable
             onPress={() =>
-              Alert.alert("Conta", `Conectado como ${perfil.nome}.`, [
-                { text: "Cancelar", style: "cancel" },
-                {
-                  text: "Excluir minha conta",
-                  style: "destructive",
-                  onPress: () => excluirConta(aoSair),
-                },
-                {
-                  text: "Sair",
-                  onPress: async () => {
-                    await limparSessao();
-                    aoSair();
-                  },
-                },
-              ])
+              // Vai direto para a tela. O Alert com Cancelar, Excluir e Sair
+              // já estava no teto de três botões do Android: somar "Minha
+              // conta" faria um deles sumir em silêncio.
+              navigation.navigate("MinhaConta")
             }
             style={({ pressed }) => [
               styles.avatar,
@@ -285,6 +274,22 @@ export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
             estilo={{ marginTop: 12 }}
           />
         ))}
+
+        {/* Rodapé do manifesto: o que é ocasional (configurar o condomínio)
+            fica em pílula, separado da operação do dia acima. */}
+        <View style={styles.linhaRodape}>
+          {modulosDe(MODULOS_SINDICO, perfilDe(perfil), "rodape", ligados).map(
+            (m) => (
+              <BotaoModulo
+                key={m.id}
+                variante="pill"
+                titulo={m.titulo}
+                icone={m.icone}
+                onPress={() => navigation.navigate(m.id)}
+              />
+            ),
+          )}
+        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -344,6 +349,7 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     fontWeight: "500",
   },
+  linhaRodape: { flexDirection: "row", gap: 10, marginTop: 18 },
   gradeStats: {
     flexDirection: "row",
     flexWrap: "wrap",
