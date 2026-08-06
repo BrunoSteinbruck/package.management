@@ -28,6 +28,9 @@ export {
   // Idem o mês de referência: o mesmo julho é escrito no app, no painel e na
   // conciliação, e o formato mora em competencia.ts.
   mesPorExtenso,
+  // Telefone é gravado só com dígitos; quem lê na tela precisa dos
+  // parênteses e do traço, no app e no painel igual.
+  formatarTelefone,
 } from "@pacotes/shared";
 
 import type { PacoteLinha, StatusAviso } from "@pacotes/shared";
