@@ -31,15 +31,20 @@ O blueprint `render.yaml` na raiz cria API + PostgreSQL com HTTPS.
 2. **New → Blueprint** → conecte o repo `BrunoSteinbruck/package.management` → Apply.
 3. Aguarde o primeiro deploy (build + migrations rodam sozinhos; o RLS
    entra via migration).
-4. No serviço `convivar-api` → aba Shell, rode o bootstrap do condomínio:
+4. No serviço `convivar-api` → aba Shell, rode o bootstrap do condomínio
+   (o email é o do síndico, para o login por senha do painel):
    ```
    pnpm --filter @pacotes/api exec ts-node scripts/bootstrap.ts \
-     "Residencial Aurora" residencial-aurora "Seu Nome" SEUTELEFONE
+     "Residencial Aurora" residencial-aurora "Seu Nome" SEUTELEFONE SEU@EMAIL
    ```
 5. Anote a URL (ex.: `https://convivar-api.onrender.com`). Para os apps
    apontarem pra ela: `EXPO_PUBLIC_API_URL=https://.../v1` no
    `apps/mobile/.env`.
 6. Cole também as variáveis do Twilio/Vision no dashboard (Environment).
+7. **Email do painel**: sem `RESEND_API_KEY` + `EMAIL_REMETENTE`, o síndico
+   não consegue definir a primeira senha (o "esqueci a senha / primeiro
+   acesso" envia o link por email). Em dev, `EMAIL_DEV_ECHO=1` imprime o
+   link na resposta em vez de enviar.
 
 Notas: plano free hiberna após inatividade (primeira chamada demora ~30s)
 e o Postgres free expira em 30 dias: antes do piloto real, subir para o
