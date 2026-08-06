@@ -1,5 +1,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { cifrar, criptoConfigurado, decifrar } from "./cripto.util";
+import {
+  cifrar,
+  criptoConfigurado,
+  decifrar,
+  diagnosticoDeSubida,
+} from "./cripto.util";
 
 describe("cifra das credenciais de cobrança", () => {
   beforeAll(() => {
@@ -47,5 +52,45 @@ describe("cifra das credenciais de cobrança", () => {
     } finally {
       process.env.FINANCEIRO_CRIPTO_CHAVE = anterior;
     }
+  });
+});
+
+describe("diagnóstico de subida", () => {
+  const CHAVE = "chave-de-teste-suficientemente-longa";
+
+  it("com chave boa, cala a boca", () => {
+    expect(diagnosticoDeSubida({ FINANCEIRO_CRIPTO_CHAVE: CHAVE })).toEqual({
+      nivel: "ok",
+    });
+    expect(
+      diagnosticoDeSubida({
+        FINANCEIRO_CRIPTO_CHAVE: CHAVE,
+        ASAAS_API_URL: "https://api.asaas.com/v3",
+      }),
+    ).toEqual({ nivel: "ok" });
+  });
+
+  it("sem chave e sem provedor real é aviso, não morte", () => {
+    // O financeiro é módulo opcional por condomínio: derrubar a API inteira
+    // por uma env que a maioria das instalações não usa seria pior.
+    const d = diagnosticoDeSubida({});
+    expect(d.nivel).toBe("aviso");
+  });
+
+  it("sem chave COM provedor real é fatal", () => {
+    // Aqui o deploy subiria verde e não emitiria um boleto sequer.
+    const d = diagnosticoDeSubida({ ASAAS_API_URL: "https://api.asaas.com/v3" });
+    expect(d.nivel).toBe("fatal");
+  });
+
+  it("chave curta demais conta como ausente", () => {
+    // 15 caracteres: o sha256 derivaria 32 bytes de qualquer coisa, então o
+    // tamanho é a única defesa contra um segredo fraco.
+    expect(diagnosticoDeSubida({ FINANCEIRO_CRIPTO_CHAVE: "x".repeat(15) }).nivel).toBe(
+      "aviso",
+    );
+    expect(diagnosticoDeSubida({ FINANCEIRO_CRIPTO_CHAVE: "x".repeat(16) })).toEqual({
+      nivel: "ok",
+    });
   });
 });

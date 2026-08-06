@@ -5,6 +5,7 @@ import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Request, Response, NextFunction } from "express";
 import { AppModule } from "./app.module";
+import { diagnosticoDeSubida } from "./financeiro/cripto.util";
 
 /**
  * Teto do corpo JSON.
@@ -60,6 +61,17 @@ async function bootstrap() {
     res.setHeader("X-Frame-Options", "DENY");
     next();
   });
+
+  // Checagem de configuração ANTES do listen: um processo que não pode fazer
+  // o que promete não deve começar a aceitar requisição.
+  const cripto = diagnosticoDeSubida();
+  if (cripto.nivel === "fatal") {
+    console.error(`Configuração inválida: ${cripto.mensagem}`);
+    process.exit(1);
+  }
+  if (cripto.nivel === "aviso") {
+    console.warn(`Atenção: ${cripto.mensagem}`);
+  }
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);

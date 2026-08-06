@@ -68,3 +68,39 @@ export function criptoConfigurado(): boolean {
     return false;
   }
 }
+
+/**
+ * O que dizer na subida sobre a chave de cripto.
+ *
+ * Antes disto a ausência da env só aparecia no PRIMEIRO uso: o deploy subia
+ * verde e quebrava quando o síndico salvava a credencial do provedor, que é
+ * o pior momento possível para descobrir um problema de configuração.
+ *
+ * Fatal só com `ASAAS_API_URL` presente, e não sempre: o financeiro é módulo
+ * opcional por condomínio, e derrubar a API inteira por causa de uma env que
+ * a maioria das instalações não usa trocaria um problema pequeno por um
+ * grande. Com provedor real configurado a conta é outra, porque aí a emissão
+ * de boleto de verdade depende dela.
+ */
+export function diagnosticoDeSubida(
+  env: { FINANCEIRO_CRIPTO_CHAVE?: string; ASAAS_API_URL?: string } = process.env,
+):
+  | { nivel: "ok" }
+  | { nivel: "aviso" | "fatal"; mensagem: string } {
+  const bruta = env.FINANCEIRO_CRIPTO_CHAVE;
+  if (bruta && bruta.length >= 16) return { nivel: "ok" };
+
+  const problema = !bruta
+    ? "FINANCEIRO_CRIPTO_CHAVE ausente"
+    : "FINANCEIRO_CRIPTO_CHAVE curta demais (mínimo 16 caracteres)";
+
+  return env.ASAAS_API_URL
+    ? {
+        nivel: "fatal",
+        mensagem: `${problema}, e ASAAS_API_URL está configurada: a credencial do provedor não poderia ser guardada nem lida, e nenhum boleto sairia.`,
+      }
+    : {
+        nivel: "aviso",
+        mensagem: `${problema}. O financeiro funciona em modo de teste; cadastrar credencial de provedor vai falhar.`,
+      };
+}
