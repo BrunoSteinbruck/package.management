@@ -165,12 +165,23 @@ export const MODULOS_SINDICO: readonly Modulo<
     flag: "documentos",
   },
   {
-    id: "VisitasHoje",
-    titulo: "Visitas de hoje",
+    // Aponta para Visitantes e não para VisitasHoje: o síndico quer o
+    // histórico com busca, não só o portão de hoje, que é a tela da portaria.
+    id: "Visitantes",
+    titulo: "Visitantes",
     icone: "pessoa",
     perfis: ["sindico"],
     slot: "secundario",
     flag: "visitantes",
+  },
+  // No rodapé: configurar é ocasional e não disputa espaço com a operação
+  // do dia, que é o resto da prateleira.
+  {
+    id: "Configuracoes",
+    titulo: "Configurações",
+    icone: "ajustes",
+    perfis: ["sindico"],
+    slot: "rodape",
   },
 ];
 

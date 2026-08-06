@@ -25,6 +25,10 @@ import { UnidadesScreen } from "./src/screens/UnidadesScreen";
 import { EquipeScreen } from "./src/screens/EquipeScreen";
 import { RelatoriosScreen } from "./src/screens/RelatoriosScreen";
 import { FinanceiroScreen } from "./src/screens/FinanceiroScreen";
+import { ConfiguracoesScreen } from "./src/screens/ConfiguracoesScreen";
+import { VisitantesScreen } from "./src/screens/VisitantesScreen";
+import { ComunicadoLeiturasScreen } from "./src/screens/ComunicadoLeiturasScreen";
+import { MinhaContaScreen } from "./src/screens/MinhaContaScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
@@ -150,12 +154,21 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
         <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
         <Sindico.Screen name="Relatorios" component={RelatoriosScreen} />
         <Sindico.Screen name="Financeiro" component={FinanceiroScreen} />
+        <Sindico.Screen name="Configuracoes" component={ConfiguracoesScreen} />
+        <Sindico.Screen name="MinhaConta">
+          {(props) => <MinhaContaScreen {...props} aoSair={aoSair} />}
+        </Sindico.Screen>
         <Sindico.Screen name="Avisar" component={AvisarScreen} />
         {/* Consumos em modo leitura: registrar leitura é rota da portaria e
             nem compila nesta pilha. */}
         <Sindico.Screen name="Consumos" component={ConsumosScreen} />
         <Sindico.Screen name="Comunicados" component={ComunicadosScreen} />
         <Sindico.Screen name="NovoComunicado" component={NovoComunicadoScreen} />
+        <Sindico.Screen
+          name="ComunicadoLeituras"
+          component={ComunicadoLeiturasScreen}
+        />
+        <Sindico.Screen name="Visitantes" component={VisitantesScreen} />
         {/* Mesma tela do morador, lendo a lista do gestor. */}
         <Sindico.Screen name="Documentos">
           {(props) => <DocumentosScreen {...props} gestor />}

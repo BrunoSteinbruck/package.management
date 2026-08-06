@@ -68,13 +68,24 @@ export type SindicoStackParamList = Omit<
   Relatorios: undefined;
   // Cobranças, valor por unidade e conciliação bancária.
   Financeiro: undefined;
+  // Módulos que o condomínio liga; governa as prateleiras dos três apps.
+  Configuracoes: undefined;
   // Painel de consumos: o síndico acompanha e exporta, não registra leitura.
   Consumos: undefined;
   // Comunicados: quem publica é o síndico, então a lista e o compositor
   // existem só nesta pilha. O morador tem a rota de leitura, não a de escrita.
   Comunicados: undefined;
   NovoComunicado: undefined;
+  // Rota COM parâmetro: fora do manifesto de propósito (a tipagem
+  // `RotaDeEntrada` barra), porque quem chega aqui vem da linha tocada.
+  ComunicadoLeituras: { comunicadoId: string; titulo: string };
   Documentos: undefined;
+  // Esperadas hoje e o histórico com busca. Substitui a entrada VisitasHoje
+  // no menu do síndico; a rota antiga segue registrada.
+  Visitantes: undefined;
+  // E-mail, senha, sair e excluir conta. Fora do manifesto: chega-se pelo
+  // avatar do cabeçalho, que é onde conta se procura.
+  MinhaConta: undefined;
 };
 
 /** Pilha do morador (perfil.tipo === "morador"). */
