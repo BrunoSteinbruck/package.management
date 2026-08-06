@@ -66,6 +66,15 @@ export interface FotoRef {
  */
 export interface Capacidades {
   modulos: ModuloCondominio[];
+  /**
+   * Onde baixar o app, para os convites por WhatsApp anexarem ao texto.
+   *
+   * Vem do mesmo `APP_DOWNLOAD_URL` que o SMS de convite automático já usa,
+   * então existe UM lugar para trocar quando a loja mudar. Null enquanto o
+   * env não estiver definido: o convite sai sem link em vez de sair com um
+   * "undefined" colado no fim da frase.
+   */
+  appDownloadUrl: string | null;
 }
 
 // ----- Pacotes -----

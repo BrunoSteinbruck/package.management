@@ -449,10 +449,20 @@ async function main() {
   // ===== Onda 0: flags e capacidades =====
   console.log("\n== Onda 0: flags por condomínio ==");
   {
-    const cap = await req<{ modulos: string[] }>("GET", "/conta/capacidades", {
-      token: morador,
-    });
+    const cap = await req<{
+      modulos: string[];
+      appDownloadUrl?: string | null;
+    }>("GET", "/conta/capacidades", { token: morador });
     checa("capacidades começam vazias", cap.modulos.length === 0);
+    // O link de download acompanha as capacidades para os convites por
+    // WhatsApp. Sem o env definido é null, e o campo PRECISA existir mesmo
+    // assim: o cliente distingue "não configurado" de "resposta velha".
+    checa(
+      "capacidades trazem appDownloadUrl (string ou null)",
+      "appDownloadUrl" in cap &&
+        (cap.appDownloadUrl === null || typeof cap.appDownloadUrl === "string"),
+      String(cap.appDownloadUrl),
+    );
 
     const lista = await req<Array<{ id: string; ativo: boolean }>>(
       "GET",

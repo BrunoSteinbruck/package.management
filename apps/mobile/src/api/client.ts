@@ -1,5 +1,10 @@
 import { mensagemDeErro, type Capacidades, type JwtPayload } from "@pacotes/shared";
-import { carregarSessao, salvarModulos, salvarSessao } from "./session";
+import {
+  carregarSessao,
+  salvarAppDownloadUrl,
+  salvarModulos,
+  salvarSessao,
+} from "./session";
 
 // Em dispositivo físico, defina EXPO_PUBLIC_API_URL no .env com o IP da sua
 // máquina na rede local (ex.: http://192.168.0.10:3001/v1).
@@ -109,8 +114,10 @@ export async function renovarSessao(): Promise<boolean> {
  */
 export async function sincronizarModulos(): Promise<void> {
   try {
-    const { modulos } = await apiFetch<Capacidades>("/conta/capacidades");
+    const { modulos, appDownloadUrl } =
+      await apiFetch<Capacidades>("/conta/capacidades");
     await salvarModulos(modulos);
+    await salvarAppDownloadUrl(appDownloadUrl ?? null);
   } catch {
     // mantém o cache anterior
   }

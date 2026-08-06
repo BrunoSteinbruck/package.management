@@ -63,7 +63,11 @@ export class ContaService {
         : user.condominioId
           ? [user.condominioId]
           : [];
-    if (ids.length === 0) return { modulos: [] };
+    // O link de download acompanha os dois caminhos: quem ainda não tem
+    // vínculo nenhum também precisa dele para convidar (e é justamente o
+    // primeiro dia do condomínio).
+    const appDownloadUrl = process.env.APP_DOWNLOAD_URL ?? null;
+    if (ids.length === 0) return { modulos: [], appDownloadUrl };
 
     const condominios = await this.prisma.condominio.findMany({
       where: { id: { in: ids } },
@@ -74,6 +78,7 @@ export class ContaService {
       modulos: MODULOS_CONDOMINIO.filter((m) =>
         ligados.has(m),
       ) as ModuloCondominio[],
+      appDownloadUrl,
     };
   }
 

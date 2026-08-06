@@ -4,6 +4,15 @@ import type { JwtPayload, ModuloCondominio } from "@pacotes/shared";
 const TOKEN_KEY = "@sessao/token";
 const PERFIL_KEY = "@sessao/perfil";
 const MODULOS_KEY = "@sessao/modulos";
+/**
+ * Chave PRÓPRIA, e não um campo dentro de `@sessao/modulos`.
+ *
+ * `carregarModulos` faz `Array.isArray(lido) ? ... : []` sobre o conteúdo
+ * dessa chave: guardar um objeto lá dentro faria todo aparelho já instalado
+ * ler `[]` na primeira abertura depois da atualização, e a home do síndico
+ * perderia as prateleiras até a rede responder.
+ */
+const APP_DOWNLOAD_KEY = "@sessao/appDownloadUrl";
 
 export interface Sessao {
   token: string;
@@ -46,7 +55,12 @@ export function registrarLimpezaDeSessao(fn: () => void): void {
 }
 
 export async function limparSessao(): Promise<void> {
-  await AsyncStorage.multiRemove([TOKEN_KEY, PERFIL_KEY, MODULOS_KEY]);
+  await AsyncStorage.multiRemove([
+    TOKEN_KEY,
+    PERFIL_KEY,
+    MODULOS_KEY,
+    APP_DOWNLOAD_KEY,
+  ]);
   for (const fn of limpezas) fn();
   for (const fn of ouvintes) fn([]);
 }
@@ -90,4 +104,20 @@ export async function carregarModulos(): Promise<ModuloCondominio[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Onde baixar o app, para os convites por WhatsApp.
+ *
+ * Vem das capacidades e fica em cache pelo mesmo motivo dos módulos: quem
+ * convida quer o texto pronto na hora, não depois de uma ida à rede. Null
+ * quando o servidor não tem o env: o convite sai sem link.
+ */
+export async function salvarAppDownloadUrl(url: string | null): Promise<void> {
+  if (url) await AsyncStorage.setItem(APP_DOWNLOAD_KEY, url);
+  else await AsyncStorage.removeItem(APP_DOWNLOAD_KEY);
+}
+
+export function carregarAppDownloadUrl(): Promise<string | null> {
+  return AsyncStorage.getItem(APP_DOWNLOAD_KEY);
 }
