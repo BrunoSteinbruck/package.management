@@ -129,7 +129,7 @@ export const MODULOS_SINDICO: readonly Modulo<
   {
     id: "Relatorios",
     titulo: "Relatórios de encomendas",
-    icone: "lista",
+    icone: "grafico",
     perfis: ["sindico"],
     slot: "secundario",
   },

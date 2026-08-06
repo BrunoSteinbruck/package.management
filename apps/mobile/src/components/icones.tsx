@@ -23,7 +23,8 @@ export type NomeIcone =
   | "boleto"
   | "megafone"
   | "alerta"
-  | "ajustes";
+  | "ajustes"
+  | "grafico";
 
 const DESENHOS: Record<NomeIcone, React.ReactNode> = {
   camera: (
@@ -94,6 +95,15 @@ const DESENHOS: Record<NomeIcone, React.ReactNode> = {
     <>
       <Path d="M8 6h13M8 12h13M8 18h13" />
       <Path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </>
+  ),
+  // Relatórios: colunas de altura diferente, que é o desenho da própria tela.
+  // Existe porque "lista" já era Documentos, e as duas linhas ficavam lado a
+  // lado no menu do síndico com o mesmo ícone.
+  grafico: (
+    <>
+      <Path d="M4 20h16" />
+      <Path d="M7 20v-6M12 20V6M17 20v-9" />
     </>
   ),
   // Boleto: as barras do código de barras. Os ícones de caixa e de lista já
