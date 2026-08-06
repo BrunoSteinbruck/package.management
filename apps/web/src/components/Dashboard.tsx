@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  contatoDeMembro,
   formatarTelefone,
   linkWhatsApp,
   perfilDe,
@@ -996,7 +997,7 @@ function EquipeSection() {
           {equipe.map((m) => (
             <tr key={m.id}>
               <td className="unidade">{m.nome}</td>
-              <td>{m.telefone}</td>
+              <td>{contatoDeMembro(m.telefone)}</td>
               <td>
                 {m.email ? (
                   m.email

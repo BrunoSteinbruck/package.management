@@ -10,9 +10,9 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { MembroEquipe } from "@pacotes/shared";
+import { contatoDeMembro, type MembroEquipe } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
-import { formatarTelefone, iniciais } from "../api/types";
+import { iniciais } from "../api/types";
 import {
   Botao,
   Card,
@@ -255,7 +255,7 @@ export function EquipeScreen({ navigation }: Props) {
           <View>
             <ItemLista
               titulo={item.nome}
-              sub={`${formatarTelefone(item.telefone)} · ${String(item.papel).toLowerCase()}`}
+              sub={`${contatoDeMembro(item.telefone)} · ${String(item.papel).toLowerCase()}`}
               detalhe={item.email ?? undefined}
               media={{ iniciais: iniciais(item.nome) }}
               direita={

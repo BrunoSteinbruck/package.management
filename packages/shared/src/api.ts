@@ -1,3 +1,4 @@
+import { formatarTelefone } from "./dto";
 import type {
   CategoriaDocumento,
   ModuloCondominio,
@@ -492,6 +493,21 @@ export interface MembroEquipe {
   email: string | null;
   papel: PapelUsuario | string;
   ativo: boolean;
+}
+
+/**
+ * O telefone do membro como se mostra na tela.
+ *
+ * Excluir a conta anonimiza o registro gravando `removido:<uuid>` na coluna
+ * de telefone (`conta.service.ts`), para o histórico de quem entregou pacote
+ * não apontar para lugar nenhum. Esse uuid não é telefone e não é para
+ * ninguém ler: a linha continua na lista como rastro do quadro antigo, mas
+ * dizendo o que de fato é.
+ */
+export function contatoDeMembro(telefone: string): string {
+  return telefone.startsWith("removido:")
+    ? "conta excluída"
+    : formatarTelefone(telefone);
 }
 
 // ----- Leituras de medidores -----

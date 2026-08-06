@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatarTelefone, normalizarTelefone, RequestOtpSchema } from "./dto";
+import { contatoDeMembro } from "./api";
 
 /**
  * O `+55` que a pessoa digita naturalmente quebrava o login em silêncio: o
@@ -86,5 +87,20 @@ describe("o schema aplica a normalização na borda", () => {
     expect(ler("123")).toBeNull();
     expect(ler("")).toBeNull();
     expect(ler("nao-e-telefone")).toBeNull();
+  });
+});
+
+describe("telefone do membro da equipe", () => {
+  it("conta excluída não mostra o uuid da anonimização", () => {
+    // `conta.service.ts` grava "removido:<uuid>" na coluna de telefone para o
+    // histórico de entregas não apontar para ninguém. Sem este tratamento, a
+    // lista da equipe imprimia o uuid cru onde deveria estar um telefone.
+    expect(contatoDeMembro("removido:7a737e1d-1900-4e99-bcc8-dd06c9a69b81")).toBe(
+      "conta excluída",
+    );
+  });
+
+  it("membro ativo continua com o telefone formatado", () => {
+    expect(contatoDeMembro("51900000002")).toBe("(51) 90000-0002");
   });
 });
