@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   competenciaAtual,
   diasEntre,
+  geracaoDevidaHoje,
   hojeNoFuso,
   inicioDaCompetencia,
   nomeDaCompetencia,
@@ -82,5 +83,38 @@ describe("calendário do financeiro", () => {
     // e o `+3` cairia no dia anterior às 23h.
     expect(diasEntre("2026-10-15", somarDias("2026-10-15", 3))).toBe(3);
     expect(diasEntre("2026-02-12", somarDias("2026-02-12", 3))).toBe(3);
+  });
+});
+
+describe("janela da geração automática", () => {
+  it("gera enquanto o vencimento está no futuro", () => {
+    expect(geracaoDevidaHoje("2026-08-01", 10)).toBe(true);
+    expect(geracaoDevidaHoje("2026-08-09", 10)).toBe(true);
+  });
+
+  it("não gera no dia do vencimento nem depois", () => {
+    // Cobrança criada no próprio dia do vencimento nasce sem prazo, e a régua
+    // a marcaria VENCIDA no ciclo seguinte: push de atraso para quem nunca
+    // viu o boleto.
+    expect(geracaoDevidaHoje("2026-08-10", 10)).toBe(false);
+    expect(geracaoDevidaHoje("2026-08-31", 10)).toBe(false);
+  });
+
+  it("dia de vencimento 1 nunca gera sozinho", () => {
+    // Não há dia do mês anterior ao dia 1. É consequência aceita da regra: com
+    // vencimento no dia 1 a geração é sempre manual, e antecipada.
+    expect(geracaoDevidaHoje("2026-08-01", 1)).toBe(false);
+  });
+
+  it("dia 31 em fevereiro segue a mesma correção do vencimento", () => {
+    // O vencimento vira 28; então o dia 27 ainda gera e o 28 não.
+    expect(geracaoDevidaHoje("2026-02-27", 31)).toBe(true);
+    expect(geracaoDevidaHoje("2026-02-28", 31)).toBe(false);
+  });
+
+  it("a competência sai do próprio dia, sem virar mês", () => {
+    // 31 de dezembro com vencimento no dia 10 não pode olhar para janeiro.
+    expect(geracaoDevidaHoje("2026-12-31", 10)).toBe(false);
+    expect(geracaoDevidaHoje("2027-01-05", 10)).toBe(true);
   });
 });

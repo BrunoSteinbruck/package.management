@@ -54,6 +54,25 @@ export function vencimentoDa(competencia: string, diaVencimento: number): string
   return `${competencia}-${String(dia).padStart(2, "0")}`;
 }
 
+/**
+ * A geração automática do mês deve rodar hoje?
+ *
+ * Só enquanto o vencimento da competência corrente ainda está no futuro.
+ * Gerar no dia do vencimento ou depois criaria uma cobrança que nasce sem
+ * prazo nenhum: no ciclo seguinte a própria régua a marcaria VENCIDA e
+ * mandaria push de atraso para um morador que nunca chegou a ver o boleto.
+ *
+ * O custo dessa escolha é uma unidade cadastrada tarde no mês ficar de fora
+ * da rodada automática. Fica para o síndico gerar à mão, que é quem sabe se
+ * aquela unidade se cobra neste mês ou no que vem.
+ */
+export function geracaoDevidaHoje(
+  hoje: string,
+  diaVencimento: number,
+): boolean {
+  return hoje < vencimentoDa(hoje.slice(0, 7), diaVencimento);
+}
+
 /** Diferença em dias entre duas datas AAAA-MM-DD (b menos a). */
 export function diasEntre(a: string, b: string): number {
   const ms = Date.parse(`${b}T00:00:00.000Z`) - Date.parse(`${a}T00:00:00.000Z`);

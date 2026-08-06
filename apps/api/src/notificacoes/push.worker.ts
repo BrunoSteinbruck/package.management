@@ -5,7 +5,12 @@ import {
   OnModuleInit,
 } from "@nestjs/common";
 import { gerarCodigoConvite } from "../common/convite.util";
-import { hojeNoFuso, somarDias } from "../financeiro/competencia.util";
+import {
+  geracaoDevidaHoje,
+  hojeNoFuso,
+  somarDias,
+} from "../financeiro/competencia.util";
+import { FinanceiroService } from "../financeiro/financeiro.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { SmsService } from "../sms/sms.service";
 import { WhatsAppService } from "../whatsapp/whatsapp.service";
@@ -55,6 +60,7 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly sms: SmsService,
     private readonly whatsapp: WhatsAppService,
+    private readonly financeiro: FinanceiroService,
   ) {}
 
   onModuleInit() {
@@ -84,6 +90,9 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
         for (const condominio of condominios) {
           await this.lembretesDoCondominio(condominio.id);
           await this.expurgarDocumentosDeVisita(condominio.id);
+          // Gerar ANTES da régua: a cobrança criada agora já entra na conta
+          // de lembretes desta mesma rodada, em vez de esperar um dia.
+          await this.geracaoAutomatica(condominio.id, condominio.timezone);
           await this.reguaDeCobranca(condominio.id, condominio.timezone);
         }
       }
@@ -452,6 +461,51 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
    *
    * Só roda com a régua ligada na configuração do condomínio.
    */
+  /**
+   * Gera as cobranças do mês para quem ligou isso na configuração.
+   *
+   * Este é o chamador que `gerarDoCondominio` sempre esperou: a auditoria da
+   * geração mora no método do controller justamente porque aqui não há
+   * usuário atrás da ação.
+   *
+   * Rodar todo dia é inofensivo e desejável: a geração pula unidade que já
+   * tem cobrança na competência, então repetir não duplica, e uma unidade
+   * cujo valor foi preenchido no dia 3 entra na rodada do dia 4 em vez de
+   * esperar o mês seguinte. A janela de `geracaoDevidaHoje` é o que impede a
+   * cobrança de nascer vencida.
+   */
+  private async geracaoAutomatica(condominioId: string, timezone: string) {
+    // Dentro do tenant: `config_financeiro` tem RLS, e ler fora devolveria
+    // null, o que deixaria a geração desligada em silêncio para todo mundo.
+    const cfg = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.configFinanceiro.findUnique({ where: { condominioId } }),
+    );
+    if (!cfg?.geracaoAutomatica) return;
+
+    const hoje = hojeNoFuso(timezone);
+    if (!geracaoDevidaHoje(hoje, cfg.diaVencimento)) return;
+
+    try {
+      const r = await this.financeiro.gerarDoCondominio(
+        condominioId,
+        hoje.slice(0, 7),
+      );
+      if (r.criadas > 0 || r.naoCobradas.length > 0) {
+        this.logger.log(
+          `Geração automática ${r.competencia}: ${r.criadas} criada(s), ` +
+            `${r.naoCobradas.length} sem responsável cadastrado`,
+        );
+      }
+    } catch (e) {
+      // Provedor fora do ar, ou a chave de cripto trocada, não podem derrubar
+      // o ciclo: o resto dos condomínios ainda precisa de push. Amanhã tenta
+      // de novo, e a geração é idempotente.
+      this.logger.error(
+        `Geração automática falhou: ${(e as Error).message.slice(0, 140)}`,
+      );
+    }
+  }
+
   private async reguaDeCobranca(condominioId: string, timezone: string) {
     // Dentro do tenant: `config_financeiro` tem RLS, e ler fora devolveria
     // null, o que desligaria a régua em silêncio para todo mundo.
