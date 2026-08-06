@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,10 +14,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { placaValida } from "@pacotes/shared";
+import { linkWhatsApp, placaValida } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { excluirConta } from "../api/excluirConta";
-import { limparSessao } from "../api/session";
+import { carregarAppDownloadUrl, limparSessao } from "../api/session";
 import { iniciais, type Veiculo, type Vinculado } from "../api/types";
 import { Botao, Card, HeaderTela, Kicker, Nota } from "../components/ui";
 import { Icone } from "../components/icones";
@@ -45,6 +46,8 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
   const [convidandoAberto, setConvidandoAberto] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [novoTelefone, setNovoTelefone] = useState("");
+  // Onde baixar o app, para o texto do convite. Vem do cache das capacidades.
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const ligados = useModulos();
   const [prefs, setPrefs] = useState<Preferencias | null>(null);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
@@ -67,6 +70,7 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
         .then(setPrefs)
         .catch(() => {});
       carregarVeiculos();
+      carregarAppDownloadUrl().then(setDownloadUrl);
     }, [unidadeId, carregarVeiculos]),
   );
 
@@ -147,6 +151,27 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
    * Substituiu o código de 7 dias, que era compartilhado por qualquer canal e
    * servia para quem o recebesse encaminhado.
    */
+  /**
+   * Texto pessoal, não institucional: quem manda é o morador falando com a
+   * própria família, e é isso que faz a mensagem não parecer propaganda.
+   */
+  async function avisarConvidado(nome: string, telefone: string) {
+    const link = downloadUrl ? ` Baixa aqui: ${downloadUrl}` : "";
+    const texto =
+      `Oi, ${nome.split(" ")[0]}! Te convidei para o app do ${condominio}, ` +
+      `onde a gente acompanha as encomendas e avisos da ${rotulo}. ` +
+      `Baixa o Convivar e entra com o seu número: assim que a administração ` +
+      `aprovar, você já entra na nossa unidade.${link}`;
+    try {
+      await Linking.openURL(linkWhatsApp(telefone, texto));
+    } catch {
+      Alert.alert(
+        "WhatsApp não disponível",
+        "Não foi possível abrir o WhatsApp neste aparelho.",
+      );
+    }
+  }
+
   async function convidar() {
     const tel = novoTelefone.replace(/\D/g, "");
     if (novoNome.trim().length < 2 || tel.length < 10) return;
@@ -156,12 +181,23 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
         method: "POST",
         body: { unidadeId, nome: novoNome.trim(), telefone: tel },
       });
+      const nome = novoNome.trim();
       setNovoNome("");
       setNovoTelefone("");
       setConvidandoAberto(false);
+      // O convidado não é notificado por nenhum canal automático: o pedido
+      // vai para o síndico, não para ele. Sem este passo, ele só descobriria
+      // que foi convidado se instalasse o app por conta própria.
       Alert.alert(
         "Pedido enviado ao síndico",
-        `Quando a administração aprovar, ${novoNome.trim().split(" ")[0]} entra no app com o próprio número e já cai em ${rotulo}.`,
+        `Quando a administração aprovar, ${nome.split(" ")[0]} entra no app com o próprio número e já cai em ${rotulo}.`,
+        [
+          { text: "Agora não", style: "cancel" },
+          {
+            text: "Avisar pelo WhatsApp",
+            onPress: () => avisarConvidado(nome, tel),
+          },
+        ],
       );
     } catch (e) {
       Alert.alert("Não foi possível convidar", String((e as Error).message));
