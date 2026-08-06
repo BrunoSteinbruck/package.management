@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   formatarTelefone,
+  linkWhatsApp,
   perfilDe,
   rotuloUnidade,
   type Adocao,
@@ -82,13 +83,19 @@ export function Dashboard({
   const [pendentesAprovacao, setPendentesAprovacao] = useState(0);
   const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState<Ocorrencia[]>([]);
   const [modulos, setModulos] = useState<ModuloCondominio[]>([]);
+  // Vem junto das capacidades para o convite por WhatsApp anexar ao texto;
+  // sem env no servidor é null e o convite sai sem link.
+  const [appDownloadUrl, setAppDownloadUrl] = useState<string | null>(null);
   const ligado = (m: ModuloCondominio) => modulos.includes(m);
 
   // Recarrega a cada troca de visão: sair de Configurações depois de ligar um
   // módulo tem que revelar a seção dele sem exigir F5.
   useEffect(() => {
     apiFetch<Capacidades>("/conta/capacidades")
-      .then((c) => setModulos(c.modulos))
+      .then((c) => {
+        setModulos(c.modulos);
+        setAppDownloadUrl(c.appDownloadUrl ?? null);
+      })
       .catch(() => {});
   }, [visao]);
 
@@ -258,7 +265,12 @@ export function Dashboard({
         {visao === "relatorios" && <RelatoriosView />}
         {visao === "consumos" && gestor && <ConsumosView />}
         {visao === "ocorrencias" && gestor && <OcorrenciasView />}
-        {visao === "moradores" && gestor && <MoradoresView />}
+        {visao === "moradores" && gestor && (
+          <MoradoresView
+            appDownloadUrl={appDownloadUrl}
+            condominio={perfil.condominioNome ?? "condomínio"}
+          />
+        )}
         {visao === "comunicados" && gestor && ligado("comunicados") && (
           <ComunicadosView />
         )}
@@ -1376,7 +1388,13 @@ function VagasSection({ aoImportar }: { aoImportar: () => void }) {
   );
 }
 
-function MoradoresView() {
+function MoradoresView({
+  appDownloadUrl,
+  condominio,
+}: {
+  appDownloadUrl: string | null;
+  condominio: string;
+}) {
   const [vinculos, setVinculos] = useState<VinculoPendente[]>([]);
   const [unidades, setUnidades] = useState<UnidadePanorama[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -1467,6 +1485,25 @@ function MoradoresView() {
 
   const comApp = unidades.filter((u) => u.temApp).length;
 
+  /**
+   * Abre o WhatsApp do síndico com a mensagem pronta para o titular.
+   *
+   * Nada é enviado pelo servidor: é o número dele falando com o morador. Isso
+   * evita a verificação de empresa da Meta (que depende do CNPJ) e a política
+   * de opt-in, que barraria mensagem de empresa para quem nunca consentiu.
+   */
+  function convidarPorWhatsApp(u: UnidadePanorama) {
+    if (!u.titular) return;
+    const primeiro = u.titular.nome.trim().split(/\s+/)[0];
+    const link = appDownloadUrl ? ` Baixe aqui: ${appDownloadUrl}` : "";
+    const texto =
+      `Olá, ${primeiro}! Aqui é da administração do ${condominio}. ` +
+      `Agora avisamos as encomendas da portaria pelo aplicativo Convivar. ` +
+      `Baixe o app e entre com este número de celular: a unidade ` +
+      `${rotuloUnidade(u)} já está cadastrada no seu nome.${link}`;
+    window.open(linkWhatsApp(u.titular.telefone, texto), "_blank", "noopener");
+  }
+
   return (
     <>
       <h1>Moradores</h1>
@@ -1529,6 +1566,7 @@ function MoradoresView() {
                 <th>Telefone</th>
                 <th>Vinculados</th>
                 <th>Adoção</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -1554,6 +1592,19 @@ function MoradoresView() {
                     <span className={`selo ${u.temApp ? "ok" : "neutro"}`}>
                       {u.temApp ? "no app" : "sem app"}
                     </span>
+                  </td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {/* Só onde há alguém para convidar. Sai do WhatsApp do
+                        próprio síndico: remetente conhecido converte melhor
+                        que número de empresa, e não depende da API da Meta. */}
+                    {!u.temApp && u.titular && (
+                      <button
+                        className="outline"
+                        onClick={() => convidarPorWhatsApp(u)}
+                      >
+                        Convidar por WhatsApp
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
