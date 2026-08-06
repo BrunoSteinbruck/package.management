@@ -10,13 +10,28 @@ por email do provedor de cobrança.
 - `apps/api`: API NestJS + Prisma/PostgreSQL (multi-tenant com RLS), worker
   de push (Expo Push) e OCR de etiquetas (stub em dev; Google Vision via
   `GOOGLE_VISION_API_KEY`)
-- `apps/mobile`: app Expo único: o login roteia por papel. Equipe da
-  portaria: entrada com câmera/scanner + OCR, retirada parcial com foto,
-  scan do QR do morador, fila offline. Morador: push, pendentes/histórico,
-  QR de retirada, convite de familiar
-- `apps/web`: painel Next.js do síndico: pendências, adoção, aprovação de
-  vínculos, import de moradores (`pnpm --filter @pacotes/web dev`, porta 3002).
-  Gestor entra com email + senha; OTP por SMS é só do app e da portaria
+- `apps/mobile`: app Expo único: o login roteia por papel, em três pilhas.
+  **Portaria**: entrada com câmera/scanner + OCR, retirada parcial com foto,
+  scan do QR do morador, leitura de medidores, fila offline. **Morador**:
+  push, encomendas e histórico, visitas, boletos, documentos, comunicados.
+  **Síndico**: gestão completa, em paridade com o painel (ver abaixo)
+- `apps/web`: painel Next.js do síndico (`pnpm --filter @pacotes/web dev`,
+  porta 3002). Gestor entra com e-mail + senha; OTP por SMS é só do app e da
+  portaria
+
+### Síndico: app e painel fazem a mesma coisa
+
+A gestão inteira existe nos dois: encomendas com filtros, relatórios,
+consumos com tarifas, moradores e unidades, equipe, visitantes, comunicados,
+documentos, financeiro (cobranças, taxas, conciliação), módulos e conta.
+
+Ficam **só no painel**, de propósito, as operações de arquivo — importar CSV
+de moradores e de vagas, importar o OFX do banco, enviar PDF de documento e
+exportar a planilha de pacotes: são tarefas de mesa, feitas onde o arquivo
+já está. O app lê tudo e executa todas as ações.
+
+Fica **só no app**: avisar morador (com foto e OCR de placa/vaga), que
+depende da câmera.
 - `packages/shared`: tipos e schemas zod compartilhados
 
 ## Rodando local
