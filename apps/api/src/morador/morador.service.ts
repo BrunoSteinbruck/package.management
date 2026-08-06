@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -6,16 +8,13 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type {
+  ConvidarMoradorDto,
   CriarVeiculoDto,
-  EmitirConviteDto,
   EmitirQrDto,
   JwtPayload,
   RegistrarDeviceDto,
 } from "@pacotes/shared";
-import { gerarCodigoConvite } from "../common/convite.util";
 import { PrismaService } from "../prisma/prisma.service";
-
-const CONVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface QrPayload {
   tipo: "qr-retirada";
@@ -175,34 +174,66 @@ export class MoradorService {
     return vinculo;
   }
 
-  async emitirConvite(user: JwtPayload, dto: EmitirQrDto | EmitirConviteDto) {
+  /**
+   * Convidar alguém para a unidade, pelo telefone.
+   *
+   * O vínculo nasce PENDENTE e cai na fila "Aprovar moradores" do síndico: é
+   * ele quem responde por quem enxerga encomendas, boletos e documentos da
+   * unidade. O morador indica, não concede.
+   *
+   * Nada é enviado à pessoa daqui. Quando ela instalar o app e entrar com esse
+   * telefone, o vínculo já aprovado está esperando — e é por isso que o pedido
+   * é preso ao NÚMERO, e não a um código que qualquer um pode encaminhar.
+   */
+  async convidarMorador(user: JwtPayload, dto: ConvidarMoradorDto) {
     const moradorId = this.exigirMorador(user);
     const vinculo = await this.exigirVinculoAtivo(moradorId, dto.unidadeId);
-    // Cap de convites vivos por unidade: cada código é uma credencial de
-    // vínculo: sem teto, um morador poderia emitir infinitos.
-    const ativos = await this.prisma.convite.count({
+
+    const convidado = await this.prisma.morador.upsert({
+      where: { telefone: dto.telefone },
+      // Não renomeia quem já existe: o nome do cadastro é da própria pessoa, e
+      // um vizinho digitando "mãe" não pode reescrever isso para todo mundo.
+      update: {},
+      create: { nome: dto.nome, telefone: dto.telefone },
+    });
+    if (convidado.id === moradorId) {
+      throw new BadRequestException("Esse é o seu próprio número.");
+    }
+
+    const existente = await this.prisma.vinculo.findUnique({
       where: {
-        unidadeId: dto.unidadeId,
-        canal: "MORADOR",
-        usadoEm: null,
-        expiraEm: { gt: new Date() },
+        moradorId_unidadeId: {
+          moradorId: convidado.id,
+          unidadeId: dto.unidadeId,
+        },
       },
     });
-    if (ativos >= 5) {
-      throw new ForbiddenException(
-        "Sua unidade já tem 5 convites ativos. Use um deles ou aguarde expirarem.",
+    if (existente?.status === "ATIVO") {
+      throw new ConflictException("Essa pessoa já está nesta unidade.");
+    }
+    if (existente?.status === "PENDENTE") {
+      throw new ConflictException(
+        "Já existe um pedido para esse número aguardando o síndico.",
       );
     }
-    const convite = await this.prisma.convite.create({
-      data: {
+
+    // REMOVIDO volta a PENDENTE: recusa anterior não é banimento.
+    await this.prisma.vinculo.upsert({
+      where: {
+        moradorId_unidadeId: {
+          moradorId: convidado.id,
+          unidadeId: dto.unidadeId,
+        },
+      },
+      update: { status: "PENDENTE", aprovadoPorId: null },
+      create: {
+        moradorId: convidado.id,
+        unidadeId: dto.unidadeId,
         condominioId: vinculo.condominioId,
-        unidadeId: vinculo.unidadeId,
-        codigo: gerarCodigoConvite(),
-        canal: "MORADOR",
-        expiraEm: new Date(Date.now() + CONVITE_TTL_MS),
+        status: "PENDENTE",
       },
     });
-    return { codigo: convite.codigo, expiraEm: convite.expiraEm };
+    return { nome: convidado.nome, telefone: convidado.telefone };
   }
 
   /**
@@ -218,12 +249,35 @@ export class MoradorService {
     }
     const morador = await this.prisma.morador.findUniqueOrThrow({
       where: { id: user.sub },
-      select: { aceitaWhatsapp: true, _count: { select: { devices: true } } },
+      select: {
+        aceitaWhatsapp: true,
+        aceitaPush: true,
+        _count: { select: { devices: true } },
+      },
     });
     return {
       aceitaWhatsapp: morador.aceitaWhatsapp,
+      aceitaPush: morador.aceitaPush,
       temApp: morador._count.devices > 0,
     };
+  }
+
+  /**
+   * Liga ou desliga o push do app.
+   *
+   * Não mexe no Device: a unidade continua contando como "no app" para o
+   * síndico. Silenciar aviso não é desinstalar, e confundir os dois faria a
+   * adoção do painel despencar a cada morador que só queria dormir em paz.
+   */
+  async alternarPush(user: JwtPayload, aceita: boolean) {
+    if (user.tipo !== "morador") {
+      throw new ForbiddenException("Apenas moradores");
+    }
+    await this.prisma.morador.update({
+      where: { id: user.sub },
+      data: { aceitaPush: aceita },
+    });
+    return this.preferencias(user);
   }
 
   async alternarWhatsapp(user: JwtPayload, aceita: boolean) {

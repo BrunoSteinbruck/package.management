@@ -3,8 +3,8 @@ import {
   Alert,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -17,8 +17,8 @@ import { placaValida } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
-import type { Veiculo, Vinculado } from "../api/types";
-import { Botao, Card, HeaderTela, Kicker } from "../components/ui";
+import { iniciais, type Veiculo, type Vinculado } from "../api/types";
+import { Botao, Card, HeaderTela, Kicker, Nota } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
 import { useModulos } from "../useModulos";
@@ -27,6 +27,8 @@ import type { MoradorStackParamList } from "../navigation";
 /** GET /morador/preferencias */
 interface Preferencias {
   aceitaWhatsapp: boolean;
+  /** Push do app. Nasce ligado; desligar não desinstala nem some da adoção. */
+  aceitaPush: boolean;
   /** Com app instalado o canal é o push, e o WhatsApp não entra. */
   temApp: boolean;
 }
@@ -35,16 +37,14 @@ type Props = NativeStackScreenProps<MoradorStackParamList, "MinhaUnidade"> & {
   aoSair: () => void;
 };
 
-function iniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/);
-  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase();
-}
-
 export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
   const insets = useSafeAreaInsets();
   const { unidadeId, rotulo, condominio } = route.params;
   const [vinculados, setVinculados] = useState<Vinculado[]>([]);
   const [convidando, setConvidando] = useState(false);
+  const [convidandoAberto, setConvidandoAberto] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoTelefone, setNovoTelefone] = useState("");
   const ligados = useModulos();
   const [prefs, setPrefs] = useState<Preferencias | null>(null);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
@@ -69,6 +69,27 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
       carregarVeiculos();
     }, [unidadeId, carregarVeiculos]),
   );
+
+  /**
+   * Otimista, com desfazer: o interruptor tem que mexer no toque. Esperar a
+   * resposta deixava a chave parada por meio segundo e a pessoa tocava de
+   * novo, mandando duas requisições contrárias.
+   */
+  async function alternarPush(valor: boolean) {
+    if (!prefs) return;
+    setPrefs({ ...prefs, aceitaPush: valor });
+    try {
+      setPrefs(
+        await apiFetch<Preferencias>("/morador/preferencias/push", {
+          method: "POST",
+          body: { aceita: valor },
+        }),
+      );
+    } catch (e) {
+      setPrefs({ ...prefs, aceitaPush: !valor });
+      Alert.alert("Não foi possível salvar", String((e as Error).message));
+    }
+  }
 
   async function alternarWhatsapp() {
     if (!prefs) return;
@@ -119,21 +140,31 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
     }
   }
 
+  /**
+   * Convida pelo telefone. O pedido vai para a fila do síndico: o morador
+   * indica quem entra na unidade, quem autoriza é a administração.
+   *
+   * Substituiu o código de 7 dias, que era compartilhado por qualquer canal e
+   * servia para quem o recebesse encaminhado.
+   */
   async function convidar() {
+    const tel = novoTelefone.replace(/\D/g, "");
+    if (novoNome.trim().length < 2 || tel.length < 10) return;
     setConvidando(true);
     try {
-      const convite = await apiFetch<{ codigo: string }>("/morador/convites", {
+      await apiFetch("/morador/convidar", {
         method: "POST",
-        body: { unidadeId },
+        body: { unidadeId, nome: novoNome.trim(), telefone: tel },
       });
-      await Share.share({
-        message:
-          `Você foi convidado para o Convivar, o app de encomendas do ${condominio}. ` +
-          `Baixe o app, entre com seu celular e use o código ${convite.codigo} ` +
-          `para se vincular à unidade ${rotulo}. O código vale por 7 dias.`,
-      });
+      setNovoNome("");
+      setNovoTelefone("");
+      setConvidandoAberto(false);
+      Alert.alert(
+        "Pedido enviado ao síndico",
+        `Quando a administração aprovar, ${novoNome.trim().split(" ")[0]} entra no app com o próprio número e já cai em ${rotulo}.`,
+      );
     } catch (e) {
-      Alert.alert("Não foi possível gerar o convite", String((e as Error).message));
+      Alert.alert("Não foi possível convidar", String((e as Error).message));
     } finally {
       setConvidando(false);
     }
@@ -194,14 +225,57 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
           ))}
         </Card>
 
-        <Botao
-          titulo="Convidar familiar"
-          variante="outline"
-          icone="mais"
-          onPress={convidar}
-          carregando={convidando}
-          estilo={{ marginTop: 14, minHeight: 56 }}
-        />
+        {convidandoAberto ? (
+          <Card estilo={{ marginTop: 14 }}>
+            <Kicker>Convidar para esta unidade</Kicker>
+            <TextInput
+              style={styles.campoConvite}
+              placeholder="Nome"
+              placeholderTextColor={theme.colors.textFaint}
+              value={novoNome}
+              onChangeText={setNovoNome}
+              maxLength={120}
+              autoFocus
+            />
+            <TextInput
+              style={styles.campoConvite}
+              placeholder="Celular com DDD"
+              placeholderTextColor={theme.colors.textFaint}
+              value={novoTelefone}
+              onChangeText={setNovoTelefone}
+              keyboardType="phone-pad"
+              maxLength={20}
+            />
+            <Botao
+              titulo="Enviar para aprovação"
+              onPress={convidar}
+              carregando={convidando}
+              desabilitado={
+                novoNome.trim().length < 2 ||
+                novoTelefone.replace(/\D/g, "").length < 10
+              }
+              estilo={{ marginTop: 10 }}
+            />
+            <Botao
+              titulo="Cancelar"
+              variante="outline"
+              onPress={() => setConvidandoAberto(false)}
+              estilo={{ marginTop: 8 }}
+            />
+            <Nota
+              texto="O síndico aprova antes de a pessoa ver as encomendas, boletos e documentos da unidade."
+              estilo={{ marginTop: 12 }}
+            />
+          </Card>
+        ) : (
+          <Botao
+            titulo="Convidar familiar"
+            variante="outline"
+            icone="mais"
+            onPress={() => setConvidandoAberto(true)}
+            estilo={{ marginTop: 14, minHeight: 56 }}
+          />
+        )}
 
         <Text style={[styles.tituloSecao, { marginTop: 26 }]}>Veículos</Text>
         <Text style={styles.subVeiculos}>
@@ -261,42 +335,60 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
           </View>
         </Card>
 
-        {/* Com o app instalado o aviso chega por push, e o WhatsApp não é
-            usado: oferecer a opção aqui prometeria algo que não acontece.
-            Por isso a linha só vira toggle para quem não tem device. */}
-        <Pressable
-          style={({ pressed }) => [styles.linhaNotif, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-          onPress={ligados.includes("whatsapp") && prefs && !prefs.temApp
-            ? alternarWhatsapp
-            : () =>
-                Alert.alert(
-                  "Notificações",
-                  "Todos os moradores vinculados recebem os avisos da unidade neste aparelho.",
-                )}
-        >
-          <View style={styles.iconeNotif}>
-            <Icone nome="sino" tamanho={20} cor={theme.colors.ok} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.notifTitulo}>Notificações</Text>
-            <Text style={styles.notifSub}>
-              {ligados.includes("whatsapp") && prefs && !prefs.temApp
-                ? prefs.aceitaWhatsapp
-                  ? "Recebendo comunicados e boletos por WhatsApp"
-                  : "Toque para receber comunicados e boletos por WhatsApp"
-                : "Todos os vinculados recebem os avisos"}
-            </Text>
-          </View>
-          {ligados.includes("whatsapp") && prefs && !prefs.temApp ? (
-            <Icone
-              nome={prefs.aceitaWhatsapp ? "check" : "chevron"}
-              tamanho={22}
-              cor={prefs.aceitaWhatsapp ? theme.colors.ok : theme.colors.textFaint}
+        <Text style={[styles.tituloSecao, { marginTop: 26 }]}>Notificações</Text>
+        <Card estilo={{ padding: 6 }}>
+          {/* Era uma linha com chevron que abria um alerta "OK" e não mudava
+              nada: parecia ajuste e não era. Agora é o interruptor mesmo. */}
+          <View style={styles.linhaNotif}>
+            <View style={styles.iconeNotif}>
+              <Icone nome="sino" tamanho={20} cor={theme.colors.ok} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.notifTitulo}>Avisos no app</Text>
+              <Text style={styles.notifSub}>
+                {prefs?.aceitaPush === false
+                  ? "Desligado: nada de encomendas, avisos ou comunicados"
+                  : "Encomendas, avisos da portaria e comunicados"}
+              </Text>
+            </View>
+            <Switch
+              value={prefs?.aceitaPush ?? true}
+              disabled={!prefs}
+              onValueChange={alternarPush}
+              trackColor={{ false: theme.colors.toggleOff, true: theme.colors.acao }}
             />
-          ) : (
-            <Icone nome="chevron" tamanho={22} cor={theme.colors.textFaint} />
+          </View>
+
+          {/* WhatsApp só para quem NÃO tem o app: com push instalado o aviso
+              já chega, e oferecer o outro canal prometeria uma duplicata que
+              não acontece. */}
+          {ligados.includes("whatsapp") && prefs && !prefs.temApp && (
+            <View style={[styles.linhaNotif, styles.linhaNotifDivisor]}>
+              <View style={styles.iconeNotif}>
+                <Icone nome="megafone" tamanho={20} cor={theme.colors.ok} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.notifTitulo}>WhatsApp</Text>
+                <Text style={styles.notifSub}>
+                  Comunicados e boletos, enquanto você não usa o app
+                </Text>
+              </View>
+              <Switch
+                value={prefs.aceitaWhatsapp}
+                onValueChange={alternarWhatsapp}
+                trackColor={{ false: theme.colors.toggleOff, true: theme.colors.acao }}
+              />
+            </View>
           )}
-        </Pressable>
+        </Card>
+
+        {prefs?.aceitaPush === false && (
+          <Nota
+            icone="alerta"
+            texto="Com os avisos desligados você não fica sabendo quando uma encomenda chega. A portaria continua recebendo normalmente."
+            estilo={{ marginTop: 12 }}
+          />
+        )}
 
         <Botao
           titulo="Sair da conta"
@@ -362,16 +454,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   badgeTitularTexto: { fontSize: 12, fontWeight: "600", color: theme.colors.ok },
+  campoConvite: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: theme.colors.text,
+    marginTop: 8,
+  },
   linhaNotif: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.card,
-    padding: 14,
-    marginTop: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+  },
+  linhaNotifDivisor: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divisor,
   },
   iconeNotif: {
     width: 42,

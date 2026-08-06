@@ -10,12 +10,14 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import {
+  AlternarPushDto,
+  ConvidarMoradorDto,
   AlternarWhatsappDto,
+  AlternarPushSchema,
+  ConvidarMoradorSchema,
   AlternarWhatsappSchema,
   CriarVeiculoDto,
   CriarVeiculoSchema,
-  EmitirConviteDto,
-  EmitirConviteSchema,
   EmitirQrDto,
   EmitirQrSchema,
   JwtPayload,
@@ -87,12 +89,16 @@ export class MoradorController {
     return this.morador.emitirQr(user, dto);
   }
 
-  @Post("convites")
-  emitirConvite(
+  /**
+   * Convidar familiar pelo telefone. Cria pedido PENDENTE para o síndico
+   * aprovar; substituiu o código de 7 dias, que era transferível.
+   */
+  @Post("convidar")
+  convidarMorador(
     @CurrentUser() user: JwtPayload,
-    @Body(new ZodPipe(EmitirConviteSchema)) dto: EmitirConviteDto,
+    @Body(new ZodPipe(ConvidarMoradorSchema)) dto: ConvidarMoradorDto,
   ) {
-    return this.morador.emitirConvite(user, dto);
+    return this.morador.convidarMorador(user, dto);
   }
 
   /**
@@ -110,6 +116,14 @@ export class MoradorController {
     @Body(new ZodPipe(AlternarWhatsappSchema)) dto: AlternarWhatsappDto,
   ) {
     return this.morador.alternarWhatsapp(user, dto.aceita);
+  }
+
+  @Post("preferencias/push")
+  alternarPush(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodPipe(AlternarPushSchema)) dto: AlternarPushDto,
+  ) {
+    return this.morador.alternarPush(user, dto.aceita);
   }
 
   @Get("unidades/:unidadeId/vinculados")

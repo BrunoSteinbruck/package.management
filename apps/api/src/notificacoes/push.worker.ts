@@ -240,7 +240,10 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
     });
     if (vinculos.length === 0) return [];
     const devices = await this.prisma.device.findMany({
-      where: { moradorId: { in: vinculos.map((v) => v.moradorId) } },
+      where: {
+        moradorId: { in: vinculos.map((v) => v.moradorId) },
+        morador: { aceitaPush: true },
+      },
     });
     // Dedup: um morador com duas unidades no mesmo bloco alvo apareceria duas
     // vezes e receberia o push duplicado.
@@ -249,7 +252,9 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
 
   /** Tokens Expo válidos de um morador específico (destinatário de OCORRENCIA). */
   private async tokensDoMorador(moradorId: string): Promise<string[]> {
-    const devices = await this.prisma.device.findMany({ where: { moradorId } });
+    const devices = await this.prisma.device.findMany({
+      where: { moradorId, morador: { aceitaPush: true } },
+    });
     return apenasExpo(devices);
   }
 
@@ -260,7 +265,10 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
       select: { moradorId: true },
     });
     const devices = await this.prisma.device.findMany({
-      where: { moradorId: { in: vinculos.map((v) => v.moradorId) } },
+      where: {
+        moradorId: { in: vinculos.map((v) => v.moradorId) },
+        morador: { aceitaPush: true },
+      },
     });
     return apenasExpo(devices);
   }
