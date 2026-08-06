@@ -10,6 +10,7 @@ import {
   type CobrancaGestor,
   type ConfigFinanceiro,
   type ResumoFinanceiro,
+  type SalvarConfigFinanceiroDto,
   type StatusCobranca,
   type TaxaLinha,
 } from "@pacotes/shared";
@@ -56,11 +57,12 @@ export function FinanceiroView() {
   const [resumo, setResumo] = useState<ResumoFinanceiro | null>(null);
   const [config, setConfig] = useState<ConfigFinanceiro | null>(null);
   const [taxas, setTaxas] = useState<TaxaLinha[]>([]);
-  const [aba, setAba] = useState<"cobrancas" | "taxas" | "conciliacao">(
-    "cobrancas",
-  );
+  const [aba, setAba] = useState<
+    "cobrancas" | "taxas" | "conciliacao" | "ajustes"
+  >("cobrancas");
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -127,6 +129,35 @@ export function FinanceiroView() {
       setErro((e as Error).message);
     } finally {
       setGerando(false);
+    }
+  }
+
+  /**
+   * Manda a configuração inteira, como as taxas: o schema exige os três
+   * campos, e o upsert grava o que chegar.
+   */
+  async function salvarConfig(mudanca: Partial<SalvarConfigFinanceiroDto>) {
+    if (!config) return;
+    setSalvandoConfig(true);
+    setErro(null);
+    try {
+      const salva = await apiFetch<ConfigFinanceiro>(
+        "/cadastro/financeiro/config",
+        {
+          method: "POST",
+          body: {
+            diaVencimento: config.diaVencimento,
+            geracaoAutomatica: config.geracaoAutomatica,
+            reguaAtiva: config.reguaAtiva,
+            ...mudanca,
+          },
+        },
+      );
+      setConfig(salva);
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSalvandoConfig(false);
     }
   }
 
@@ -265,6 +296,12 @@ export function FinanceiroView() {
             onClick={() => setAba("conciliacao")}
           >
             Conciliação
+          </button>
+          <button
+            className={`chip ${aba === "ajustes" ? "ativo" : ""}`}
+            onClick={() => setAba("ajustes")}
+          >
+            Ajustes
           </button>
         </div>
         {aba === "cobrancas" && (
@@ -444,6 +481,113 @@ export function FinanceiroView() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {aba === "ajustes" && config && (
+        <div className="card">
+          <h2 style={{ fontSize: 15, marginBottom: 4 }}>
+            Como as cobranças saem
+          </h2>
+          <table>
+            <tbody>
+              <tr>
+                <td>
+                  <div className="unidade">Dia do vencimento</div>
+                  <div style={{ fontSize: 13, color: "var(--texto-3)" }}>
+                    Vale para as cobranças geradas daqui em diante; as que já
+                    existem mantêm a data com que foram criadas. Mês sem esse
+                    dia usa o último: 31 em fevereiro vence no dia 28.
+                  </div>
+                </td>
+                <td style={{ width: 130, textAlign: "right" }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    defaultValue={config.diaVencimento}
+                    disabled={salvandoConfig}
+                    style={{ width: 70 }}
+                    onBlur={(e) => {
+                      const dia = Number(e.target.value);
+                      if (
+                        !Number.isInteger(dia) ||
+                        dia < 1 ||
+                        dia > 31 ||
+                        dia === config.diaVencimento
+                      ) {
+                        e.target.value = String(config.diaVencimento);
+                        return;
+                      }
+                      salvarConfig({ diaVencimento: dia });
+                    }}
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div className="unidade">Gerar sozinho todo mês</div>
+                  <div style={{ fontSize: 13, color: "var(--texto-3)" }}>
+                    O sistema cria as cobranças do mês corrente sem ninguém
+                    clicar, enquanto o vencimento ainda estiver no futuro.
+                    Unidade que já tem cobrança no mês é pulada, e unidade sem
+                    valor ou sem responsável fica de fora: essas continuam
+                    dependendo de você.
+                  </div>
+                </td>
+                <td style={{ width: 130, textAlign: "right" }}>
+                  <span
+                    className={`selo ${config.geracaoAutomatica ? "ok" : "alerta"}`}
+                  >
+                    {config.geracaoAutomatica ? "ligado" : "desligado"}
+                  </span>
+                </td>
+                <td style={{ width: 130, textAlign: "right" }}>
+                  <button
+                    className="outline"
+                    disabled={salvandoConfig}
+                    onClick={() =>
+                      salvarConfig({
+                        geracaoAutomatica: !config.geracaoAutomatica,
+                      })
+                    }
+                  >
+                    {config.geracaoAutomatica ? "Desligar" : "Ligar"}
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div className="unidade">Lembrar o morador</div>
+                  <div style={{ fontSize: 13, color: "var(--texto-3)" }}>
+                    Um aviso no app três dias antes do vencimento e outro
+                    quando a cobrança vence. Um de cada por cobrança, nunca
+                    repetido.
+                  </div>
+                </td>
+                <td style={{ width: 130, textAlign: "right" }}>
+                  <span className={`selo ${config.reguaAtiva ? "ok" : "alerta"}`}>
+                    {config.reguaAtiva ? "ligado" : "desligado"}
+                  </span>
+                </td>
+                <td style={{ width: 130, textAlign: "right" }}>
+                  <button
+                    className="outline"
+                    disabled={salvandoConfig}
+                    onClick={() =>
+                      salvarConfig({ reguaAtiva: !config.reguaAtiva })
+                    }
+                  >
+                    {config.reguaAtiva ? "Desligar" : "Ligar"}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="aviso">
+            A credencial do provedor de cobrança e o extrato OFX do banco
+            continuam sendo cadastrados fora daqui.
+          </p>
         </div>
       )}
 

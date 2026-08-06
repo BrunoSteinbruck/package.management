@@ -5,7 +5,9 @@ import {
   Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -45,7 +47,7 @@ import type { SindicoStackParamList } from "../navigation";
 
 type Props = NativeStackScreenProps<SindicoStackParamList, "Financeiro">;
 
-type Aba = "cobrancas" | "taxas" | "conciliacao";
+type Aba = "cobrancas" | "taxas" | "conciliacao" | "ajustes";
 
 const STATUS: Record<
   StatusCobranca,
@@ -97,6 +99,7 @@ export function FinanceiroScreen({ navigation }: Props) {
   const [taxas, setTaxas] = useState<TaxaLinha[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [gerando, setGerando] = useState(false);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
   const [editando, setEditando] = useState<TaxaLinha | null>(null);
   const [rascunho, setRascunho] = useState<RascunhoTaxa>({
     valor: "",
@@ -246,6 +249,38 @@ export function FinanceiroScreen({ navigation }: Props) {
     }
   }
 
+  /**
+   * Manda a configuração inteira, como as taxas: o schema exige os três
+   * campos, e o upsert grava o que chegar.
+   */
+  async function salvarConfig(mudanca: Partial<ConfigFinanceiro>) {
+    if (!config) return;
+    const anterior = config;
+    // Otimista: o Switch tem que mexer no toque. Se o servidor recusar, volta.
+    setConfig({ ...config, ...mudanca });
+    setSalvandoConfig(true);
+    try {
+      const salva = await apiFetch<ConfigFinanceiro>(
+        "/cadastro/financeiro/config",
+        {
+          method: "POST",
+          body: {
+            diaVencimento: anterior.diaVencimento,
+            geracaoAutomatica: anterior.geracaoAutomatica,
+            reguaAtiva: anterior.reguaAtiva,
+            ...mudanca,
+          },
+        },
+      );
+      setConfig(salva);
+    } catch (e) {
+      setConfig(anterior);
+      Alert.alert("Não foi possível salvar", String((e as Error).message));
+    } finally {
+      setSalvandoConfig(false);
+    }
+  }
+
   const podeAvancar = competencia < competenciaAtual();
 
   const cabecalho = (
@@ -256,6 +291,7 @@ export function FinanceiroScreen({ navigation }: Props) {
             ["cobrancas", "Cobranças"],
             ["taxas", "Valor por unidade"],
             ["conciliacao", "Conciliação"],
+            ["ajustes", "Ajustes"],
           ] as const
         ).map(([valor, rotulo]) => (
           <Chip
@@ -354,6 +390,102 @@ export function FinanceiroScreen({ navigation }: Props) {
       <Tela comInsetTop>
         <HeaderTela titulo="Financeiro" aoVoltar={() => navigation.goBack()} />
         <ConciliacaoAba cabecalho={cabecalho} />
+      </Tela>
+    );
+  }
+
+  if (aba === "ajustes") {
+    return (
+      <Tela comInsetTop>
+        <HeaderTela titulo="Financeiro" aoVoltar={() => navigation.goBack()} />
+        <ScrollView
+          contentContainerStyle={styles.lista}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={carregando} onRefresh={carregar} />
+          }
+        >
+          {cabecalho}
+          <Kicker>Como as cobranças saem</Kicker>
+          <Card estilo={{ padding: 6 }}>
+            <View style={styles.linhaAjuste}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tituloAjuste}>Dia do vencimento</Text>
+                <Text style={styles.subAjuste}>
+                  Vale para as cobranças geradas daqui em diante. Mês sem esse
+                  dia usa o último: 31 em fevereiro vence no dia 28.
+                </Text>
+              </View>
+              <TextInput
+                style={styles.campoDia}
+                keyboardType="number-pad"
+                maxLength={2}
+                editable={!salvandoConfig}
+                defaultValue={String(config?.diaVencimento ?? 10)}
+                selectTextOnFocus
+                // Salva ao sair do campo e não a cada tecla: digitar "25"
+                // passa por "2", que é um dia de vencimento válido e seria
+                // gravado no caminho.
+                onEndEditing={(e) => {
+                  const dia = Number(e.nativeEvent.text);
+                  if (
+                    !Number.isInteger(dia) ||
+                    dia < 1 ||
+                    dia > 31 ||
+                    dia === config?.diaVencimento
+                  ) {
+                    return;
+                  }
+                  salvarConfig({ diaVencimento: dia });
+                }}
+              />
+            </View>
+
+            <View style={[styles.linhaAjuste, styles.divisorAjuste]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tituloAjuste}>Gerar sozinho todo mês</Text>
+                <Text style={styles.subAjuste}>
+                  As cobranças do mês são criadas sem ninguém clicar, enquanto
+                  o vencimento ainda estiver no futuro. Unidade que já tem
+                  cobrança no mês é pulada, e unidade sem valor ou sem
+                  responsável fica de fora.
+                </Text>
+              </View>
+              <Switch
+                value={config?.geracaoAutomatica ?? false}
+                disabled={!config || salvandoConfig}
+                onValueChange={(v) => salvarConfig({ geracaoAutomatica: v })}
+                trackColor={{
+                  false: theme.colors.toggleOff,
+                  true: theme.colors.acao,
+                }}
+              />
+            </View>
+
+            <View style={[styles.linhaAjuste, styles.divisorAjuste]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tituloAjuste}>Lembrar o morador</Text>
+                <Text style={styles.subAjuste}>
+                  Um aviso no app três dias antes do vencimento e outro quando
+                  a cobrança vence. Um de cada por cobrança, nunca repetido.
+                </Text>
+              </View>
+              <Switch
+                value={config?.reguaAtiva ?? false}
+                disabled={!config || salvandoConfig}
+                onValueChange={(v) => salvarConfig({ reguaAtiva: v })}
+                trackColor={{
+                  false: theme.colors.toggleOff,
+                  true: theme.colors.acao,
+                }}
+              />
+            </View>
+          </Card>
+          <Nota
+            texto="A credencial do provedor de cobrança e o extrato OFX do banco são cadastrados pelo painel, no computador."
+            estilo={{ marginTop: 12 }}
+          />
+        </ScrollView>
       </Tela>
     );
   }
@@ -530,6 +662,33 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   abas: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  linhaAjuste: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+  },
+  divisorAjuste: { borderTopWidth: 1, borderTopColor: theme.colors.divisor },
+  tituloAjuste: { fontSize: 15.5, fontWeight: "700", color: theme.colors.text },
+  subAjuste: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  campoDia: {
+    width: 56,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: theme.colors.text,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    paddingVertical: 10,
+  },
   seletorMes: {
     flexDirection: "row",
     alignItems: "center",
