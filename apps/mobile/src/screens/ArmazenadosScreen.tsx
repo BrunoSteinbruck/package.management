@@ -16,7 +16,7 @@ import {
   type PacoteArmazenado,
   type Unidade,
 } from "../api/types";
-import { HeaderTela, ItemLista, Nota, Selo, Tela, Vazio } from "../components/ui";
+import { Chip, HeaderTela, ItemLista, Nota, Selo, Tela, Vazio } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
 
@@ -30,14 +30,33 @@ interface Props {
   navigation: { goBack: () => void };
   aoTocarPacote?: (unidade: Unidade) => void;
   aoBiparQr?: () => void;
+  /**
+   * Filtros de status e período, como no painel.
+   *
+   * Só o síndico recebe. A tela do porteiro é ferramenta de balcão, com uma
+   * pergunta só ("o que está aqui agora?"): oferecer quatro filtros ali
+   * atrapalharia justamente quem tem a mão ocupada com o pacote.
+   */
+  comFiltros?: boolean;
 }
+
+/** Os mesmos recortes do painel, na mesma ordem. */
+const FILTROS = [
+  { valor: "ARMAZENADO", rotulo: "Na portaria", contagem: "na portaria" },
+  { valor: "", rotulo: "Todos", contagem: "no total" },
+  { valor: "ENTREGUE", rotulo: "Entregues", contagem: "entregues" },
+  { valor: "EXTRAVIADO", rotulo: "Extraviados", contagem: "extraviadas" },
+] as const;
 
 export function ArmazenadosScreen({
   navigation,
   aoTocarPacote,
   aoBiparQr,
+  comFiltros,
 }: Props) {
   const [busca, setBusca] = useState("");
+  const [status, setStatus] = useState<string>("ARMAZENADO");
+  const [ultimos30, setUltimos30] = useState(false);
   const [itens, setItens] = useState<PacoteArmazenado[]>([]);
   const [total, setTotal] = useState(0);
   const [carregando, setCarregando] = useState(false);
@@ -47,10 +66,11 @@ export function ArmazenadosScreen({
     async (novaBusca: string, novaPagina: number) => {
       setCarregando(true);
       try {
-        const params = new URLSearchParams({
-          status: "ARMAZENADO",
-          pagina: String(novaPagina),
-        });
+        const params = new URLSearchParams({ pagina: String(novaPagina) });
+        // Status vazio é "Todos": o parâmetro some da query em vez de ir
+        // vazio, que o zod recusaria.
+        if (status) params.set("status", status);
+        if (ultimos30) params.set("dias", "30");
         if (novaBusca.trim()) params.set("busca", novaBusca.trim());
         const lista = await apiFetch<ListaPacotes>(`/portaria/pacotes?${params}`);
         pagina.current = novaPagina;
@@ -64,13 +84,20 @@ export function ArmazenadosScreen({
         setCarregando(false);
       }
     },
-    [],
+    [status, ultimos30],
   );
 
+  // `carregar` muda quando o filtro muda, então trocar de chip já recarrega
+  // da página 1 sem um efeito a mais.
   useEffect(() => {
     const timer = setTimeout(() => carregar(busca, 1), busca ? 300 : 0);
     return () => clearTimeout(timer);
   }, [busca, carregar]);
+
+  // O rótulo acompanha o filtro: "38 na portaria" com o chip Entregues
+  // marcado seria mentira.
+  const rotuloContagem =
+    FILTROS.find((f) => f.valor === status)?.contagem ?? "no total";
 
   return (
     <Tela comInsetTop>
@@ -99,12 +126,30 @@ export function ArmazenadosScreen({
           )}
         </View>
 
+        {comFiltros && (
+          <View style={styles.filtros}>
+            {FILTROS.map((f) => (
+              <Chip
+                key={f.valor || "todos"}
+                rotulo={f.rotulo}
+                ativo={status === f.valor}
+                onPress={() => setStatus(f.valor)}
+              />
+            ))}
+            <Chip
+              rotulo="Últimos 30 dias"
+              ativo={ultimos30}
+              onPress={() => setUltimos30((v) => !v)}
+            />
+          </View>
+        )}
+
         {/* O total sai do título e vira bloco próprio: no título ele competia
             com o nome da tela e ficava pequeno demais para ser lido de longe,
             que é como o porteiro olha o balcão. */}
         <View style={styles.contagem}>
           <Text style={styles.contagemNumero}>{total}</Text>
-          <Text style={styles.contagemRotulo}>na portaria</Text>
+          <Text style={styles.contagemRotulo}>{rotuloContagem}</Text>
         </View>
 
         <FlatList
@@ -132,7 +177,7 @@ export function ArmazenadosScreen({
                 titulo={
                   busca
                     ? "Nada encontrado com essa busca."
-                    : "Nenhuma encomenda na portaria."
+                    : `Nenhuma encomenda ${rotuloContagem}.`
                 }
               />
             ) : null
@@ -153,11 +198,23 @@ export function ArmazenadosScreen({
                     : ""
                 }`}
                 detalhe={item.codigoRastreio ?? undefined}
-                // Só o atraso vira selo. Com "hoje" e "1 dia" marcados também,
-                // a coluna inteira ficava colorida e o que precisa de ação se
-                // perdia no meio do que está normal.
+                // Filtrando por "Na portaria", só o atraso vira selo: com
+                // "hoje" e "1 dia" marcados também, a coluna inteira ficava
+                // colorida e o que precisa de ação sumia no meio. Nos outros
+                // filtros o que importa é em que estado o pacote está.
                 direita={
-                  dias >= 3 ? (
+                  status !== "ARMAZENADO" ? (
+                    <Selo
+                      tom={item.status === "ARMAZENADO" ? "neutro" : "ok"}
+                      texto={
+                        item.status === "ARMAZENADO"
+                          ? "na portaria"
+                          : item.status === "ENTREGUE"
+                            ? "entregue"
+                            : "extraviado"
+                      }
+                    />
+                  ) : dias >= 3 ? (
                     <Selo tom="alerta" texto={`${dias} dias`} />
                   ) : undefined
                 }
@@ -209,6 +266,12 @@ const styles = StyleSheet.create({
   },
   botaoQrTexto: { color: "#FFF", fontSize: 15, fontWeight: "600" },
   inputBusca: { flex: 1, fontSize: 16, color: theme.colors.text },
+  filtros: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
   contagem: {
     flexDirection: "row",
     alignItems: "baseline",
