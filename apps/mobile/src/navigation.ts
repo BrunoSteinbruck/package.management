@@ -64,6 +64,8 @@ export type SindicoStackParamList = Omit<
   Unidades: undefined;
   // Porteiros, apoio e outros síndicos: quem opera a portaria.
   Equipe: undefined;
+  // Os números do mês da portaria, no mesmo recorte do painel.
+  Relatorios: undefined;
   // Painel de consumos: o síndico acompanha e exporta, não registra leitura.
   Consumos: undefined;
   // Comunicados: quem publica é o síndico, então a lista e o compositor

@@ -23,6 +23,7 @@ import { OcorrenciasScreen } from "./src/screens/OcorrenciasScreen";
 import { SindicoHomeScreen } from "./src/screens/SindicoHomeScreen";
 import { UnidadesScreen } from "./src/screens/UnidadesScreen";
 import { EquipeScreen } from "./src/screens/EquipeScreen";
+import { RelatoriosScreen } from "./src/screens/RelatoriosScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
@@ -139,9 +140,14 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
         </Sindico.Screen>
         <Sindico.Screen name="Equipe" component={EquipeScreen} />
         {/* Portaria em modo leitura: sem as ações, a lista de encomendas não
-            leva a lugar nenhum. O síndico acompanha, não movimenta. */}
-        <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
+            leva a lugar nenhum. O síndico acompanha, não movimenta. Em
+            compensação ele ganha os filtros do painel, que a tela de balcão
+            do porteiro não tem. */}
+        <Sindico.Screen name="Armazenados">
+          {(props) => <ArmazenadosScreen {...props} comFiltros />}
+        </Sindico.Screen>
         <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
+        <Sindico.Screen name="Relatorios" component={RelatoriosScreen} />
         <Sindico.Screen name="Avisar" component={AvisarScreen} />
         {/* Consumos em modo leitura: registrar leitura é rota da portaria e
             nem compila nesta pilha. */}

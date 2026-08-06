@@ -127,6 +127,13 @@ export const MODULOS_SINDICO: readonly Modulo<
     slot: "secundario",
   },
   {
+    id: "Relatorios",
+    titulo: "Relatórios de encomendas",
+    icone: "lista",
+    perfis: ["sindico"],
+    slot: "secundario",
+  },
+  {
     id: "Consumos",
     titulo: "Consumos de água e gás",
     icone: "medidor",
