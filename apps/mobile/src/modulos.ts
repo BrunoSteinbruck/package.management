@@ -106,6 +106,13 @@ export const MODULOS_SINDICO: readonly Modulo<
     slot: "secundario",
   },
   {
+    id: "Equipe",
+    titulo: "Equipe da portaria",
+    icone: "escudo",
+    perfis: ["sindico"],
+    slot: "secundario",
+  },
+  {
     id: "Armazenados",
     titulo: "Encomendas na portaria",
     icone: "pacote",

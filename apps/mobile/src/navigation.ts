@@ -62,6 +62,8 @@ export type SindicoStackParamList = Omit<
   // As unidades do condomínio e quem está em cada uma: é daqui que sai o
   // convite para quem ainda não baixou o app.
   Unidades: undefined;
+  // Porteiros, apoio e outros síndicos: quem opera a portaria.
+  Equipe: undefined;
   // Painel de consumos: o síndico acompanha e exporta, não registra leitura.
   Consumos: undefined;
   // Comunicados: quem publica é o síndico, então a lista e o compositor

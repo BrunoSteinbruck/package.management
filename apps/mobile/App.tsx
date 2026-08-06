@@ -22,6 +22,7 @@ import { OcorrenciaDetalheScreen } from "./src/screens/OcorrenciaDetalheScreen";
 import { OcorrenciasScreen } from "./src/screens/OcorrenciasScreen";
 import { SindicoHomeScreen } from "./src/screens/SindicoHomeScreen";
 import { UnidadesScreen } from "./src/screens/UnidadesScreen";
+import { EquipeScreen } from "./src/screens/EquipeScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
@@ -136,6 +137,7 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
             />
           )}
         </Sindico.Screen>
+        <Sindico.Screen name="Equipe" component={EquipeScreen} />
         {/* Portaria em modo leitura: sem as ações, a lista de encomendas não
             leva a lugar nenhum. O síndico acompanha, não movimenta. */}
         <Sindico.Screen name="Armazenados" component={ArmazenadosScreen} />
