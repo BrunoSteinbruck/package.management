@@ -32,7 +32,7 @@ export class AuthGuard implements CanActivate {
     if (payload.tipo !== "usuario" && payload.tipo !== "morador") {
       throw new UnauthorizedException("Token não é de sessão");
     }
-    // A conta precisa continuar existindo E ativa. O JWT vale 30 dias, e sem
+    // A conta precisa continuar existindo E ativa. O JWT vale 90 dias, e sem
     // esta checagem um token emitido ANTES da exclusão/desativação seguia
     // operando a portaria (code review provou: registro de pacote com 201
     // usando token de conta excluída). Vale também para o porteiro que o

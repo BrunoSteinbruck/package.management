@@ -6,10 +6,10 @@ describe("validade da sessão", () => {
     expect(validadeDaSessao("painel")).toBe("24h");
   });
 
-  it("app segue 30 dias", () => {
+  it("app vale 90 dias", () => {
     // `undefined` é o caso do app e o de todo token emitido antes deste
     // campo existir: sem tratamento, uma sessão antiga renovaria curto e
     // derrubaria o morador do nada.
-    expect(validadeDaSessao(undefined)).toBe("30d");
+    expect(validadeDaSessao(undefined)).toBe("90d");
   });
 });

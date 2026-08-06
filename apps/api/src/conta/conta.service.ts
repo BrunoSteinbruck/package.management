@@ -44,7 +44,7 @@ export class ContaService {
    * Módulos que esta sessão enxerga. O app chama ao abrir e guarda o
    * resultado; a home usa para decidir quais pontos de entrada mostrar.
    *
-   * Fica fora do JWT porque o token vale 30 dias: módulo ligado hoje pelo
+   * Fica fora do JWT porque o token vale 90 dias: módulo ligado hoje pelo
    * síndico precisa aparecer na próxima abertura, não no próximo login.
    *
    * Filtra contra `MODULOS_CONDOMINIO` porque a coluna é `text[]`: valor

@@ -12,9 +12,15 @@ import type { JwtPayload } from "@pacotes/shared";
  * Vinte e quatro horas no painel não custa nada ao gestor, porque com senha
  * relogar é digitar, não esperar um SMS. E o painel renova ao abrir, então
  * quem entra todo dia nunca vê a tela de login; quem some por um dia, sim.
+ *
+ * Noventa dias no app porque o refresh silencioso renova a cada abertura:
+ * este prazo só é sentido por quem ABANDONOU o app, e cada relogin custa um
+ * SMS de OTP. Não vira porta aberta para conta encerrada: o guard confere
+ * `ativo`/existência a cada request, então porteiro desligado e conta
+ * excluída caem na hora, com qualquer validade.
  */
 export function validadeDaSessao(
   sessao?: JwtPayload["sessao"],
-): "24h" | "30d" {
-  return sessao === "painel" ? "24h" : "30d";
+): "24h" | "90d" {
+  return sessao === "painel" ? "24h" : "90d";
 }

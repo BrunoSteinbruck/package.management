@@ -422,8 +422,8 @@ async function main() {
       token: morador,
     });
     checa(
-      "refresh do app continua valendo 30 dias",
-      !!appRenovado.token && leToken(appRenovado.token).horas === 720,
+      "refresh do app continua valendo 90 dias",
+      !!appRenovado.token && leToken(appRenovado.token).horas === 2160,
     );
   }
 
@@ -854,12 +854,17 @@ async function main() {
     checa("morador autoriza visita", !!v.id);
 
     const minhas = await req<
-      Array<{ id: string; dataPrevista: string } & Record<string, unknown>>
+      Array<{ id: string; dataPrevista: string; codigo: string | null } & Record<string, unknown>>
     >("GET", "/morador/visitas", { token: morador });
     const minha = minhas.find((x) => x.id === v.id);
     checa("data não desloca de dia", minha?.dataPrevista === hoje,
       `${minha?.dataPrevista} vs ${hoje}`);
     checa("morador não vê o documento na resposta dele", !("documento" in (minha ?? {})));
+    checa(
+      "visita nasce com código no padrão V-0000",
+      /^V-\d{4}$/.test(minha?.codigo ?? ""),
+      String(minha?.codigo),
+    );
 
     checa(
       "janela invertida é barrada",
@@ -882,11 +887,20 @@ async function main() {
       corpo: { unidadeId, nomeVisitante: "So amanha (e2e)", dataPrevista: amanha },
     });
     const doDia = await req<
-      Array<{ id: string; documento: string | null; autorizadoPor: string }>
+      Array<{
+        id: string;
+        codigo: string | null;
+        documento: string | null;
+        autorizadoPor: string;
+      }>
     >("GET", "/portaria/visitas-hoje", { token: porteiro });
     checa(
       "portaria vê a visita de hoje, com documento e quem autorizou",
       doDia.some((x) => x.id === v.id && x.documento === "12345678900" && !!x.autorizadoPor),
+    );
+    checa(
+      "portaria vê o mesmo código que o morador",
+      doDia.find((x) => x.id === v.id)?.codigo === minha?.codigo,
     );
     checa(
       "visita de amanhã fora da lista de hoje",
@@ -948,6 +962,225 @@ async function main() {
       return n?.status === "ENVIADA";
     });
     checa("push de chegada foi processado", push);
+  }
+
+  // ===== Cadastro: recusar vínculo e panorama de unidades =====
+  console.log("\n== Cadastro: vínculos e panorama ==");
+  {
+    const panorama = await req<
+      Array<{
+        unidadeId: string;
+        bloco: string | null;
+        identificacao: string;
+        titular: { nome: string; telefone: string } | null;
+        vinculados: number;
+        temApp: boolean;
+      }>
+    >("GET", "/cadastro/unidades/panorama", { token: sindico });
+    const adocao = await req<{ totalUnidades: number; unidadesComApp: number }>(
+      "GET",
+      "/cadastro/adocao",
+      { token: sindico },
+    );
+    checa(
+      "panorama cobre todas as unidades do condomínio",
+      panorama.length === adocao.totalUnidades,
+      `${panorama.length} vs ${adocao.totalUnidades}`,
+    );
+    // As duas rotas contam a mesma coisa por caminhos diferentes: se
+    // divergirem, uma das duas está errada e a tela mente para o síndico.
+    checa(
+      "unidades com app do panorama batem com /adocao",
+      panorama.filter((u) => u.temApp).length === adocao.unidadesComApp,
+    );
+    checa(
+      "unidade com vinculado traz titular com nome e telefone",
+      panorama.every((u) =>
+        u.vinculados > 0 ? !!u.titular?.nome && !!u.titular?.telefone : u.titular === null,
+      ),
+    );
+    checa(
+      "porteiro não lê o panorama",
+      (await req<{ statusCode?: number }>("GET", "/cadastro/unidades/panorama", {
+        token: porteiro,
+      })).statusCode === 403,
+    );
+
+    // Vínculo pendente montado à mão: nenhum fluxo da suíte cria um, e o que
+    // se quer exercitar é a recusa, não a origem do pedido.
+    const unidadeAlvo = panorama[0].unidadeId;
+    const pedinte = await prisma.morador.upsert({
+      where: { telefone: "51900000099" },
+      update: { nome: "Pedinte E2E" },
+      create: { nome: "Pedinte E2E", telefone: "51900000099" },
+    });
+    const pedido = await prisma.vinculo.upsert({
+      where: {
+        moradorId_unidadeId: { moradorId: pedinte.id, unidadeId: unidadeAlvo },
+      },
+      update: { status: "PENDENTE", aprovadoPorId: null },
+      create: {
+        moradorId: pedinte.id,
+        unidadeId: unidadeAlvo,
+        condominioId: cid,
+        status: "PENDENTE",
+      },
+    });
+
+    const pendentes = await req<Array<{ id: string }>>(
+      "GET",
+      "/cadastro/vinculos/pendentes",
+      { token: sindico },
+    );
+    checa("pedido aparece na fila de aprovação", pendentes.some((p) => p.id === pedido.id));
+
+    checa(
+      "porteiro não recusa vínculo",
+      (await req<{ statusCode?: number }>(
+        "POST",
+        `/cadastro/vinculos/${pedido.id}/recusar`,
+        { token: porteiro },
+      )).statusCode === 403,
+    );
+
+    const recusa = await req<{ recusado?: boolean }>(
+      "POST",
+      `/cadastro/vinculos/${pedido.id}/recusar`,
+      { token: sindico },
+    );
+    checa("síndico recusa o vínculo", recusa.recusado === true);
+    checa(
+      "recusar duas vezes não passa em silêncio",
+      (await req<{ statusCode?: number }>(
+        "POST",
+        `/cadastro/vinculos/${pedido.id}/recusar`,
+        { token: sindico },
+      )).statusCode === 403,
+    );
+
+    const depois = await prisma.vinculo.findUniqueOrThrow({
+      where: { id: pedido.id },
+      select: { status: true },
+    });
+    checa("vínculo recusado vai para REMOVIDO, não some", depois.status === "REMOVIDO");
+    checa(
+      "recusado sai da fila de aprovação",
+      !(await req<Array<{ id: string }>>("GET", "/cadastro/vinculos/pendentes", {
+        token: sindico,
+      })).some((p) => p.id === pedido.id),
+    );
+    // registros_acao tem RLS FORCE: se o `withTenant` próprio do serviço
+    // sumisse, o insert violaria o WITH CHECK e nada seria gravado.
+    const trilha = await comTenant(cid, (tx) =>
+      tx.registroAcao.findFirst({ where: { acao: "cadastro.recusar_vinculo" } }),
+    );
+    checa("recusa deixa registro na trilha de auditoria", !!trilha);
+
+    await prisma.vinculo.deleteMany({ where: { moradorId: pedinte.id } });
+    await prisma.morador.delete({ where: { id: pedinte.id } });
+  }
+
+  // ===== Morador: convidar por telefone e preferência de push =====
+  console.log("\n== Morador: convite e notificações ==");
+  {
+    const unidadeId = (await req<Array<{ unidade: { id: string } }>>(
+      "GET",
+      "/morador/pacotes",
+      { token: morador },
+    ))[0].unidade.id;
+    const TEL_CONVIDADO = "51900000098";
+
+    const convite = await req<{ nome?: string; telefone?: string }>(
+      "POST",
+      "/morador/convidar",
+      {
+        token: morador,
+        corpo: { unidadeId, nome: "Familiar E2E", telefone: TEL_CONVIDADO },
+      },
+    );
+    checa("morador convida pelo telefone", convite.telefone === TEL_CONVIDADO);
+
+    // O ponto do desenho: o convidado NÃO entra sozinho, cai na fila do síndico.
+    const pendentes = await req<Array<{ morador: { telefone: string } }>>(
+      "GET",
+      "/cadastro/vinculos/pendentes",
+      { token: sindico },
+    );
+    checa(
+      "convidado vai para a fila do síndico, não entra direto",
+      pendentes.some((p) => p.morador.telefone === TEL_CONVIDADO),
+    );
+    const criado = await prisma.morador.findUniqueOrThrow({
+      where: { telefone: TEL_CONVIDADO },
+      select: { id: true },
+    });
+    checa(
+      "e o vínculo nasce PENDENTE",
+      (
+        await prisma.vinculo.findFirstOrThrow({
+          where: { moradorId: criado.id, unidadeId },
+          select: { status: true },
+        })
+      ).status === "PENDENTE",
+    );
+    checa(
+      "convidar o mesmo número duas vezes não empilha pedido",
+      (await req<{ statusCode?: number }>("POST", "/morador/convidar", {
+        token: morador,
+        corpo: { unidadeId, nome: "Familiar E2E", telefone: TEL_CONVIDADO },
+      })).statusCode === 409,
+    );
+    checa(
+      "morador não convida para unidade alheia",
+      (await req<{ statusCode?: number }>("POST", "/morador/convidar", {
+        token: morador,
+        corpo: {
+          unidadeId: "00000000-0000-0000-0000-000000000000",
+          nome: "Invasor",
+          telefone: "51900000097",
+        },
+      })).statusCode === 403,
+    );
+    checa(
+      "o código de convite do morador saiu de cena",
+      (await req<{ statusCode?: number }>("POST", "/morador/convites", {
+        token: morador,
+        corpo: { unidadeId },
+      })).statusCode === 404,
+    );
+
+    // Preferência de push: nasce LIGADA (o oposto do WhatsApp) e desligar não
+    // desfaz a adoção, que é o que o painel do síndico conta.
+    const prefs = await req<{ aceitaPush?: boolean; temApp?: boolean }>(
+      "GET",
+      "/morador/preferencias",
+      { token: morador },
+    );
+    checa("push nasce ligado", prefs.aceitaPush === true);
+    const desligado = await req<{ aceitaPush?: boolean; temApp?: boolean }>(
+      "POST",
+      "/morador/preferencias/push",
+      { token: morador, corpo: { aceita: false } },
+    );
+    checa("morador desliga os avisos", desligado.aceitaPush === false);
+    checa(
+      "desligar aviso NÃO tira a unidade da adoção",
+      desligado.temApp === prefs.temApp,
+    );
+    checa(
+      "e o síndico não mexe na preferência do morador",
+      (await req<{ statusCode?: number }>("POST", "/morador/preferencias/push", {
+        token: sindico,
+        corpo: { aceita: true },
+      })).statusCode === 403,
+    );
+    await req("POST", "/morador/preferencias/push", {
+      token: morador,
+      corpo: { aceita: true },
+    });
+
+    await prisma.vinculo.deleteMany({ where: { moradorId: criado.id } });
+    await prisma.morador.delete({ where: { id: criado.id } });
   }
 
   // ===== Onda 3: financeiro =====

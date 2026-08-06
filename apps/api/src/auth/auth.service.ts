@@ -368,11 +368,11 @@ export class AuthService {
   /**
    * Renovação silenciosa: token válido → token novo com validade cheia.
    * O app chama ao abrir; assim o OTP só acontece em device novo ou
-   * app abandonado por mais de 30 dias.
+   * app abandonado por mais de 90 dias.
    */
   async refresh(user: JwtPayload) {
     // Conta excluída (ou membro de equipe desativado) não renova. O token
-    // continua assinado e válido por até 30 dias, então sem esta checagem o
+    // continua assinado e válido por até 90 dias, então sem esta checagem o
     // app de um SEGUNDO aparelho ficaria preso numa sessão fantasma,
     // mostrando telas vazias em vez de voltar para o login.
     const existe =
@@ -385,7 +385,7 @@ export class AuthService {
 
     // O strip de exp/iat é obrigatório: o jsonwebtoken recusa um payload que
     // já traga `exp` quando `expiresIn` vem nas opções. E o spread preserva o
-    // claim `sessao`, que é o que faz o painel renovar 24h e o app 30d sem
+    // claim `sessao`, que é o que faz o painel renovar 24h e o app 90d sem
     // um `if` a mais aqui.
     const { exp, iat, ...payload } = user as JwtPayload & {
       exp?: number;
