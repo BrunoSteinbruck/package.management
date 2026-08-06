@@ -6,9 +6,11 @@
 // feed.ts    a caixa de entrada do morador, em um formato só
 // perfil.ts  identidade da sessão e o perfil que decide a experiência
 // competencia.ts  como o mês de referência é escrito na tela
+// whatsapp.ts     link de conversa com mensagem pronta
 
 export * from "./enums";
 export * from "./competencia";
+export * from "./whatsapp";
 export * from "./documento";
 export * from "./erro-api";
 export * from "./dto";
