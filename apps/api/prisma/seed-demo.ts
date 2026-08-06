@@ -452,6 +452,35 @@ async function main() {
     }
   });
 
+  // Taxas por unidade: sem elas a tela "Valor por unidade" abre vazia e o
+  // botão "Gerar cobranças" não geraria nada, porque o provedor exige valor,
+  // nome e documento do responsável para emitir.
+  //
+  // Os CPFs são os de teste que a Receita publica (todos os dígitos iguais
+  // com DV correto): passam na validação e não são de ninguém.
+  const CPFS_DEMO = [
+    "11111111111", "22222222222", "33333333333", "44444444444", "55555555555",
+    "66666666666", "77777777777", "88888888888", "99999999999", "12345678909",
+  ];
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.condominio_id', ${cid}, true)`;
+    if ((await tx.taxaUnidade.count()) > 0) {
+      console.log("Taxas já existem, pulando.");
+      return;
+    }
+    for (const [i, m] of moradores.entries()) {
+      await tx.taxaUnidade.create({
+        data: {
+          condominioId: cid,
+          unidadeId: U(m.unidade).id,
+          valorMensal: 480,
+          responsavelNome: m.nome,
+          responsavelCpfCnpj: CPFS_DEMO[i % CPFS_DEMO.length],
+        },
+      });
+    }
+  });
+
   // Cobranças: o mês corrente em aberto para todos, e três meses pagos atrás.
   // O morador da demo tem o histórico completo, que é a tela de Boletos.
   await prisma.$transaction(async (tx) => {
@@ -505,6 +534,7 @@ async function main() {
       documentos: await tx.documento.count(),
       visitas: await tx.visita.count(),
       cobrancas: await tx.cobranca.count(),
+      taxas: await tx.taxaUnidade.count(),
     };
   });
 
@@ -514,7 +544,7 @@ async function main() {
   console.log(`  Pacotes: ${totais.naPortaria} na portaria (3 parados 3+ dias) | ${totais.entregues} entregues`);
   console.log("  Leituras: 4 meses fechados + mês atual ~70% lido (água e gás), tarifas definidas");
   console.log(
-    `  Comunicados: ${totais.comunicados} | Documentos: ${totais.documentos} (PDF real) | Visitas: ${totais.visitas} | Cobranças: ${totais.cobrancas}`,
+    `  Comunicados: ${totais.comunicados} | Documentos: ${totais.documentos} (PDF real) | Visitas: ${totais.visitas} | Cobranças: ${totais.cobrancas} (${totais.taxas} taxas)`,
   );
   console.log(`  Módulos ligados: ${MODULOS_DEMO.join(", ")}`);
   console.log(`  Síndico: ${SINDICO_TELEFONE} | Porteiro: ${PORTEIRO_TELEFONE} | Morador demo: ${MORADOR_DEMO_TELEFONE}`);
