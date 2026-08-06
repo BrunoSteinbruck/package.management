@@ -1843,6 +1843,98 @@ async function main() {
       "redefinir a senha destrava a conta bloqueada",
       (await tentar(SENHA_E2E)) === 201,
     );
+
+    /**
+     * A redefinição derruba as sessões antigas.
+     *
+     * `sindico` foi emitido lá no começo da suíte e valeu por ela inteira.
+     * Este é o caminho de quem PERDEU o acesso: deixar a sessão de quem
+     * estava dentro faria do link de recuperação teatro.
+     */
+    const antigo = await fetch(`${API}/conta/perfil`, {
+      headers: { authorization: `Bearer ${sindico}` },
+    });
+    checa(
+      "redefinir a senha mata as sessões anteriores",
+      antigo.status === 401,
+      String(antigo.status),
+    );
+    const recemNascido = await fetch(`${API}/conta/perfil`, {
+      headers: { authorization: `Bearer ${redefinido.token}` },
+    });
+    checa(
+      "e a sessão que a redefinição acabou de emitir continua valendo",
+      recemNascido.status === 200,
+      String(recemNascido.status),
+    );
+  }
+
+  console.log("\n== Sair dos outros aparelhos ==");
+  {
+    /**
+     * Dois logins da mesma conta, como dois aparelhos. Um pede para sair dos
+     * outros: o outro cai, e quem pediu continua dentro.
+     *
+     * Este é o buraco que a coluna fecha. Antes, celular perdido só se
+     * resolvia desativando a conta (que também derruba o dono no aparelho
+     * novo) ou, no caso do morador, excluindo a conta inteira.
+     */
+    const entrar = async () =>
+      (
+        await req<{ token?: string }>("POST", "/auth/senha/login", {
+          corpo: { identificador: EMAIL_SINDICO_E2E, senha: SENHA_E2E },
+        })
+      ).token as string;
+    const aparelhoA = await entrar();
+    const aparelhoB = await entrar();
+
+    /**
+     * A pausa é a regra, não um contorno de teste.
+     *
+     * O `iat` do JWT é em segundos (RFC 7519), e o corte só derruba token
+     * ANTERIOR ao segundo do carimbo. É isso que mantém viva a sessão
+     * reemitida no mesmo instante da revogação, sem a qual quem troca a senha
+     * se expulsaria sozinho. Sem a pausa, os dois logins caem no mesmo
+     * segundo do carimbo e sobrevivem de direito: a suíte roda mais rápido do
+     * que a granularidade do padrão.
+     */
+    await new Promise((r) => setTimeout(r, 1100));
+
+    const novo = await req<{ token?: string }>(
+      "POST",
+      "/conta/sair-outros-aparelhos",
+      { token: aparelhoB },
+    );
+    checa("sair dos outros aparelhos devolve uma sessão nova", !!novo.token);
+
+    const outro = await fetch(`${API}/conta/perfil`, {
+      headers: { authorization: `Bearer ${aparelhoA}` },
+    });
+    checa("o outro aparelho perde o acesso", outro.status === 401, String(outro.status));
+
+    /**
+     * O token que PEDIU também nasceu antes do carimbo, então também morre:
+     * é por isso que o endpoint devolve um novo, e por isso que os clientes
+     * são obrigados a guardá-lo. Sem essa troca, a pessoa se expulsaria ao
+     * tentar expulsar os outros.
+     */
+    const queLevouOPedido = await fetch(`${API}/conta/perfil`, {
+      headers: { authorization: `Bearer ${aparelhoB}` },
+    });
+    checa(
+      "inclusive o token que pediu, que por isso é trocado",
+      queLevouOPedido.status === 401,
+      String(queLevouOPedido.status),
+    );
+
+    const comONovo = await fetch(`${API}/conta/perfil`, {
+      headers: { authorization: `Bearer ${novo.token}` },
+    });
+    checa(
+      "e a sessão devolvida funciona",
+      comONovo.status === 200,
+      String(comONovo.status),
+    );
   }
 
   // ---------- fim ----------

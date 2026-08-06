@@ -11,10 +11,15 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { contatoDeMembro, type MinhaConta } from "@pacotes/shared";
+import {
+  contatoDeMembro,
+  type JwtPayload,
+  type MinhaConta,
+} from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { excluirConta } from "../api/excluirConta";
-import { limparSessao } from "../api/session";
+import { sairDosOutrosAparelhos } from "../api/sairOutrosAparelhos";
+import { limparSessao, salvarSessao } from "../api/session";
 import { Botao, Card, HeaderTela, Kicker, Nota, Tela } from "../components/ui";
 import { theme } from "../theme";
 import type { SindicoStackParamList } from "../navigation";
@@ -89,14 +94,21 @@ export function MinhaContaScreen({ navigation, aoSair }: Props) {
     }
     setSalvandoSenha(true);
     try {
-      await apiFetch("/conta/senha", {
-        method: "POST",
-        body: { senhaAtual, novaSenha },
-      });
+      const r = await apiFetch<{ token: string; perfil: MinhaConta & JwtPayload }>(
+        "/conta/senha",
+        { method: "POST", body: { senhaAtual, novaSenha } },
+      );
+      // Trocar a senha derruba as sessões anteriores, e a que está aqui é
+      // uma delas: sem guardar o token novo, o próximo request levaria 401 e
+      // a pessoa cairia no login logo depois de trocar a própria senha.
+      await salvarSessao({ token: r.token, perfil: r.perfil });
       setSenhaAtual("");
       setNovaSenha("");
       setConfirmacao("");
-      Alert.alert("Senha alterada", "Ela vale a partir do próximo login.");
+      Alert.alert(
+        "Senha alterada",
+        "As sessões nos outros aparelhos foram encerradas. Você continua conectado aqui.",
+      );
       await carregar();
     } catch (e) {
       Alert.alert("Não foi possível alterar", String((e as Error).message));
@@ -223,6 +235,19 @@ export function MinhaContaScreen({ navigation, aoSair }: Props) {
             />
             <Nota
               texto="A senha vale para entrar no painel web. No app, a portaria continua entrando pelo código por SMS."
+              estilo={{ marginTop: 12 }}
+            />
+          </Card>
+
+          <Kicker>Segurança</Kicker>
+          <Card>
+            <Botao
+              titulo="Sair dos outros aparelhos"
+              variante="outline"
+              onPress={sairDosOutrosAparelhos}
+            />
+            <Nota
+              texto="Use se perder o celular ou se achar que alguém entrou na sua conta. Você continua conectado neste aparelho."
               estilo={{ marginTop: 12 }}
             />
           </Card>

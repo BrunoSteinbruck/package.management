@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { MinhaConta } from "@pacotes/shared";
-import { apiFetch } from "@/lib/api";
+import type { JwtPayload, MinhaConta } from "@pacotes/shared";
+import { apiFetch, salvarSessao } from "@/lib/api";
 
 /**
  * A conta de quem está logado: o e-mail que recupera a senha, e a senha.
@@ -33,6 +33,7 @@ export function MinhaContaView() {
   const [confirmacao, setConfirmacao] = useState("");
   const [salvandoSenha, setSalvandoSenha] = useState(false);
   const [avisoSenha, setAvisoSenha] = useState<string | null>(null);
+  const [saindoDosOutros, setSaindoDosOutros] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -76,19 +77,56 @@ export function MinhaContaView() {
     setErro(null);
     setAvisoSenha(null);
     try {
-      await apiFetch("/conta/senha", {
-        method: "POST",
-        body: { senhaAtual, novaSenha },
-      });
+      const r = await apiFetch<{ token: string; perfil: JwtPayload }>(
+        "/conta/senha",
+        { method: "POST", body: { senhaAtual, novaSenha } },
+      );
+      // Trocar a senha derruba as sessões anteriores, e a deste navegador é
+      // uma delas: sem guardar o token novo, a próxima requisição levaria 401
+      // e o gestor cairia no login logo depois de trocar a própria senha.
+      salvarSessao(r.token, r.perfil);
       setSenhaAtual("");
       setNovaSenha("");
       setConfirmacao("");
-      setAvisoSenha("Senha alterada. Ela vale a partir do próximo login.");
+      setAvisoSenha(
+        "Senha alterada. As sessões nos outros aparelhos foram encerradas; esta continua aberta.",
+      );
       await carregar();
     } catch (e) {
       setErro((e as Error).message);
     } finally {
       setSalvandoSenha(false);
+    }
+  }
+
+  /**
+   * Encerra as sessões dos outros aparelhos, mantendo esta.
+   *
+   * O painel guarda o token em localStorage, onde um XSS o alcança, e o
+   * mesmo gestor tem o app com sessão de 90 dias. Este é o botão para quando
+   * a suspeita existe mas a senha não precisa mudar.
+   */
+  async function sairDosOutros() {
+    if (
+      !confirm(
+        "Encerrar as sessões nos outros aparelhos? Quem estiver com sua conta aberta em outro computador ou no celular precisa entrar de novo. Aqui você continua conectado.",
+      )
+    )
+      return;
+    setSaindoDosOutros(true);
+    setErro(null);
+    setAvisoSenha(null);
+    try {
+      const r = await apiFetch<{ token: string; perfil: JwtPayload }>(
+        "/conta/sair-outros-aparelhos",
+        { method: "POST" },
+      );
+      salvarSessao(r.token, r.perfil);
+      setAvisoSenha("As sessões dos outros aparelhos foram encerradas.");
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSaindoDosOutros(false);
     }
   }
 
@@ -216,6 +254,23 @@ export function MinhaContaView() {
             {avisoSenha}
           </p>
         )}
+      </section>
+
+      <section className="card">
+        <h2>Outros aparelhos</h2>
+        <p className="aviso">
+          Encerra sua conta em todo lugar menos aqui: outro computador, o
+          celular, um aparelho perdido. Use se desconfiar que alguém entrou, ou
+          depois de trocar de telefone. Trocar a senha acima já faz isso junto.
+        </p>
+        <button
+          className="outline"
+          onClick={sairDosOutros}
+          disabled={saindoDosOutros}
+          style={{ marginTop: 8 }}
+        >
+          {saindoDosOutros ? "Encerrando..." : "Sair dos outros aparelhos"}
+        </button>
       </section>
     </>
   );

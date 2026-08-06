@@ -17,6 +17,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { linkWhatsApp, placaValida } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { excluirConta } from "../api/excluirConta";
+import { sairDosOutrosAparelhos } from "../api/sairOutrosAparelhos";
 import { carregarAppDownloadUrl, limparSessao } from "../api/session";
 import { iniciais, type Veiculo, type Vinculado } from "../api/types";
 import { Botao, Card, HeaderTela, Kicker, Nota } from "../components/ui";
@@ -443,6 +444,15 @@ export function MinhaUnidadeScreen({ navigation, route, aoSair }: Props) {
             ])
           }
           estilo={{ marginTop: 22 }}
+        />
+
+        {/* Acima de "excluir conta" porque é a alternativa a ela: quem perde
+            o celular tinha, até agora, só o caminho destrutivo. */}
+        <Botao
+          titulo="Sair dos outros aparelhos"
+          variante="outline"
+          onPress={sairDosOutrosAparelhos}
+          estilo={{ marginTop: 10 }}
         />
 
         <Pressable
