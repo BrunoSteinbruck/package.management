@@ -8,13 +8,18 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
+  lerValorEmReais,
   mesAno,
+  mesCurto,
   type ConsumoLinha,
   type ConsumosResposta,
+  type HistoricoConsumoMes,
+  type TarifaLinha,
   type TipoMedidor,
 } from "@pacotes/shared";
 import { apiFetch, API_URL, urlFoto } from "../api/client";
@@ -46,21 +51,68 @@ export function ConsumosScreen({ navigation }: Props) {
   const [tipo, setTipo] = useState<TipoMedidor>("AGUA");
   const [competencia, setCompetencia] = useState(competenciaAtual());
   const [dados, setDados] = useState<ConsumosResposta | null>(null);
+  const [serie, setSerie] = useState<HistoricoConsumoMes[]>([]);
+  const [tarifas, setTarifas] = useState<TarifaLinha[]>([]);
+  const [editandoTarifa, setEditandoTarifa] = useState(false);
+  const [valorTarifa, setValorTarifa] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [fotoAberta, setFotoAberta] = useState<ConsumoLinha | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      setDados(
-        await apiFetch<ConsumosResposta>(
+      // O histórico e as tarifas falham sozinhos: sem eles a tabela do mês,
+      // que é a razão da tela, continua de pé.
+      const [consumos, historico, tarifa] = await Promise.allSettled([
+        apiFetch<ConsumosResposta>(
           `/leituras/consumos?tipo=${tipo}&competencia=${competencia}`,
         ),
-      );
+        apiFetch<HistoricoConsumoMes[]>(
+          `/leituras/historico?tipo=${tipo}&competencia=${competencia}&meses=12`,
+        ),
+        apiFetch<TarifaLinha[]>("/leituras/tarifas"),
+      ]);
+      if (consumos.status === "rejected") throw consumos.reason;
+      setDados(consumos.value);
+      if (historico.status === "fulfilled") setSerie(historico.value);
+      if (tarifa.status === "fulfilled") setTarifas(tarifa.value);
       setErro(null);
     } catch (e) {
       setErro((e as Error).message);
     }
   }, [tipo, competencia]);
+
+  const tarifaAtual = tarifas.find((t) => t.tipo === tipo)?.valorPorM3 ?? null;
+
+  /**
+   * Salva a tarifa por m³ do tipo aberto.
+   *
+   * `lerValorEmReais` e não `Number(...)`: o síndico escreve "8,65" e
+   * "1.500,00", que o Number recusa, e aceita "0x10" como 16, que iria
+   * direto para o cálculo da conta de todo mundo.
+   */
+  async function salvarTarifa() {
+    const valor = lerValorEmReais(valorTarifa);
+    if (valor === null) {
+      Alert.alert(
+        "Valor não reconhecido",
+        `Escreva como 8,65 ou 12,50. Recebido: "${valorTarifa}".`,
+      );
+      return;
+    }
+    try {
+      await apiFetch("/leituras/tarifas", {
+        method: "PUT",
+        body: { tipo, valorPorM3: valor },
+      });
+      setEditandoTarifa(false);
+      setValorTarifa("");
+      await carregar();
+    } catch (e) {
+      Alert.alert("Não foi possível salvar", String((e as Error).message));
+    }
+  }
+
+  const maxSerie = Math.max(1, ...serie.map((m) => m.consumoTotal));
 
   useEffect(() => {
     carregar();
@@ -223,6 +275,83 @@ export function ConsumosScreen({ navigation }: Props) {
             <Text style={styles.totalRotulo}>unidades lidas</Text>
           </View>
         </View>
+
+        {serie.length > 0 && (
+          <View style={styles.cardHistorico}>
+            <Text style={styles.tituloBloco}>12 meses</Text>
+            <View style={styles.grafico}>
+              {serie.map((m) => (
+                <View key={m.competencia} style={styles.mes}>
+                  <View style={styles.colunaTrilha}>
+                    <View
+                      style={[
+                        styles.coluna,
+                        { height: `${Math.max((m.consumoTotal / maxSerie) * 100, 2)}%` },
+                        // O mês aberto acende; o resto fica de fundo. Sem
+                        // isso não dá para situar a tabela na série.
+                        m.competencia === competencia && styles.colunaAtual,
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.rotuloMes}>{mesCurto(m.competencia)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <View style={styles.cardTarifa}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tituloBloco}>Tarifa de {NOMES[tipo].toLowerCase()}</Text>
+            {editandoTarifa ? (
+              <TextInput
+                style={styles.campoTarifa}
+                placeholder="8,65"
+                placeholderTextColor={theme.colors.textFaint}
+                value={valorTarifa}
+                onChangeText={setValorTarifa}
+                keyboardType="decimal-pad"
+                maxLength={12}
+                autoFocus
+              />
+            ) : (
+              <Text style={styles.tarifaValor}>
+                {tarifaAtual !== null
+                  ? `${reais(tarifaAtual)} por m³`
+                  : "sem tarifa cadastrada"}
+              </Text>
+            )}
+          </View>
+          {editandoTarifa ? (
+            <View style={styles.acoesTarifa}>
+              <Pressable
+                onPress={() => setEditandoTarifa(false)}
+                style={styles.botaoTarifaSecundario}
+              >
+                <Text style={styles.botaoTarifaSecundarioTexto}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={salvarTarifa} style={styles.botaoTarifa}>
+                <Text style={styles.botaoTarifaTexto}>Salvar</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => {
+                setValorTarifa(
+                  tarifaAtual !== null
+                    ? String(tarifaAtual).replace(".", ",")
+                    : "",
+                );
+                setEditandoTarifa(true);
+              }}
+              style={styles.botaoTarifaSecundario}
+            >
+              <Text style={styles.botaoTarifaSecundarioTexto}>
+                {tarifaAtual !== null ? "Alterar" : "Definir"}
+              </Text>
+            </Pressable>
+          )}
+        </View>
           </>
         }
         ListFooterComponent={
@@ -272,6 +401,81 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   botaoExportarTexto: { color: "#FFF", fontSize: 13.5, fontWeight: "700" },
+  tituloBloco: { fontSize: 15, fontWeight: "700", color: theme.colors.text },
+  cardHistorico: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    marginTop: 12,
+  },
+  grafico: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 4,
+    height: 96,
+    marginTop: 12,
+  },
+  mes: { flex: 1, alignItems: "center", gap: 5, height: "100%" },
+  colunaTrilha: { flex: 1, width: "100%", justifyContent: "flex-end" },
+  coluna: {
+    width: "100%",
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    backgroundColor: theme.colors.acentoClaro,
+    minHeight: 2,
+  },
+  colunaAtual: { backgroundColor: theme.colors.acao },
+  rotuloMes: { fontSize: 10, color: theme.colors.textMuted, fontWeight: "500" },
+  cardTarifa: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    marginTop: 12,
+  },
+  tarifaValor: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  campoTarifa: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: theme.colors.text,
+    marginTop: 6,
+  },
+  acoesTarifa: { flexDirection: "row", gap: 8 },
+  botaoTarifa: {
+    backgroundColor: theme.colors.marca,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  botaoTarifaTexto: { color: "#FFF", fontSize: 14, fontWeight: "600" },
+  botaoTarifaSecundario: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.chipBorder,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  botaoTarifaSecundarioTexto: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   linhaFiltros: { gap: 12 },
   chips: { flexDirection: "row", gap: 8 },
   seletorMes: {
