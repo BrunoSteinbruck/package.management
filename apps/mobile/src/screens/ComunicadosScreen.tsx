@@ -90,6 +90,17 @@ export function ComunicadosScreen({ navigation }: Props) {
                 <Selo texto={item.blocos.join(", ")} tom="neutro" />
               ) : undefined
             }
+            // A linha já diz quantos leram; tocar responde QUEM faltou.
+            chevron={item.leituras > 0}
+            onPress={
+              item.leituras > 0
+                ? () =>
+                    navigation.navigate("ComunicadoLeituras", {
+                      comunicadoId: item.id,
+                      titulo: item.titulo,
+                    })
+                : undefined
+            }
           />
         )}
       />
