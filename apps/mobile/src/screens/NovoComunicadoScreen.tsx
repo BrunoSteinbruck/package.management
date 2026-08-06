@@ -63,8 +63,8 @@ export function NovoComunicadoScreen({ navigation }: Props) {
 
   const alvo =
     blocos.length === 0
-      ? "Vai para o condomínio inteiro."
-      : `Vai só para: ${blocos.join(", ")}.`;
+      ? "Vai por push a todos os moradores do condomínio"
+      : `Vai por push só aos moradores ${blocos.length === 1 ? "do bloco" : "dos blocos"} ${blocos.join(", ")}`;
 
   return (
     <Tela comInsetTop>
@@ -90,7 +90,7 @@ export function NovoComunicadoScreen({ navigation }: Props) {
             maxLength={120}
           />
 
-          <Kicker>Texto</Kicker>
+          <Kicker>Mensagem</Kicker>
           <TextInput
             style={[styles.campo, styles.campoLongo]}
             placeholder="O que os moradores precisam saber."
@@ -120,7 +120,7 @@ export function NovoComunicadoScreen({ navigation }: Props) {
           <Text style={styles.alvo}>{alvo}</Text>
 
           <Botao
-            titulo="Publicar"
+            titulo="Publicar comunicado"
             onPress={publicar}
             carregando={enviando}
             estilo={{ marginTop: 18 }}

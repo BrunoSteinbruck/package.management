@@ -240,9 +240,7 @@ export function EntradaConfirmScreen({ navigation, route }: Props) {
           {unidade ? (
             <>
               <View style={styles.linhaUnidade}>
-                <Text style={styles.unidadeValor}>
-                  {unidade.bloco ? `${unidade.bloco} · ${unidade.identificacao}` : unidade.identificacao}
-                </Text>
+                <Text style={styles.unidadeValor}>{rotuloUnidade(unidade)}</Text>
                 <Icone nome="chevron" tamanho={26} cor={theme.colors.textFaint} />
               </View>
               <Text style={styles.unidadeHint} onPress={() => setUnidade(null)}>

@@ -29,6 +29,20 @@ export interface UnidadeRotulo {
   identificacao: string;
 }
 
+/**
+ * Como a unidade é escrita em qualquer lugar do produto: bloco antes do
+ * apartamento, separados por meio-ponto. "B · 302", nunca "302 · Bloco B".
+ *
+ * Vive no shared porque estava reimplementado em quatro arquivos e em três
+ * formatos diferentes: o app dizia "302 · Bloco B", o painel dizia ora
+ * "302 · B" ora "B · 302", e a conciliação bancária dizia "302 · B". Quem lê
+ * o extrato e a tela lado a lado tinha que traduzir de cabeça.
+ */
+export function rotuloUnidade(u: UnidadeRotulo | undefined | null): string {
+  if (!u) return "-";
+  return u.bloco ? `${u.bloco} · ${u.identificacao}` : u.identificacao;
+}
+
 export interface Unidade extends UnidadeRotulo {
   id: string;
 }
@@ -42,7 +56,7 @@ export interface FotoRef {
 /**
  * O que a sessão atual pode ver. GET /conta/capacidades
  *
- * Fica fora do JWT de propósito: o token vale 30 dias, e módulo ligado pelo
+ * Fica fora do JWT de propósito: o token vale 90 dias, e módulo ligado pelo
  * síndico precisa aparecer na próxima abertura do app, não no próximo login.
  *
  * Para o morador é a união dos módulos dos condomínios onde ele tem vínculo
@@ -75,7 +89,15 @@ export interface Pacote {
  */
 export interface PacoteLinha extends Pacote {
   unidade: Unidade;
-  retirada: { retiradoEm: string } | null;
+  retirada: {
+    retiradoEm: string;
+    /**
+     * Nome atual do morador quando a retirada tem vínculo, senão o texto que
+     * o porteiro escreveu ("Ana (faxina)"). Null nas retiradas anteriores ao
+     * campo, que só registravam a unidade.
+     */
+    retiradoPorNome: string | null;
+  } | null;
 }
 
 export interface ListaPacotes {
@@ -261,6 +283,12 @@ export interface DocumentoLinha {
 export interface VisitaMorador {
   id: string;
   nomeVisitante: string;
+  /**
+   * Código curto que o morador passa para quem vem ("V-4821"). Serve para a
+   * portaria achar a linha certa na lista do dia, não para autenticar
+   * ninguém. Null nas visitas criadas antes do campo.
+   */
+  codigo: string | null;
   dataPrevista: string;
   janelaInicio: string | null;
   janelaFim: string | null;
@@ -401,6 +429,23 @@ export interface Adocao {
   totalUnidades: number;
   unidadesComApp: number;
   percentual: number;
+}
+
+/**
+ * Uma unidade na tabela de moradores do painel. GET /cadastro/unidades/panorama
+ *
+ * Responde a pergunta que a lista de pendentes não responde: quem já está
+ * cadastrado, e em quais apartamentos ninguém baixou o app. Sem isso o síndico
+ * via só o percentual de adoção e não sabia onde bater na porta.
+ */
+export interface UnidadePanorama {
+  unidadeId: string;
+  bloco: string | null;
+  identificacao: string;
+  /** O primeiro vinculado, por ordem de aprovação. Null quando não há nenhum. */
+  titular: { nome: string; telefone: string } | null;
+  vinculados: number;
+  temApp: boolean;
 }
 
 export interface DiaSerie {

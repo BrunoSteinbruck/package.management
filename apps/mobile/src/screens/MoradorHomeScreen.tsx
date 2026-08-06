@@ -1,7 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  FlatList,
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -15,13 +13,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { JwtPayload } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { registrarPush } from "../api/push";
-import {
-  dataCurta,
-  diasNaPortaria,
-  rotuloUnidade,
-  type MinhaUnidade,
-} from "../api/types";
-import { BotaoCta, BotaoModulo, Card } from "../components/ui";
+import { rotuloUnidade, type MinhaUnidade } from "../api/types";
+import { BotaoModulo, Card } from "../components/ui";
 import { Icone } from "../components/icones";
 import { MODULOS_MORADOR, modulosDe } from "../modulos";
 import { useModulos } from "../useModulos";
@@ -38,7 +31,6 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
   const [unidades, setUnidades] = useState<MinhaUnidade[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [atualizando, setAtualizando] = useState(false);
-  const [historicoAberto, setHistoricoAberto] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -62,18 +54,9 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
     0,
   );
 
-  const historico = useMemo(
-    () =>
-      (unidades ?? [])
-        .flatMap((u) =>
-          u.historico.map((p) => ({ ...p, unidadeRotulo: rotuloUnidade(u.unidade) })),
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.retirada?.retiradoEm ?? b.recebidoEm).getTime() -
-            new Date(a.retirada?.retiradoEm ?? a.recebidoEm).getTime(),
-        ),
-    [unidades],
+  const totalHistorico = (unidades ?? []).reduce(
+    (soma, u) => soma + u.historico.length,
+    0,
   );
 
   return (
@@ -101,10 +84,7 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
             <Text style={styles.ola}>Oi, {perfil.nome.split(" ")[0]}</Text>
             {primeira && (
               <Text style={styles.subCabecalho} numberOfLines={1}>
-                {primeira.unidade.condominio} ·{" "}
-                {primeira.unidade.bloco
-                  ? `${primeira.unidade.bloco} ${primeira.unidade.identificacao}`
-                  : primeira.unidade.identificacao}
+                {primeira.unidade.condominio} · {rotuloUnidade(primeira.unidade)}
               </Text>
             )}
           </View>
@@ -152,102 +132,35 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
           </Card>
         )}
 
-        {unidades && unidades.length > 0 && totalPendentes === 0 && (
-          <View style={styles.heroVazio}>
-            <View style={styles.heroCirculo}>
-              <Icone nome="check" tamanho={38} cor={theme.colors.ok} traco={2.4} />
-            </View>
-            <Text style={styles.heroTitulo}>Nada na portaria</Text>
-            <Text style={styles.heroTexto}>
-              Avisaremos assim que uma encomenda chegar.
-            </Text>
-          </View>
-        )}
-
-        {unidades?.map(
-          (minha) =>
-            minha.pendentes.length > 0 && (
-              <View key={minha.unidade.id} style={{ marginBottom: 22 }}>
-                {unidades.length > 1 && (
-                  <Text style={styles.tituloUnidadeMulti}>
-                    {rotuloUnidade(minha.unidade)}
-                  </Text>
-                )}
-                <View style={styles.linhaSecao}>
-                  <Text style={styles.tituloSecao}>Na portaria</Text>
-                  <View style={styles.badgeContador}>
-                    <Text style={styles.badgeContadorTexto}>
-                      {minha.pendentes.length}
-                    </Text>
-                  </View>
-                </View>
-
-                {minha.pendentes.map((p) => {
-                  const dias = diasNaPortaria(p.recebidoEm);
-                  const atrasada = dias >= 3;
-                  return (
-                    <Pressable
-                      key={p.id}
-                      style={({ pressed }) => [
-                        styles.cardPacote,
-                        { transform: [{ scale: pressed ? 0.98 : 1 }] },
-                      ]}
-                      onPress={() => navigation.navigate("Detalhe", { pacoteId: p.id })}
-                    >
-                      <View style={styles.thumb} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.pacoteTitulo}>
-                          {p.transportadora ?? "Encomenda"}
-                        </Text>
-                        {atrasada ? (
-                          <Text style={[styles.pacoteSub, styles.pacoteSubAtraso]}>
-                            Há {dias} dias
-                          </Text>
-                        ) : (
-                          <Text style={styles.pacoteSub}>
-                            Chegou {dataCurta(p.recebidoEm)}
-                          </Text>
-                        )}
-                      </View>
-                      <Icone nome="chevron" tamanho={22} cor={theme.colors.textFaint} />
-                    </Pressable>
-                  );
-                })}
-                {/* O QR é conferência opcional do condomínio. Desligado, o
-                    morador simplesmente vai à portaria e diz a unidade, que
-                    é o que ele já fazia: sem o botão, a tela não promete um
-                    ritual que a portaria não vai pedir. */}
-                {ligados.includes("qr_retirada") && (
-                  <BotaoCta
-                    titulo="Retirar na portaria"
-                    icone="qr"
-                    altura={66}
-                    onPress={() =>
-                      navigation.navigate("Qr", {
-                        unidadeId: minha.unidade.id,
-                        rotulo: rotuloUnidade(minha.unidade),
-                        pendentes: minha.pendentes.length,
-                      })
-                    }
-                    estilo={{ marginTop: 12 }}
-                  />
-                )}
-              </View>
-            ),
-        )}
-
-        {/* Prateleira dos módulos do condomínio, no corpo e não no rodapé:
-            o rodapé é uma linha só de pílulas, desenhada para uma ou duas
-            ações rápidas, e com quatro o texto quebrava dentro da pílula. */}
-        {modulosDe(MODULOS_MORADOR, "morador", "secundario", ligados).map((m) => (
+        {/* A home é lançador, não lista. Antes ela abria com as encomendas
+            inline e o resto do app ficava abaixo delas: quem tinha seis
+            pacotes rolava a tela inteira para achar Boletos. As encomendas
+            agora têm tela própria e aqui fica só a porta, com a contagem. */}
+        {unidades && unidades.length > 0 && (
           <BotaoModulo
-            key={m.id}
-            titulo={m.titulo}
-            icone={m.icone}
-            onPress={() => navigation.navigate(m.id)}
-            estilo={{ marginTop: 12 }}
+            titulo="Encomendas"
+            icone="pacote"
+            onPress={() => navigation.navigate("Encomendas")}
+            badge={
+              totalPendentes > 0
+                ? { texto: `${totalPendentes} na portaria`, destaque: true }
+                : undefined
+            }
+            estilo={{ marginTop: 2 }}
           />
-        ))}
+        )}
+
+        {unidades &&
+          unidades.length > 0 &&
+          modulosDe(MODULOS_MORADOR, "morador", "secundario", ligados).map((m) => (
+            <BotaoModulo
+              key={m.id}
+              titulo={m.titulo}
+              icone={m.icone}
+              onPress={() => navigation.navigate(m.id)}
+              estilo={{ marginTop: 12 }}
+            />
+          ))}
       </ScrollView>
 
       {primeira && (
@@ -264,65 +177,20 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
                 onPress={() => navigation.navigate(m.id)}
               />
             ))}
-            {historico.length > 0 && (
+            {totalHistorico > 0 && (
+              // Leva para a mesma tela de Encomendas, onde o histórico é a
+              // segunda seção. Era um bottom-sheet com a lista duplicada.
               <BotaoModulo
                 variante="pill"
                 titulo="Histórico"
                 icone="lista"
-                contagem={historico.length}
-                onPress={() => setHistoricoAberto(true)}
+                badge={{ texto: String(totalHistorico) }}
+                onPress={() => navigation.navigate("Encomendas")}
               />
             )}
           </View>
         </View>
       )}
-
-      <Modal
-        visible={historicoAberto}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setHistoricoAberto(false)}
-      >
-        <Pressable
-          style={styles.backdrop}
-          onPress={() => setHistoricoAberto(false)}
-        />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-          <View style={styles.alca} />
-          <Text style={styles.sheetTitulo}>Histórico</Text>
-          <FlatList
-            data={historico}
-            keyExtractor={(p) => p.id}
-            style={{ flexGrow: 0 }}
-            contentContainerStyle={{ gap: 8, paddingTop: 8 }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  setHistoricoAberto(false);
-                  navigation.navigate("Detalhe", { pacoteId: item.id });
-                }}
-                style={({ pressed }) => [
-                  styles.itemHistorico,
-                  { opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <View style={styles.checkCirculo}>
-                  <Icone nome="check" tamanho={15} cor={theme.colors.ok} traco={2.6} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.historicoTitulo}>
-                    {item.transportadora ?? "Encomenda"}
-                  </Text>
-                  <Text style={styles.historicoSub}>
-                    Entregue{item.retirada ? ` · ${dataCurta(item.retirada.retiradoEm)}` : ""}
-                  </Text>
-                </View>
-                <Icone nome="chevron" tamanho={20} cor={theme.colors.textFaint} />
-              </Pressable>
-            )}
-          />
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -363,56 +231,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: theme.colors.surface,
   },
-  heroVazio: { alignItems: "center", paddingVertical: 56, gap: 8 },
-  heroCirculo: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: theme.colors.okBg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  heroTitulo: { fontSize: 21, fontWeight: "700", color: theme.colors.text },
-  heroTexto: { fontSize: 14.5, color: theme.colors.textSecondary, fontWeight: "500" },
-  tituloUnidadeMulti: { fontSize: 15, fontWeight: "700", color: theme.colors.textSecondary, marginBottom: 8 },
-  linhaSecao: { flexDirection: "row", alignItems: "center", gap: 8 },
-  tituloSecao: { fontSize: 17, fontWeight: "700", color: theme.colors.text },
-  badgeContador: {
-    minWidth: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: theme.colors.acao,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 7,
-  },
-  badgeContadorTexto: { color: "#FFF", fontSize: 13.5, fontWeight: "700" },
-  cardPacote: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 14,
-    marginTop: 10,
-  },
-  thumb: {
-    width: 58,
-    height: 58,
-    borderRadius: 12,
-    backgroundColor: theme.colors.placeholder,
-    borderWidth: 1,
-    borderColor: theme.colors.chipBorder,
-    borderStyle: "dashed",
-  },
-  pacoteTitulo: { fontSize: 17, fontWeight: "700", color: theme.colors.text },
-  pacoteSub: { fontSize: 13.5, color: theme.colors.textSecondary, fontWeight: "500", marginTop: 2 },
-  // A partir de 3 dias a própria data fica âmbar. Sem selo e sem texto de
-  // cobrança: a cor já sinaliza, sem soar agressiva.
-  pacoteSubAtraso: { color: theme.colors.alerta, fontWeight: "600" },
   vazioTitulo: { fontSize: 16, fontWeight: "700", color: theme.colors.text },
   vazioTexto: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 2 },
   rodape: {
@@ -421,43 +239,4 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
   },
   linhaRodape: { flexDirection: "row", gap: 10 },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
-  sheet: {
-    backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: theme.radius.sheet,
-    borderTopRightRadius: theme.radius.sheet,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: 10,
-    maxHeight: "70%",
-  },
-  alca: {
-    alignSelf: "center",
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: theme.colors.toggleOff,
-    marginBottom: 12,
-  },
-  sheetTitulo: { fontSize: 19, fontWeight: "700", color: theme.colors.text },
-  itemHistorico: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.card,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  checkCirculo: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: theme.colors.okBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  historicoTitulo: { fontSize: 15, fontWeight: "600", color: theme.colors.text },
-  historicoSub: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 1 },
 });

@@ -1,10 +1,17 @@
 import React, { useCallback, useState } from "react";
-import { Alert, FlatList, RefreshControl } from "react-native";
+import {
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { VinculoPendente } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
-import { dataCurta, rotuloUnidade } from "../api/types";
+import { iniciais, rotuloUnidade } from "../api/types";
 import { Botao, HeaderTela, ItemLista, Tela, Vazio } from "../components/ui";
 import { theme } from "../theme";
 import type { SindicoStackParamList } from "../navigation";
@@ -48,9 +55,17 @@ export function AprovacoesScreen({ navigation }: Props) {
   return (
     <Tela comInsetTop>
       <HeaderTela
-        titulo={`Aprovações (${itens.length})`}
+        titulo="Aprovar moradores"
         aoVoltar={() => navigation.goBack()}
       />
+      {itens.length > 0 && (
+        <View style={styles.legenda}>
+          <Text style={styles.legendaTexto}>
+            {itens.length} pedido{itens.length === 1 ? "" : "s"} aguardando ·
+            confirme com a unidade antes de aprovar
+          </Text>
+        </View>
+      )}
       <FlatList
         data={itens}
         keyExtractor={(v) => v.id}
@@ -75,13 +90,8 @@ export function AprovacoesScreen({ navigation }: Props) {
         renderItem={({ item }) => (
           <ItemLista
             titulo={item.morador.nome}
-            sub={`${rotuloUnidade(item.unidade)} · ${item.morador.telefone}`}
-            detalhe={dataCurta(item.criadoEm)}
-            media={{
-              icone: "pessoa",
-              corFundo: theme.colors.unidadeBg,
-              corIcone: theme.colors.marca,
-            }}
+            sub={`${item.morador.telefone} · pediu vínculo a ${rotuloUnidade(item.unidade)}`}
+            media={{ iniciais: iniciais(item.morador.nome) }}
             direita={
               <Botao
                 titulo="Aprovar"
@@ -97,3 +107,13 @@ export function AprovacoesScreen({ navigation }: Props) {
     </Tela>
   );
 }
+
+const styles = StyleSheet.create({
+  legenda: { paddingHorizontal: theme.spacing.lg, paddingBottom: 12 },
+  legendaTexto: {
+    fontSize: 13.5,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
+    lineHeight: 19,
+  },
+});

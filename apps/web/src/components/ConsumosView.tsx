@@ -1,22 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type {
-  ConsumoLinha,
-  ConsumosResposta,
-  FotoRef,
-  HistoricoConsumoMes,
-  TarifaLinha,
-  TipoMedidor,
+import {
+  mesAno,
+  mesCurto,
+  rotuloUnidade,
+  type ConsumoLinha,
+  type ConsumosResposta,
+  type FotoRef,
+  type HistoricoConsumoMes,
+  type TarifaLinha,
+  type TipoMedidor,
 } from "@pacotes/shared";
 import { apiFetch, API_URL } from "@/lib/api";
 
 const NOMES: Record<TipoMedidor, string> = { AGUA: "Água", GAS: "Gás" };
-const MESES_PT = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
-
 function competenciaAtual(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -26,16 +24,6 @@ function somarMeses(competencia: string, n: number): string {
   const [ano, mes] = competencia.split("-").map(Number);
   const total = ano * 12 + (mes - 1) + n;
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
-}
-
-function nomeCompetencia(competencia: string): string {
-  const [ano, mes] = competencia.split("-").map(Number);
-  return `${MESES_PT[mes - 1]}/${ano}`;
-}
-
-function mesCurto(competencia: string): string {
-  const [, mes] = competencia.split("-").map(Number);
-  return MESES_PT[mes - 1].slice(0, 3).toLowerCase();
 }
 
 function reais(n: number): string {
@@ -151,7 +139,7 @@ export function ConsumosView() {
             {"<"}
           </button>
           <span style={{ fontWeight: 700, alignSelf: "center", minWidth: 120, textAlign: "center" }}>
-            {nomeCompetencia(competencia)}
+            {mesAno(competencia)}
           </span>
           <button
             className="chip"
@@ -223,7 +211,7 @@ export function ConsumosView() {
             {dados?.linhas.map((l) => (
               <tr key={l.unidadeId}>
                 <td className="unidade">
-                  {l.bloco ? `${l.bloco} · ${l.identificacao}` : l.identificacao}
+                  {rotuloUnidade(l)}
                 </td>
                 <td className="mono" style={{ textAlign: "right" }}>
                   {l.anterior ? l.anterior.valor.toLocaleString("pt-BR") : "-"}
@@ -303,7 +291,7 @@ export function ConsumosView() {
               <div
                 className="faixa"
                 key={m.competencia}
-                title={`${nomeCompetencia(m.competencia)}: ${m.consumoTotal.toLocaleString("pt-BR")} m³ (${m.unidadesLidas} leituras)${m.valorTotal != null ? ` · ${reais(m.valorTotal)}` : ""}`}
+                title={`${mesAno(m.competencia)}: ${m.consumoTotal.toLocaleString("pt-BR")} m³ (${m.unidadesLidas} leituras)${m.valorTotal != null ? ` · ${reais(m.valorTotal)}` : ""}`}
               >
                 <div
                   className="coluna"
@@ -347,9 +335,7 @@ export function ConsumosView() {
             style={{ maxWidth: "90%", maxHeight: "80%", borderRadius: 12 }}
           />
           <div style={{ color: "#fff", fontWeight: 600 }}>
-            {fotoAberta.bloco
-              ? `${fotoAberta.bloco} · ${fotoAberta.identificacao}`
-              : fotoAberta.identificacao}
+            {rotuloUnidade(fotoAberta)}
             {" · "}
             {NOMES[tipo]} {fotoAberta.atual.valor.toLocaleString("pt-BR")}
             {" · lida por "}

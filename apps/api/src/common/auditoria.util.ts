@@ -16,7 +16,8 @@ export type AcaoAuditada =
   | "financeiro.remover_despesa"
   | "financeiro.aceitar_conciliacao"
   | "financeiro.ignorar_extrato"
-  | "cadastro.aprovar_vinculo";
+  | "cadastro.aprovar_vinculo"
+  | "cadastro.recusar_vinculo";
 
 /**
  * Grava quem fez o quê, DENTRO da transação de quem chamou.

@@ -10,7 +10,11 @@ import {
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { LeituraRegistrada, TipoMedidor } from "@pacotes/shared";
+import {
+  mesCurtoAno,
+  type LeituraRegistrada,
+  type TipoMedidor,
+} from "@pacotes/shared";
 import { apiFetch, NetworkError, uploadFoto } from "../api/client";
 import {
   cacheEstado,
@@ -44,17 +48,6 @@ registrarLimpezaDeSessao(() => {
 
 const NOMES: Record<TipoMedidor, string> = { AGUA: "Água", GAS: "Gás" };
 
-const MESES_CURTOS = [
-  "jan", "fev", "mar", "abr", "mai", "jun",
-  "jul", "ago", "set", "out", "nov", "dez",
-];
-
-/** "2026-06" vira "jun/2026" para olho humano. */
-function mesCurto(competencia: string): string {
-  const [ano, mes] = competencia.split("-").map(Number);
-  return `${MESES_CURTOS[mes - 1]}/${ano}`;
-}
-
 type Props = NativeStackScreenProps<PortariaStackParamList, "LeituraConfirm">;
 
 export function LeituraConfirmScreen({ navigation, route }: Props) {
@@ -62,6 +55,9 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
   const [unidades, setUnidades] = useState<Unidade[]>(cacheUnidades ?? []);
   const [busca, setBusca] = useState("");
   const [unidade, setUnidade] = useState<Unidade | null>(null);
+  // Se a unidade escolhida veio da fila de pendentes ou de uma busca. Sem
+  // isso a dica dizia "próxima da lista" também para quem buscou outra.
+  const [veioDaFila, setVeioDaFila] = useState(false);
   const [tipo, setTipo] = useState<TipoMedidor>(ultimoTipo);
   const [valorTexto, setValorTexto] = useState(
     sugestao !== null ? String(sugestao) : "",
@@ -216,7 +212,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
             <Text style={styles.trocarFoto}>{fotoUri ? "Refazer" : "Tirar foto"}</Text>
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Kicker>Leitura do medidor</Kicker>
+            <Kicker>Leitura</Kicker>
             <TextInput
               style={styles.campoValor}
               value={valorTexto}
@@ -232,8 +228,8 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
             />
             <Text style={styles.hintValor}>
               {sugestao !== null
-                ? "Lida da foto: confira com o medidor"
-                : "Digite o número do medidor"}
+                ? "sugerida pela foto · toque para corrigir"
+                : "digite o número do medidor"}
             </Text>
           </View>
         </View>
@@ -253,19 +249,17 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.cardUnidade}>
-          <Kicker cor={theme.colors.ok}>Apartamento</Kicker>
+          <Kicker cor={theme.colors.ok}>Unidade</Kicker>
           {unidade ? (
             <>
               <View style={styles.linhaUnidade}>
-                <Text style={styles.unidadeValor}>
-                  {unidade.bloco
-                    ? `${unidade.bloco} · ${unidade.identificacao}`
-                    : unidade.identificacao}
-                </Text>
+                <Text style={styles.unidadeValor}>{rotuloUnidade(unidade)}</Text>
                 <Icone nome="chevron" tamanho={26} cor={theme.colors.textFaint} />
               </View>
               <Text style={styles.unidadeHint} onPress={() => setUnidade(null)}>
-                Toque para trocar
+                {veioDaFila
+                  ? "próxima da lista · toque para trocar"
+                  : "toque para trocar"}
               </Text>
             </>
           ) : (
@@ -280,7 +274,14 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
               />
               <View style={styles.gradeUnidades}>
                 {filtradas.map((u) => (
-                  <Chip key={u.id} rotulo={rotuloUnidade(u)} onPress={() => setUnidade(u)} />
+                  <Chip
+                    key={u.id}
+                    rotulo={rotuloUnidade(u)}
+                    onPress={() => {
+                      setUnidade(u);
+                      setVeioDaFila(sugerindoPendentes);
+                    }}
+                  />
                 ))}
               </View>
               {sugerindoPendentes && (
@@ -295,7 +296,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
         {infoUnidade?.anterior && (
           <View style={styles.cardAnterior}>
             <Text style={styles.anteriorTexto}>
-              Anterior ({mesCurto(infoUnidade.anterior.competencia)}):{" "}
+              Anterior ({mesCurtoAno(infoUnidade.anterior.competencia)}):{" "}
               {infoUnidade.anterior.valor.toLocaleString("pt-BR")}
             </Text>
             {consumoPrevisto !== null && (
@@ -319,7 +320,7 @@ export function LeituraConfirmScreen({ navigation, route }: Props) {
         )}
 
         <BotaoCta
-          titulo="Registrar leitura"
+          titulo="Salvar leitura"
           icone="check"
           altura={72}
           onPress={enviar}

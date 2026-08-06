@@ -49,6 +49,13 @@ export class CadastroController {
     return this.cadastro.listarUnidades(user);
   }
 
+  // Antes de "unidades/:id" não existir aqui, isto seria uma rota ambígua.
+  // Fica declarada acima de qualquer parâmetro que venha a existir.
+  @Get("unidades/panorama")
+  panoramaUnidades(@CurrentUser() user: JwtPayload) {
+    return this.cadastro.panoramaUnidades(user);
+  }
+
   @Post("unidades")
   criarUnidades(
     @CurrentUser() user: JwtPayload,
@@ -124,5 +131,13 @@ export class CadastroController {
     @Param("vinculoId", ParseUUIDPipe) vinculoId: string,
   ) {
     return this.cadastro.aprovarVinculo(user, vinculoId);
+  }
+
+  @Post("vinculos/:vinculoId/recusar")
+  recusarVinculo(
+    @CurrentUser() user: JwtPayload,
+    @Param("vinculoId", ParseUUIDPipe) vinculoId: string,
+  ) {
+    return this.cadastro.recusarVinculo(user, vinculoId);
   }
 }

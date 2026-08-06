@@ -1,10 +1,14 @@
-import React, { useCallback, useState } from "react";
-import { Alert, FlatList, Linking, RefreshControl } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, FlatList, Linking, RefreshControl, StyleSheet, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import type { CategoriaDocumento, DocumentoLinha } from "@pacotes/shared";
+import {
+  CATEGORIAS_DOCUMENTO,
+  type CategoriaDocumento,
+  type DocumentoLinha,
+} from "@pacotes/shared";
 import { apiFetch, urlFoto } from "../api/client";
 import { dataCurta } from "../api/types";
-import { HeaderTela, ItemLista, Tela, Vazio } from "../components/ui";
+import { Chip, HeaderTela, ItemLista, Tela, Vazio } from "../components/ui";
 import { theme } from "../theme";
 
 const ROTULO_CATEGORIA: Record<CategoriaDocumento, string> = {
@@ -13,6 +17,26 @@ const ROTULO_CATEGORIA: Record<CategoriaDocumento, string> = {
   CONVENCAO: "Convenção",
   OUTRO: "Documento",
 };
+
+/** Plural na prateleira, singular na linha: "Atas" filtra, "Ata" é. */
+const ROTULO_FILTRO: Record<CategoriaDocumento, string> = {
+  ATA: "Atas",
+  REGIMENTO: "Regimento",
+  CONVENCAO: "Convenção",
+  OUTRO: "Outros",
+};
+
+function tamanho(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+  }
+  // Abaixo de 1 KB mostra os bytes: arredondar daria "0 KB", que lê como
+  // arquivo vazio quando na verdade é só um PDF pequeno.
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
+type Filtro = CategoriaDocumento | "TODOS";
 
 /**
  * Documentos do condomínio.
@@ -30,6 +54,7 @@ export function DocumentosScreen({
 }) {
   const [itens, setItens] = useState<DocumentoLinha[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [filtro, setFiltro] = useState<Filtro>("TODOS");
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -52,6 +77,16 @@ export function DocumentosScreen({
     }, [carregar]),
   );
 
+  // As prateleiras vazias não aparecem: um condomínio que só publicou atas não
+  // ganha três chips que devolvem lista vazia.
+  const prateleiras = useMemo(() => {
+    const presentes = new Set(itens.map((d) => d.categoria));
+    return CATEGORIAS_DOCUMENTO.filter((c) => presentes.has(c));
+  }, [itens]);
+
+  const visiveis =
+    filtro === "TODOS" ? itens : itens.filter((d) => d.categoria === filtro);
+
   async function abrir(doc: DocumentoLinha) {
     try {
       // `Linking` e não um navegador embutido: é o que o app já usa para o
@@ -68,8 +103,25 @@ export function DocumentosScreen({
   return (
     <Tela comInsetTop>
       <HeaderTela titulo="Documentos" aoVoltar={() => navigation.goBack()} />
+      {prateleiras.length > 1 && (
+        <View style={styles.filtros}>
+          <Chip
+            rotulo="Todos"
+            ativo={filtro === "TODOS"}
+            onPress={() => setFiltro("TODOS")}
+          />
+          {prateleiras.map((c) => (
+            <Chip
+              key={c}
+              rotulo={ROTULO_FILTRO[c]}
+              ativo={filtro === c}
+              onPress={() => setFiltro(c)}
+            />
+          ))}
+        </View>
+      )}
       <FlatList
-        data={itens}
+        data={visiveis}
         keyExtractor={(d) => d.id}
         contentContainerStyle={{
           paddingHorizontal: theme.spacing.lg,
@@ -83,7 +135,7 @@ export function DocumentosScreen({
           !carregando ? (
             <Vazio
               variante="hero"
-              icone="pacote"
+              icone="lista"
               titulo="Nenhum documento"
               texto="Atas, regimento e convenção publicados pela administração aparecem aqui."
             />
@@ -92,9 +144,11 @@ export function DocumentosScreen({
         renderItem={({ item }) => (
           <ItemLista
             titulo={item.titulo}
-            sub={`${ROTULO_CATEGORIA[item.categoria]} · ${dataCurta(item.criadoEm)}`}
+            sub={`${ROTULO_CATEGORIA[item.categoria]} · ${dataCurta(item.criadoEm)} · PDF, ${tamanho(item.tamanhoBytes)}`}
             media={{
-              icone: "pacote",
+              // "lista" e não "pacote": a caixa é o ícone da encomenda, e
+              // repetido aqui as duas linhas do menu viravam o mesmo desenho.
+              icone: "lista",
               corFundo: theme.colors.okBg,
               corIcone: theme.colors.marca,
             }}
@@ -106,3 +160,13 @@ export function DocumentosScreen({
     </Tela>
   );
 }
+
+const styles = StyleSheet.create({
+  filtros: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: 12,
+  },
+});

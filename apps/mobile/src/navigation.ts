@@ -15,6 +15,12 @@ export type PortariaStackParamList = {
     /** Quem recebeu: morador da unidade OU nome livre, nunca os dois. */
     recebidoPorMoradorId?: string;
     recebidoPorNome?: string;
+    /**
+     * Só para escrever na tela. Existe separado porque `recebidoPorNome` fica
+     * vazio quando o recebedor é morador (aí vale a FK), e a legenda da câmera
+     * precisa do nome nos dois casos.
+     */
+    recebedorRotulo?: string;
   };
   // Sem parâmetro: a foto é um campo opcional dentro do formulário, com a
   // câmera embutida, e não um passo anterior a ele.
@@ -65,6 +71,9 @@ export type SindicoStackParamList = Omit<
 /** Pilha do morador (perfil.tipo === "morador"). */
 export type MoradorStackParamList = {
   Home: undefined;
+  // A lista de encomendas do morador: pendentes na portaria e histórico. Sem
+  // parâmetro porque carrega as unidades dele, como as demais entradas.
+  Encomendas: undefined;
   Qr: { unidadeId: string; rotulo: string; pendentes: number };
   Detalhe: { pacoteId: string };
   MinhaUnidade: { unidadeId: string; rotulo: string; condominio: string };
@@ -73,6 +82,9 @@ export type MoradorStackParamList = {
   // escolher. Antes vinha a primeira unidade da home, e quem tinha duas não
   // conseguia relatar pela segunda.
   Reportar: undefined;
+  // Lista e leitura. A lista sai do feed unificado filtrado; o sino continua
+  // abrindo o feed inteiro.
+  Comunicados: undefined;
   Comunicado: { comunicadoId: string };
   Documentos: undefined;
   Visitas: undefined;

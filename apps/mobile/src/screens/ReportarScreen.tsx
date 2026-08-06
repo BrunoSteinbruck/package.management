@@ -18,7 +18,7 @@ import {
   rotuloUnidade,
   type MinhaUnidade,
 } from "../api/types";
-import { BotaoCta, Chip, HeaderTela, Kicker } from "../components/ui";
+import { BotaoCta, Chip, HeaderTela, Kicker, Nota } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
 import type { MoradorStackParamList } from "../navigation";
@@ -152,7 +152,7 @@ export function ReportarScreen({ navigation }: Props) {
           ))}
         </View>
 
-        <Kicker>Descrição (opcional)</Kicker>
+        <Kicker>O que aconteceu?</Kicker>
         <TextInput
           style={styles.campo}
           placeholder="Ex.: extintor do 3º andar fora do suporte"
@@ -163,6 +163,7 @@ export function ReportarScreen({ navigation }: Props) {
           multiline
         />
 
+        <Kicker>Foto (opcional)</Kicker>
         {fotoUri ? (
           <Pressable onPress={abrirCamera}>
             <Image source={{ uri: fotoUri }} style={styles.foto} />
@@ -171,7 +172,7 @@ export function ReportarScreen({ navigation }: Props) {
         ) : (
           <Pressable style={styles.addFoto} onPress={abrirCamera}>
             <Icone nome="camera" tamanho={22} cor={theme.colors.marca} />
-            <Text style={styles.addFotoTexto}>Adicionar foto</Text>
+            <Text style={styles.addFotoTexto}>Tirar foto</Text>
           </Pressable>
         )}
 
@@ -182,6 +183,10 @@ export function ReportarScreen({ navigation }: Props) {
           carregando={salvando}
           desabilitado={!categoria || !unidadeId}
           estilo={{ marginTop: 22 }}
+        />
+        <Nota
+          texto="Vai direto para a administração, com seu nome"
+          estilo={{ marginTop: 12 }}
         />
       </ScrollView>
     </View>

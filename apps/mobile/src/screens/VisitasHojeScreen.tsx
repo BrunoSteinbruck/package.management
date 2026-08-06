@@ -1,9 +1,9 @@
 import React, { useCallback, useState } from "react";
-import { Alert, FlatList, RefreshControl } from "react-native";
+import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { VisitaPortaria } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
-import { rotuloUnidade } from "../api/types";
+import { diaPorExtenso, iniciais, rotuloUnidade } from "../api/types";
 import { Botao, HeaderTela, ItemLista, Selo, Tela, Vazio } from "../components/ui";
 import { theme } from "../theme";
 
@@ -28,6 +28,9 @@ export function VisitasHojeScreen({
 }) {
   const [itens, setItens] = useState<VisitaPortaria[]>([]);
   const [carregando, setCarregando] = useState(false);
+  // Canceladas não entram na conta: a legenda responde quantas pessoas a
+  // portaria ainda pode receber hoje.
+  const autorizadas = itens.filter((v) => v.status !== "CANCELADA").length;
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -58,6 +61,12 @@ export function VisitasHojeScreen({
   return (
     <Tela comInsetTop>
       <HeaderTela titulo="Visitas de hoje" aoVoltar={() => navigation.goBack()} />
+      <View style={styles.legenda}>
+        <Text style={styles.legendaTexto}>
+          {diaPorExtenso()} · {autorizadas} autorizada
+          {autorizadas === 1 ? "" : "s"}
+        </Text>
+      </View>
       <FlatList
         data={itens}
         keyExtractor={(v) => v.id}
@@ -85,25 +94,24 @@ export function VisitasHojeScreen({
             <>
               <ItemLista
                 titulo={item.nomeVisitante}
-                sub={`${rotuloUnidade(item.unidade)} · ${janela(item)}`}
-                detalhe={item.documento ?? undefined}
-                media={{
-                  icone: "pessoa",
-                  corFundo: chegou ? theme.colors.divisor : theme.colors.okBg,
-                  corIcone: chegou
-                    ? theme.colors.textSecondary
-                    : theme.colors.marca,
-                }}
+                sub={`visita a ${rotuloUnidade(item.unidade)} · ${janela(item)}`}
+                // Código antes do documento: é o que o visitante diz na
+                // portaria, e o documento nem sempre foi informado.
+                detalhe={
+                  [item.codigo, item.documento].filter(Boolean).join(" · ") ||
+                  undefined
+                }
+                media={{ iniciais: iniciais(item.nomeVisitante) }}
                 direita={
                   <Selo
-                    texto={chegou ? "entrou" : "esperada"}
+                    texto={chegou ? "chegou" : "autorizada"}
                     tom={chegou ? "ok" : "neutro"}
                   />
                 }
               />
               {podeDarBaixa && !chegou && (
                 <Botao
-                  titulo="Chegou"
+                  titulo="Registrar chegada"
                   icone="check"
                   variante="outline"
                   onPress={() => darBaixa(item)}
@@ -116,3 +124,12 @@ export function VisitasHojeScreen({
     </Tela>
   );
 }
+
+const styles = StyleSheet.create({
+  legenda: { paddingHorizontal: theme.spacing.lg, paddingBottom: 12 },
+  legendaTexto: {
+    fontSize: 13.5,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
+  },
+});

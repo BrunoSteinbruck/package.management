@@ -5,10 +5,19 @@ import {
   Linking,
   RefreshControl,
   Share,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { CobrancaMorador, StatusCobranca } from "@pacotes/shared";
+import {
+  mesCapitalizado,
+  mesDeAno,
+  rotuloUnidade,
+  type CobrancaMorador,
+  type StatusCobranca,
+} from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { Botao, HeaderTela, ItemLista, Selo, Tela, Vazio } from "../components/ui";
 import { theme } from "../theme";
@@ -17,21 +26,16 @@ import type { MoradorStackParamList } from "../navigation";
 type Props = NativeStackScreenProps<MoradorStackParamList, "Cobrancas">;
 
 const ROTULO: Record<StatusCobranca, { texto: string; tom: "ok" | "alerta" | "neutro" }> = {
-  PENDENTE: { texto: "em aberto", tom: "neutro" },
+  PENDENTE: { texto: "pendente", tom: "neutro" },
   PAGA: { texto: "paga", tom: "ok" },
   VENCIDA: { texto: "vencida", tom: "alerta" },
   CANCELADA: { texto: "cancelada", tom: "neutro" },
 };
 
-const MESES = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-];
-
-/** "2026-07" vira "julho de 2026" sem passar por Date. */
-function nomeCompetencia(c: string): string {
-  const [ano, mes] = c.split("-");
-  return `${MESES[Number(mes) - 1]} de ${ano}`;
+/** No ano corrente basta "Julho"; fora dele o ano precisa aparecer. */
+function mesCompetencia(c: string): string {
+  const doAnoCorrente = c.startsWith(`${new Date().getFullYear()}-`);
+  return doAnoCorrente ? mesCapitalizado(c) : mesDeAno(c);
 }
 
 function diaCurto(iso: string): string {
@@ -76,11 +80,20 @@ export function CobrancasScreen({ navigation }: Props) {
     await Share.share({ message: codigo });
   }
 
+  // A cobrança corrente ganha card próprio no topo: era uma linha igual às
+  // outras, e quem abria a tela no dia 9 tinha que caçar qual vencia amanhã.
+  // Vence primeiro entre as abertas; se houver vencida, ela é a primeira.
+  const abertas = itens
+    .filter((c) => c.status === "PENDENTE" || c.status === "VENCIDA")
+    .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  const corrente = abertas[0];
+  const anteriores = itens.filter((c) => c.id !== corrente?.id);
+
   return (
     <Tela comInsetTop>
       <HeaderTela titulo="Boletos" aoVoltar={() => navigation.goBack()} />
       <FlatList
-        data={itens}
+        data={anteriores}
         keyExtractor={(c) => c.id}
         contentContainerStyle={{
           paddingHorizontal: theme.spacing.lg,
@@ -90,26 +103,68 @@ export function CobrancasScreen({ navigation }: Props) {
         refreshControl={
           <RefreshControl refreshing={carregando} onRefresh={carregar} />
         }
+        ListHeaderComponent={
+          corrente ? (
+            <View style={styles.cardCorrente}>
+              <View style={styles.linhaTopo}>
+                <Text style={styles.tituloCorrente}>
+                  Taxa condominial · {mesCompetencia(corrente.competencia)}
+                </Text>
+                <Selo
+                  texto={ROTULO[corrente.status].texto}
+                  tom={ROTULO[corrente.status].tom}
+                />
+              </View>
+              <Text style={styles.valorCorrente}>{reais(corrente.valor)}</Text>
+              <Text style={styles.subCorrente}>
+                vence em {diaCurto(corrente.vencimento)} ·{" "}
+                {rotuloUnidade(corrente.unidade)}
+              </Text>
+              {(corrente.pixCopiaCola || corrente.linhaDigitavel) && (
+                <Botao
+                  titulo={
+                    corrente.pixCopiaCola ? "Copiar PIX" : "Copiar linha digitável"
+                  }
+                  variante="marca"
+                  onPress={() => copiar(corrente)}
+                  estilo={{ marginTop: 14 }}
+                />
+              )}
+              {corrente.urlBoleto && (
+                <Botao
+                  titulo="Abrir boleto"
+                  variante="outline"
+                  onPress={() => Linking.openURL(corrente.urlBoleto!)}
+                  estilo={{ marginTop: 8 }}
+                />
+              )}
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          !carregando ? (
+          !carregando && !corrente ? (
             <Vazio
               variante="hero"
-              icone="pacote"
+              icone="boleto"
               titulo="Nenhum boleto"
               texto="Quando a administração emitir a taxa condominial, ela aparece aqui."
             />
           ) : null
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const status = ROTULO[item.status];
-          const emAberto = item.status === "PENDENTE" || item.status === "VENCIDA";
           return (
             <>
+              {index === 0 && <Text style={styles.secao}>Anteriores</Text>}
               <ItemLista
-                titulo={nomeCompetencia(item.competencia)}
-                sub={`${reais(item.valor)} · vence ${diaCurto(item.vencimento)}`}
+                titulo={mesCompetencia(item.competencia)}
+                sub={
+                  item.pagoEm
+                    ? `paga em ${diaCurto(item.pagoEm)}`
+                    : `vence em ${diaCurto(item.vencimento)}`
+                }
                 media={{
-                  icone: "pacote",
+                  icone: "boleto",
                   corFundo:
                     item.status === "VENCIDA"
                       ? theme.colors.alertaBg
@@ -119,22 +174,13 @@ export function CobrancasScreen({ navigation }: Props) {
                       ? theme.colors.alerta
                       : theme.colors.marca,
                 }}
-                direita={<Selo texto={status.texto} tom={status.tom} />}
+                direita={
+                  <View style={styles.direita}>
+                    <Text style={styles.valorLinha}>{reais(item.valor)}</Text>
+                    <Selo texto={status.texto} tom={status.tom} />
+                  </View>
+                }
               />
-              {emAberto && (item.pixCopiaCola || item.linhaDigitavel) && (
-                <Botao
-                  titulo={item.pixCopiaCola ? "Copiar PIX" : "Copiar código de barras"}
-                  variante="outline"
-                  onPress={() => copiar(item)}
-                />
-              )}
-              {emAberto && item.urlBoleto && (
-                <Botao
-                  titulo="Abrir boleto"
-                  variante="outline"
-                  onPress={() => Linking.openURL(item.urlBoleto!)}
-                />
-              )}
             </>
           );
         }}
@@ -142,3 +188,42 @@ export function CobrancasScreen({ navigation }: Props) {
     </Tela>
   );
 }
+
+const styles = StyleSheet.create({
+  cardCorrente: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.card,
+    borderWidth: 2,
+    borderColor: theme.colors.acao,
+    padding: 18,
+    marginBottom: 6,
+  },
+  linhaTopo: { flexDirection: "row", alignItems: "center", gap: 10 },
+  tituloCorrente: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.text,
+  },
+  valorCorrente: {
+    fontSize: theme.font.hero,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginTop: 8,
+  },
+  subCorrente: {
+    fontSize: 13.5,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  secao: {
+    fontSize: 16.5,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginTop: 18,
+    marginBottom: 2,
+  },
+  direita: { alignItems: "flex-end", gap: 4 },
+  valorLinha: { fontSize: 14.5, fontWeight: "700", color: theme.colors.text },
+});

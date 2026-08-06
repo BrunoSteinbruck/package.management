@@ -12,6 +12,7 @@ import type {
   JwtPayload,
   ModuloCondominio,
   SalvarModulosDto,
+  UnidadePanorama,
 } from "@pacotes/shared";
 import { MODULOS_CONDOMINIO } from "@pacotes/shared";
 import { registrarAcao } from "../common/auditoria.util";
@@ -160,6 +161,66 @@ export class CadastroService {
       unidadesComApp,
       percentual: totalUnidades > 0 ? Math.round((unidadesComApp / totalUnidades) * 100) : 0,
     };
+  }
+
+  /**
+   * A tabela de unidades do painel: quem é o titular, quantos estão vinculados
+   * e se alguém da unidade tem o app.
+   *
+   * Mesma trinca de queries de `adocao()` (unidades no tenant, vínculos ativos
+   * pela coluna, devices por morador), só que devolvendo linha a linha em vez
+   * de só o total. Continuam três queries independentes do tamanho do prédio:
+   * `include` de morador dentro de cada unidade viraria N+1.
+   */
+  async panoramaUnidades(user: JwtPayload): Promise<UnidadePanorama[]> {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    const unidades = await this.prisma.withTenant(condominioId, (tx) =>
+      tx.unidade.findMany({
+        select: { id: true, bloco: true, identificacao: true },
+        orderBy: [{ bloco: "asc" }, { identificacao: "asc" }],
+      }),
+    );
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { condominioId, status: "ATIVO" },
+      select: {
+        unidadeId: true,
+        moradorId: true,
+        morador: { select: { nome: true, telefone: true } },
+      },
+      orderBy: { criadoEm: "asc" },
+    });
+    const comApp = new Set(
+      (
+        await this.prisma.device.findMany({
+          where: { moradorId: { in: vinculos.map((v) => v.moradorId) } },
+          select: { moradorId: true },
+        })
+      ).map((d) => d.moradorId),
+    );
+
+    const porUnidade = new Map<string, typeof vinculos>();
+    for (const v of vinculos) {
+      const lista = porUnidade.get(v.unidadeId);
+      if (lista) lista.push(v);
+      else porUnidade.set(v.unidadeId, [v]);
+    }
+
+    return unidades.map((u) => {
+      const dela = porUnidade.get(u.id) ?? [];
+      return {
+        unidadeId: u.id,
+        bloco: u.bloco,
+        identificacao: u.identificacao,
+        // O primeiro a ser vinculado é o titular. Não há coluna que diga isso,
+        // e inventar uma para uma tabela de leitura não se paga.
+        titular: dela[0]
+          ? { nome: dela[0].morador.nome, telefone: dela[0].morador.telefone }
+          : null,
+        vinculados: dela.length,
+        temApp: dela.some((v) => comApp.has(v.moradorId)),
+      };
+    });
   }
 
   /** Equipe do condomínio (porteiros, apoio, síndicos). Tabela global, escopada pela coluna. */
@@ -386,5 +447,38 @@ export class CadastroService {
       }),
     );
     return { aprovado: true };
+  }
+
+  /**
+   * Nega o pedido de vínculo. Espelha `aprovarVinculo`, inclusive o
+   * `withTenant` próprio para o registro de auditoria.
+   *
+   * Vai para REMOVIDO e não some da tabela: quem pediu e foi recusado é
+   * justamente o caso em que alguém vai perguntar depois o que aconteceu. E
+   * como o par (morador, unidade) é único, apagar a linha e recriá-la no
+   * pedido seguinte perderia essa história.
+   *
+   * Recusar não é banir: a importação por CSV e o convite reabrem o vínculo
+   * como ATIVO no mesmo `upsert` de sempre.
+   */
+  async recusarVinculo(user: JwtPayload, vinculoId: string) {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+    const { count } = await this.prisma.vinculo.updateMany({
+      where: { id: vinculoId, status: "PENDENTE", condominioId },
+      data: { status: "REMOVIDO", aprovadoPorId: user.sub },
+    });
+    if (count === 0) {
+      throw new ForbiddenException("Vínculo não encontrado ou já tratado");
+    }
+    await this.prisma.withTenant(condominioId, (tx) =>
+      registrarAcao(tx, {
+        condominioId,
+        usuarioId: user.sub,
+        acao: "cadastro.recusar_vinculo",
+        detalhe: { vinculoId },
+      }),
+    );
+    return { recusado: true };
   }
 }

@@ -41,14 +41,20 @@ export function ComunicadosScreen({ navigation }: Props) {
 
   return (
     <Tela comInsetTop>
-      <HeaderTela titulo="Comunicados" aoVoltar={() => navigation.goBack()} />
-      <View style={{ paddingHorizontal: theme.spacing.lg, paddingBottom: 12 }}>
-        <Botao
-          titulo="Novo comunicado"
-          icone="sino"
-          onPress={() => navigation.navigate("NovoComunicado")}
-        />
-      </View>
+      <HeaderTela
+        titulo="Comunicados"
+        aoVoltar={() => navigation.goBack()}
+        // No cabeçalho e não em cima da lista: publicar é ocasional, ler o
+        // alcance do que já saiu é o que o síndico faz toda vez que entra.
+        direita={
+          <Botao
+            titulo="Novo"
+            icone="mais"
+            onPress={() => navigation.navigate("NovoComunicado")}
+            estilo={{ minHeight: 40, paddingHorizontal: 14 }}
+          />
+        }
+      />
       <FlatList
         data={itens}
         keyExtractor={(c) => c.id}
@@ -64,7 +70,7 @@ export function ComunicadosScreen({ navigation }: Props) {
           !carregando ? (
             <Vazio
               variante="hero"
-              icone="sino"
+              icone="megafone"
               titulo="Nenhum comunicado"
               texto="Publique um aviso e ele chega no app de todo mundo do condomínio."
             />
@@ -75,7 +81,7 @@ export function ComunicadosScreen({ navigation }: Props) {
             titulo={item.titulo}
             sub={`${dataCurta(item.criadoEm)} · ${alcanceLido(item)}`}
             media={{
-              icone: "sino",
+              icone: "megafone",
               corFundo: theme.colors.okBg,
               corIcone: theme.colors.marca,
             }}

@@ -32,6 +32,22 @@ export function normalizarTelefone(bruto: string): string {
   return comPais ? digitos.slice(2) : digitos;
 }
 
+/**
+ * O inverso de `normalizarTelefone`, só para a tela: "41988880001" vira
+ * "(41) 98888-0001". Guarda-se só dígitos no banco, e era assim que eles
+ * chegavam ao painel, colados, para o síndico ligar lendo de trás para frente.
+ *
+ * Só formata o que tem 10 ou 11 dígitos, que é DDD + número daqui. O resto
+ * volta como veio: o schema aceita até 14, e picotar um número de 12 no molde
+ * brasileiro produziria um telefone que ninguém consegue discar.
+ */
+export function formatarTelefone(bruto: string): string {
+  const d = normalizarTelefone(bruto);
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return bruto;
+}
+
 export const TelefoneSchema = z
   .string()
   .max(24)
@@ -180,6 +196,21 @@ export const EmitirConviteSchema = z.object({
   unidadeId: z.string().uuid(),
 });
 export type EmitirConviteDto = z.infer<typeof EmitirConviteSchema>;
+
+/**
+ * Convidar familiar pelo telefone.
+ *
+ * Substituiu o código de 7 dias, que era uma credencial TRANSFERÍVEL: quem
+ * recebesse o texto encaminhado entrava na unidade, e por isso existia um teto
+ * de 5 convites vivos. Aqui o pedido nasce preso a um número e ainda passa
+ * pelo síndico, que é quem responde por quem tem acesso à unidade.
+ */
+export const ConvidarMoradorSchema = z.object({
+  unidadeId: z.string().uuid(),
+  nome: z.string().min(2).max(120).transform((s) => s.trim()),
+  telefone: TelefoneSchema,
+});
+export type ConvidarMoradorDto = z.infer<typeof ConvidarMoradorSchema>;
 
 export const RegistrarPacoteSchema = z.object({
   unidadeId: z.string().uuid(),
@@ -459,6 +490,10 @@ export type CriarVisitaDto = z.infer<typeof CriarVisitaSchema>;
 /** Opt-in de WhatsApp: só o próprio morador muda. */
 export const AlternarWhatsappSchema = z.object({ aceita: z.boolean() });
 export type AlternarWhatsappDto = z.infer<typeof AlternarWhatsappSchema>;
+
+/** Liga ou desliga o push do app para este morador. */
+export const AlternarPushSchema = z.object({ aceita: z.boolean() });
+export type AlternarPushDto = z.infer<typeof AlternarPushSchema>;
 
 // ----- Módulo Financeiro -----
 

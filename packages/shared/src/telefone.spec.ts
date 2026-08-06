@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizarTelefone, RequestOtpSchema } from "./dto";
+import { formatarTelefone, normalizarTelefone, RequestOtpSchema } from "./dto";
 
 /**
  * O `+55` que a pessoa digita naturalmente quebrava o login em silêncio: o
@@ -41,6 +41,29 @@ describe("normalização de telefone", () => {
     expect(normalizarTelefone("")).toBe("");
     expect(normalizarTelefone("abc")).toBe("");
     expect(normalizarTelefone("+55")).toBe("55");
+  });
+});
+
+describe("telefone na tela", () => {
+  it("celular e fixo ganham parênteses e traço", () => {
+    expect(formatarTelefone("51900000001")).toBe("(51) 90000-0001");
+    expect(formatarTelefone("4133334444")).toBe("(41) 3333-4444");
+  });
+
+  it("aceita o que vem com o país, porque normaliza antes", () => {
+    expect(formatarTelefone("+5551900000001")).toBe("(51) 90000-0001");
+  });
+
+  it("fora de 10 ou 11 dígitos volta como veio", () => {
+    // O schema aceita até 14. Picotar um de 12 no molde daqui produziria um
+    // telefone que ninguém consegue discar, então melhor mostrar cru.
+    expect(formatarTelefone("+34 91 123 4567 8")).toBe("+34 91 123 4567 8");
+    expect(formatarTelefone("123456789")).toBe("123456789");
+    expect(formatarTelefone("")).toBe("");
+  });
+
+  it("o DDD 55 continua sendo DDD, também na tela", () => {
+    expect(formatarTelefone("55999999999")).toBe("(55) 99999-9999");
   });
 });
 

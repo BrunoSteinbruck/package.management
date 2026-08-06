@@ -25,6 +25,7 @@ function hojeNoCondominio(timezone: string): Date {
 type LinhaVisita = {
   id: string;
   nomeVisitante: string;
+  codigo: string | null;
   documento: string | null;
   dataPrevista: Date;
   janelaInicio: string | null;
@@ -34,10 +35,23 @@ type LinhaVisita = {
   unidade: { bloco: string | null; identificacao: string };
 };
 
+/**
+ * Código legível de quatro dígitos, no padrão "V-4821".
+ *
+ * Aleatório e sem sequência: numerar por condomínio deixaria o código dizer
+ * quantas visitas o prédio recebeu. Sem unicidade garantida de propósito, e é
+ * seguro: a portaria já vê nome, unidade e quem autorizou, e a colisão só
+ * poderia acontecer no MESMO dia, no MESMO condomínio, entre 9 mil valores.
+ */
+function gerarCodigoVisita(): string {
+  return `V-${String(Math.floor(1000 + Math.random() * 9000))}`;
+}
+
 function paraMorador(v: LinhaVisita): VisitaMorador {
   return {
     id: v.id,
     nomeVisitante: v.nomeVisitante,
+    codigo: v.codigo,
     // A coluna é DATE: fatiar o ISO evita o fuso do servidor empurrar a
     // visita para o dia anterior, que é o bug clássico de data sem hora.
     dataPrevista: v.dataPrevista.toISOString().slice(0, 10),
@@ -85,6 +99,7 @@ export class VisitasService {
           unidadeId: dto.unidadeId,
           moradorId,
           nomeVisitante: dto.nomeVisitante.trim(),
+          codigo: gerarCodigoVisita(),
           documento: dto.documento?.trim() || null,
           dataPrevista: new Date(`${dto.dataPrevista}T00:00:00.000Z`),
           janelaInicio: dto.janelaInicio ?? null,

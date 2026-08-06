@@ -191,6 +191,19 @@ model Morador {
   // é false e quem liga é o morador, no app. Só vale para quem NÃO tem o
   // app instalado no aparelho em uso; com app, o canal é o push.
   aceitaWhatsapp Boolean @default(false) @map("aceita_whatsapp")
+  /**
+   * Push no app. Nasce LIGADO, ao contrário do WhatsApp: avisar que a
+   * encomenda chegou é o serviço que o condomínio contratou, não abordagem de
+   * terceiro, e o morador já concedeu a permissão do sistema ao instalar.
+   * Desligar aqui é o mesmo "silencia isto" do interruptor do celular, só que
+   * preso à conta e não ao aparelho — quem troca de telefone não recomeça
+   * recebendo o que tinha desligado.
+   *
+   * Não confundir com adoção: o Device continua registrado, então a unidade
+   * segue contando como "no app" para o síndico. Desligar aviso não é
+   * desinstalar.
+   */
+  aceitaPush Boolean @default(true) @map("aceita_push")
   criadoEm DateTime @default(now()) @map("criado_em")
 
   vinculos           Vinculo[]
@@ -562,6 +575,11 @@ model Visita {
   moradorId    String       @map("morador_id") @db.Uuid
   nomeVisitante String      @map("nome_visitante")
   documento    String?
+  // Código curto que o morador passa para quem vem ("V-4821"). Não é senha:
+  // serve para a portaria achar a linha certa na lista do dia quando o nome
+  // vem abreviado ou escrito de outro jeito. Opcional porque as visitas
+  // criadas antes da coluna não têm.
+  codigo       String?      @db.VarChar(12)
   // Data prevista (sem hora): a janela opcional é o intervalo do dia.
   dataPrevista DateTime     @map("data_prevista") @db.Date
   janelaInicio String?      @map("janela_inicio")

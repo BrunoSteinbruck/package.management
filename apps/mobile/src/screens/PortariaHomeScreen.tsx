@@ -19,6 +19,7 @@ import { drenarFila, tamanhoFila } from "../api/offlineQueue";
 import { relatarDrenagem } from "../api/relatoDrenagem";
 import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
+import { iniciais } from "../api/types";
 import { BotaoModulo } from "../components/ui";
 import { Icone } from "../components/icones";
 import { MODULOS_PORTARIA, modulosDe } from "../modulos";
@@ -36,11 +37,6 @@ type Props = NativeStackScreenProps<PortariaStackParamList, "Home"> & {
   perfil: JwtPayload;
   aoSair: () => void;
 };
-
-function iniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/);
-  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase();
-}
 
 export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
   const insets = useSafeAreaInsets();

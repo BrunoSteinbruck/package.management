@@ -152,6 +152,9 @@ button.outline {
   cursor: pointer;
 }
 button.outline:active { transform: scale(0.98); }
+/* Mesma regra do .acao: sem isto, o botão desabilitado durante a requisição
+   continuava com cara de clicável. */
+button.outline:disabled { opacity: 0.45; cursor: default; }
 
 input, textarea {
   border: 1px solid var(--borda);
@@ -193,6 +196,9 @@ td .unidade { font-weight: 700; }
 .selo.ok { background: var(--ok-bg); color: var(--ok); }
 .selo.alerta { background: var(--alerta-bg); color: var(--alerta); }
 .selo.info { background: var(--ok-bg); color: var(--marca); }
+/* Ausência de estado, não estado ruim. `info` e `ok` são os dois verdes e
+   ficavam indistinguíveis lado a lado ("no app" x "sem app"). */
+.selo.neutro { background: var(--divisor); color: var(--texto-3); }
 
 .metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 18px; }
 .metrica { background: var(--surface); border: 1px solid var(--borda); border-radius: 18px; padding: 18px 20px; }

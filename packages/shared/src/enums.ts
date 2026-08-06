@@ -85,4 +85,5 @@ export const CATEGORIAS_OCORRENCIA = [
   "Vazamento",
   "Elevador",
   "Portão",
+  "Outro",
 ] as const;

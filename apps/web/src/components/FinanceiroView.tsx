@@ -5,6 +5,8 @@ import {
   cpfCnpjValido,
   formatarCpfCnpj,
   lerValorEmReais,
+  mesAno,
+  rotuloUnidade,
   type CobrancaGestor,
   type ConfigFinanceiro,
   type ResumoFinanceiro,
@@ -20,11 +22,6 @@ function prontaParaCobrar(t: TaxaLinha): boolean {
     (t.valorMensal ?? 0) > 0 && !!t.responsavelNome && !!t.responsavelCpfCnpj
   );
 }
-
-const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
 
 const STATUS: Record<StatusCobranca, { rotulo: string; selo: string }> = {
   PENDENTE: { rotulo: "em aberto", selo: "info" },
@@ -44,11 +41,6 @@ function somarMeses(competencia: string, n: number): string {
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
 }
 
-function nomeCompetencia(c: string): string {
-  const [ano, mes] = c.split("-").map(Number);
-  return `${MESES[mes - 1]}/${ano}`;
-}
-
 function diaCurto(iso: string): string {
   const [, mes, dia] = iso.split("-");
   return `${dia}/${mes}`;
@@ -56,10 +48,6 @@ function diaCurto(iso: string): string {
 
 function reais(v: number): string {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function rotulo(u: CobrancaGestor["unidade"]): string {
-  return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
 }
 
 export function FinanceiroView() {
@@ -109,7 +97,7 @@ export function FinanceiroView() {
   async function gerar() {
     if (
       !confirm(
-        `Gerar as cobranças de ${nomeCompetencia(competencia)}? Unidades que já têm cobrança neste mês são puladas.`,
+        `Gerar as cobranças de ${mesAno(competencia)}? Unidades que já têm cobrança neste mês são puladas.`,
       )
     )
       return;
@@ -170,7 +158,7 @@ export function FinanceiroView() {
     // não avisava, e o número errado seguia na tela parecendo salvo.
     if (valorMensal === null) {
       setErro(
-        `Valor não reconhecido em ${rotulo(atual.unidade)}: "${mudanca.valor}". ` +
+        `Valor não reconhecido em ${rotuloUnidade(atual.unidade)}: "${mudanca.valor}". ` +
           "Escreva como 450,50 ou 1.500,00.",
       );
       return;
@@ -184,7 +172,7 @@ export function FinanceiroView() {
     // vindo do zod fala de "taxas.0.responsavelCpfCnpj", que não diz nada
     // para quem está preenchendo uma tabela.
     if (documento && !cpfCnpjValido(documento)) {
-      setErro(`CPF/CNPJ inválido em ${rotulo(atual.unidade)}.`);
+      setErro(`CPF/CNPJ inválido em ${rotuloUnidade(atual.unidade)}.`);
       return;
     }
 
@@ -295,7 +283,7 @@ export function FinanceiroView() {
                 textAlign: "center",
               }}
             >
-              {nomeCompetencia(competencia)}
+              {mesAno(competencia)}
             </span>
             <button
               className="chip"
@@ -346,7 +334,7 @@ export function FinanceiroView() {
               <tbody>
                 {cobrancas.map((c) => (
                   <tr key={c.id}>
-                    <td className="unidade">{rotulo(c.unidade)}</td>
+                    <td className="unidade">{rotuloUnidade(c.unidade)}</td>
                     <td>{reais(c.valor)}</td>
                     <td>
                       {diaCurto(c.vencimento)}
@@ -367,7 +355,7 @@ export function FinanceiroView() {
             </table>
             {cobrancas.length === 0 && (
               <p className="aviso">
-                Nenhuma cobrança em {nomeCompetencia(competencia)}. Defina o
+                Nenhuma cobrança em {mesAno(competencia)}. Defina o
                 valor por unidade e gere as cobranças do mês.
               </p>
             )}
@@ -397,7 +385,7 @@ export function FinanceiroView() {
             <tbody>
               {taxas.map((t) => (
                 <tr key={t.unidadeId}>
-                  <td className="unidade">{rotulo(t.unidade)}</td>
+                  <td className="unidade">{rotuloUnidade(t.unidade)}</td>
                   <td>
                     <input
                       defaultValue={t.valorMensal ?? ""}

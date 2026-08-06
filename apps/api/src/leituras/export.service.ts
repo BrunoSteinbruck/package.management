@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { TipoMedidor } from "@pacotes/shared";
+import { mesAno, type TipoMedidor } from "@pacotes/shared";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 
@@ -29,29 +29,8 @@ export interface DadosExport {
   meses: MesExport[];
 }
 
-const MESES_PT = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-];
-
 function nomeTipo(tipo: TipoMedidor): string {
   return tipo === "AGUA" ? "Água" : "Gás";
-}
-
-/** "2026-07" vira "Julho/2026" nos cabeçalhos; a chave técnica fica nos dados. */
-function nomeCompetencia(competencia: string): string {
-  const [ano, mes] = competencia.split("-").map(Number);
-  return `${MESES_PT[mes - 1]}/${ano}`;
 }
 
 const fmtNumero = new Intl.NumberFormat("pt-BR", {
@@ -83,7 +62,7 @@ export class ExportService {
       ];
       // Título acima do cabeçalho: insere linha e some com a duplicata do header.
       ws.spliceRows(1, 0, [
-        `Consumo de ${nomeTipo(dados.tipo).toLowerCase()} - ${nomeCompetencia(mes.competencia)} - ${dados.condominio}`,
+        `Consumo de ${nomeTipo(dados.tipo).toLowerCase()} - ${mesAno(mes.competencia)} - ${dados.condominio}`,
       ]);
       ws.mergeCells("A1:E1");
       ws.getRow(1).font = { bold: true, size: 13 };
@@ -167,7 +146,7 @@ export class ExportService {
       if (idx > 0) doc.addPage();
       doc.font("Helvetica-Bold").fontSize(15);
       doc.text(
-        `Consumo de ${nomeTipo(dados.tipo).toLowerCase()} - ${nomeCompetencia(mes.competencia)}`,
+        `Consumo de ${nomeTipo(dados.tipo).toLowerCase()} - ${mesAno(mes.competencia)}`,
         40,
         doc.y,
       );

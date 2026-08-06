@@ -20,7 +20,9 @@ export type NomeIcone =
   | "medidor"
   | "gota"
   | "chama"
-  | "boleto";
+  | "boleto"
+  | "megafone"
+  | "alerta";
 
 const DESENHOS: Record<NomeIcone, React.ReactNode> = {
   camera: (
@@ -55,7 +57,22 @@ const DESENHOS: Record<NomeIcone, React.ReactNode> = {
     </>
   ),
   mais: <Path d="M12 5v14M5 12h14" />,
+  // Comunicado é da administração para todos; aviso é da portaria para uma
+  // unidade. Enquanto os dois usavam o sino, as duas linhas do menu eram o
+  // mesmo desenho e a diferença entre elas só existia no texto.
+  megafone: (
+    <>
+      <Path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z" />
+      <Path d="M17 9a4 4 0 0 1 0 6" />
+    </>
+  ),
   escudo: <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+  alerta: (
+    <>
+      <Path d="M12 3l10 18H2z" />
+      <Path d="M12 10v4M12 17.5v.5" />
+    </>
+  ),
   casa: (
     <>
       <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />

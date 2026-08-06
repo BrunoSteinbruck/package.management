@@ -11,14 +11,16 @@ import {
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type {
-  ConsumoLinha,
-  ConsumosResposta,
-  TipoMedidor,
+import {
+  mesAno,
+  type ConsumoLinha,
+  type ConsumosResposta,
+  type TipoMedidor,
 } from "@pacotes/shared";
 import { apiFetch, API_URL, urlFoto } from "../api/client";
+import { rotuloUnidade } from "../api/types";
 import { competenciaAtual } from "../api/estadoLeituras";
-import { Chip, HeaderTela, Selo, Tela, Vazio } from "../components/ui";
+import { Chip, HeaderTela, Nota, Selo, Tela, Vazio } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
 import type { SindicoStackParamList } from "../navigation";
@@ -26,10 +28,6 @@ import type { SindicoStackParamList } from "../navigation";
 type Props = NativeStackScreenProps<SindicoStackParamList, "Consumos">;
 
 const NOMES: Record<TipoMedidor, string> = { AGUA: "Água", GAS: "Gás" };
-const MESES_PT = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
 
 function somarMeses(competencia: string, n: number): string {
   const [ano, mes] = competencia.split("-").map(Number);
@@ -37,11 +35,6 @@ function somarMeses(competencia: string, n: number): string {
   const novoAno = Math.floor(total / 12);
   const novoMes = (total % 12) + 1;
   return `${novoAno}-${String(novoMes).padStart(2, "0")}`;
-}
-
-function nomeCompetencia(competencia: string): string {
-  const [ano, mes] = competencia.split("-").map(Number);
-  return `${MESES_PT[mes - 1]}/${ano}`;
 }
 
 function reais(n: number): string {
@@ -99,13 +92,13 @@ export function ConsumosScreen({ navigation }: Props) {
   function abrirExportar() {
     Alert.alert("Exportar relatório", `${NOMES[tipo]}: qual período?`, [
       { text: "Cancelar", style: "cancel" },
-      { text: nomeCompetencia(competencia), onPress: () => escolherFormato("mes") },
+      { text: mesAno(competencia), onPress: () => escolherFormato("mes") },
       { text: "Todos os meses", onPress: () => escolherFormato("geral") },
     ]);
   }
 
   function escolherFormato(escopo: "mes" | "geral") {
-    const periodo = escopo === "mes" ? nomeCompetencia(competencia) : "todos os meses";
+    const periodo = escopo === "mes" ? mesAno(competencia) : "todos os meses";
     Alert.alert("Exportar relatório", `${NOMES[tipo]}, ${periodo}: qual formato?`, [
       { text: "Cancelar", style: "cancel" },
       { text: "Excel", onPress: () => exportar("xlsx", escopo) },
@@ -136,9 +129,7 @@ export function ConsumosScreen({ navigation }: Props) {
         renderItem={({ item: l }) => (
           <View style={styles.linha}>
             <View style={{ width: 62 }}>
-              <Text style={styles.unidade}>
-                {l.bloco ? `${l.bloco} ${l.identificacao}` : l.identificacao}
-              </Text>
+              <Text style={styles.unidade}>{rotuloUnidade(l)}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.leituras}>
@@ -176,7 +167,7 @@ export function ConsumosScreen({ navigation }: Props) {
               variante="hero"
               icone="medidor"
               titulo="Sem leituras neste mês"
-              texto={`Nenhuma leitura de ${NOMES[tipo].toLowerCase()} em ${nomeCompetencia(competencia)}.`}
+              texto={`Nenhuma leitura de ${NOMES[tipo].toLowerCase()} em ${mesAno(competencia)}.`}
             />
           ) : null
         }
@@ -195,7 +186,7 @@ export function ConsumosScreen({ navigation }: Props) {
             >
               <Icone nome="voltar" tamanho={18} cor={theme.colors.text} traco={2.2} />
             </Pressable>
-            <Text style={styles.mesTexto}>{nomeCompetencia(competencia)}</Text>
+            <Text style={styles.mesTexto}>{mesAno(competencia)}</Text>
             <Pressable
               style={[styles.setaMes, !podeAvancar && { opacity: 0.3 }]}
               disabled={!podeAvancar}
@@ -234,6 +225,14 @@ export function ConsumosScreen({ navigation }: Props) {
         </View>
           </>
         }
+        ListFooterComponent={
+          dados && dados.linhas.length > 0 ? (
+            <Nota
+              texto="Leituras do zelador, com foto. A planilha completa sai pelo Exportar, aqui ou no painel web."
+              estilo={{ marginTop: 18 }}
+            />
+          ) : null
+        }
       />
 
       <Modal
@@ -251,9 +250,7 @@ export function ConsumosScreen({ navigation }: Props) {
                 resizeMode="contain"
               />
               <Text style={styles.fotoLegenda}>
-                {fotoAberta.bloco
-                  ? `${fotoAberta.bloco} ${fotoAberta.identificacao}`
-                  : fotoAberta.identificacao}
+                {rotuloUnidade(fotoAberta)}
                 {" · "}
                 {NOMES[tipo]} {fotoAberta.atual.valor.toLocaleString("pt-BR")}
                 {" · lida por "}

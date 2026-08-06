@@ -5,8 +5,10 @@
 // api.ts     formato das respostas (o "fio")
 // feed.ts    a caixa de entrada do morador, em um formato só
 // perfil.ts  identidade da sessão e o perfil que decide a experiência
+// competencia.ts  como o mês de referência é escrito na tela
 
 export * from "./enums";
+export * from "./competencia";
 export * from "./documento";
 export * from "./erro-api";
 export * from "./dto";

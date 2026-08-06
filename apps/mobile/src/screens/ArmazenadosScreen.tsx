@@ -16,7 +16,7 @@ import {
   type PacoteArmazenado,
   type Unidade,
 } from "../api/types";
-import { HeaderTela, ItemLista, Selo, Tela, Vazio } from "../components/ui";
+import { HeaderTela, ItemLista, Nota, Selo, Tela, Vazio } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
 
@@ -75,7 +75,7 @@ export function ArmazenadosScreen({
   return (
     <Tela comInsetTop>
       <HeaderTela
-        titulo={`Na portaria (${total})`}
+        titulo="Encomendas na portaria"
         aoVoltar={() => navigation.goBack()}
       />
       <View style={{ paddingHorizontal: theme.spacing.lg, flex: 1 }}>
@@ -99,9 +99,20 @@ export function ArmazenadosScreen({
           )}
         </View>
 
+        {/* O total sai do título e vira bloco próprio: no título ele competia
+            com o nome da tela e ficava pequeno demais para ser lido de longe,
+            que é como o porteiro olha o balcão. */}
+        <View style={styles.contagem}>
+          <Text style={styles.contagemNumero}>{total}</Text>
+          <Text style={styles.contagemRotulo}>na portaria</Text>
+        </View>
+
         <FlatList
           data={itens}
           keyExtractor={(p) => p.id}
+          // `flex: 1` explícito: com a Nota como irmã embaixo, sem isto a
+          // lista cresceria com o conteúdo e empurraria a dica para fora.
+          style={{ flex: 1 }}
           contentContainerStyle={{ gap: 10, paddingVertical: 14 }}
           refreshControl={
             <RefreshControl
@@ -130,18 +141,25 @@ export function ArmazenadosScreen({
             const dias = diasNaPortaria(item.recebidoEm);
             return (
               <ItemLista
-                titulo={rotuloUnidade(item.unidade)}
-                sub={`${item.transportadora ?? "Sem transportadora"}${
+                media={{
+                  icone: "pacote",
+                  corFundo: theme.colors.placeholder,
+                  corIcone: theme.colors.textMuted,
+                }}
+                titulo={item.transportadora ?? "Sem transportadora"}
+                sub={`${rotuloUnidade(item.unidade)}${
                   item.localArmazenamento
-                    ? ` · Prateleira ${item.localArmazenamento}`
+                    ? ` · prateleira ${item.localArmazenamento}`
                     : ""
                 }`}
                 detalhe={item.codigoRastreio ?? undefined}
+                // Só o atraso vira selo. Com "hoje" e "1 dia" marcados também,
+                // a coluna inteira ficava colorida e o que precisa de ação se
+                // perdia no meio do que está normal.
                 direita={
-                  <Selo
-                    tom={dias >= 3 ? "alerta" : "ok"}
-                    texto={dias === 0 ? "hoje" : `${dias} dia${dias > 1 ? "s" : ""}`}
-                  />
+                  dias >= 3 ? (
+                    <Selo tom="alerta" texto={`${dias} dias`} />
+                  ) : undefined
                 }
                 chevron={!!aoTocarPacote}
                 onPress={
@@ -151,6 +169,16 @@ export function ArmazenadosScreen({
             );
           }}
         />
+
+        {/* Fora da FlatList: a dica precisa estar visível já na primeira tela,
+            e como rodapé da lista só apareceria depois de rolar as 38. */}
+        {aoTocarPacote && (
+          <Nota
+            icone="alerta"
+            texto="Toque em uma encomenda para abrir a retirada da unidade"
+            estilo={{ marginBottom: 14 }}
+          />
+        )}
       </View>
     </Tela>
   );
@@ -181,4 +209,16 @@ const styles = StyleSheet.create({
   },
   botaoQrTexto: { color: "#FFF", fontSize: 15, fontWeight: "600" },
   inputBusca: { flex: 1, fontSize: 16, color: theme.colors.text },
+  contagem: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 10,
+    marginTop: 12,
+  },
+  contagemNumero: { fontSize: 28, fontWeight: "700", color: theme.colors.text },
+  contagemRotulo: {
+    fontSize: 14.5,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
+  },
 });

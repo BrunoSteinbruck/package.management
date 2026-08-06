@@ -70,19 +70,19 @@ export const MODULOS_PORTARIA: readonly Modulo<
     slot: "secundario",
   },
   {
+    id: "VisitasHoje",
+    titulo: "Visitas",
+    icone: "pessoa",
+    perfis: ["porteiro", "sindico"],
+    slot: "secundario",
+    flag: "visitantes",
+  },
+  {
     id: "Leituras",
     titulo: "Leituras de água e gás",
     icone: "medidor",
     perfis: ["porteiro"],
     slot: "secundario",
-  },
-  {
-    id: "VisitasHoje",
-    titulo: "Visitas de hoje",
-    icone: "pessoa",
-    perfis: ["porteiro", "sindico"],
-    slot: "secundario",
-    flag: "visitantes",
   },
 ];
 
@@ -122,7 +122,7 @@ export const MODULOS_SINDICO: readonly Modulo<
   {
     id: "Comunicados",
     titulo: "Comunicados",
-    icone: "sino",
+    icone: "megafone",
     perfis: ["sindico"],
     slot: "secundario",
     flag: "comunicados",
@@ -183,6 +183,14 @@ export const MODULOS_MORADOR: readonly Modulo<
     perfis: ["morador"],
     slot: "secundario",
     flag: "documentos",
+  },
+  {
+    id: "Comunicados",
+    titulo: "Comunicados",
+    icone: "megafone",
+    perfis: ["morador"],
+    slot: "secundario",
+    flag: "comunicados",
   },
 ];
 

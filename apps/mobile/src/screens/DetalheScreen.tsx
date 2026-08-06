@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { apiFetch, urlFoto } from "../api/client";
 import { dataCurta, type DetalhePacote } from "../api/types";
-import { Card, HeaderTela } from "../components/ui";
+import { Card, HeaderTela, Nota } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
 import type { MoradorStackParamList } from "../navigation";
@@ -135,12 +135,12 @@ export function DetalheScreen({ navigation, route }: Props) {
               )}
             </Card>
 
-            <View style={styles.nota}>
-              <Icone nome="escudo" tamanho={20} cor={theme.colors.ok} />
-              <Text style={styles.notaTexto}>
-                Este registro com fotos e horários vale como comprovante de entrega.
-              </Text>
-            </View>
+            <Nota
+              icone="escudo"
+              corIcone={theme.colors.ok}
+              texto="Este registro com fotos e horários vale como comprovante de entrega."
+              estilo={{ marginTop: 14 }}
+            />
           </>
         )}
       </ScrollView>
@@ -189,14 +189,4 @@ const styles = StyleSheet.create({
   linhaVertical: { flex: 1, width: 2.5, backgroundColor: theme.colors.toggleOff, marginTop: 4 },
   eventoTitulo: { fontSize: 16, fontWeight: "700", color: theme.colors.text },
   eventoSub: { fontSize: 13.5, color: theme.colors.textSecondary, marginTop: 2 },
-  nota: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: theme.colors.notaBg,
-    borderRadius: theme.radius.card,
-    padding: 14,
-    marginTop: 14,
-  },
-  notaTexto: { flex: 1, fontSize: 13.5, color: theme.colors.textSecondary, fontWeight: "500" },
 });

@@ -7,12 +7,13 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MinhaUnidade } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { rotuloUnidade } from "../api/types";
-import { Botao, Chip, HeaderTela, Kicker, Tela } from "../components/ui";
+import { Botao, Chip, HeaderTela, Kicker, Nota, Tela } from "../components/ui";
 import { theme } from "../theme";
 import type { MoradorStackParamList } from "../navigation";
 
@@ -38,6 +39,7 @@ export function NovaVisitaScreen({ navigation }: Props) {
   const [nome, setNome] = useState("");
   const [documento, setDocumento] = useState("");
   const [data, setData] = useState(diaISO(0));
+  const [escolhendoData, setEscolhendoData] = useState(false);
   const [hora, setHora] = useState("");
   const [enviando, setEnviando] = useState(false);
 
@@ -80,9 +82,14 @@ export function NovaVisitaScreen({ navigation }: Props) {
     }
   }
 
-  // Três dias bastam: visita combinada para semana que vem se autoriza na
-  // véspera, e um seletor de calendário completo custaria uma dependência.
-  const dias = [diaISO(0), diaISO(1), diaISO(2)];
+  // Hoje e amanhã cobrem a visita combinada por telefone; o resto do mês fica
+  // atrás de "Escolher data…". Antes eram três chips fixos e ponto: quem
+  // recebia visita na semana seguinte não tinha como autorizar.
+  //
+  // Sem calendário nativo de propósito: `@react-native-community/datetimepicker`
+  // é módulo nativo, e uma dependência nova custa um build novo nas lojas por
+  // uma tela que a fita de dias resolve.
+  const maisDias = Array.from({ length: 28 }, (_, i) => diaISO(i + 2));
 
   return (
     <Tela comInsetTop>
@@ -114,7 +121,7 @@ export function NovaVisitaScreen({ navigation }: Props) {
             </>
           )}
 
-          <Kicker>Quem vai visitar</Kicker>
+          <Kicker>Nome de quem vem</Kicker>
           <TextInput
             style={styles.campo}
             placeholder="Nome completo"
@@ -125,16 +132,49 @@ export function NovaVisitaScreen({ navigation }: Props) {
           />
 
           <Kicker>Quando</Kicker>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {dias.map((d, i) => (
-              <Chip
-                key={d}
-                rotulo={i === 0 ? "Hoje" : i === 1 ? "Amanhã" : rotuloDia(d)}
-                ativo={data === d}
-                onPress={() => setData(d)}
-              />
-            ))}
-          </ScrollView>
+          <View style={styles.linhaChips}>
+            <Chip
+              rotulo="Hoje"
+              ativo={data === diaISO(0)}
+              onPress={() => {
+                setData(diaISO(0));
+                setEscolhendoData(false);
+              }}
+            />
+            <Chip
+              rotulo="Amanhã"
+              ativo={data === diaISO(1)}
+              onPress={() => {
+                setData(diaISO(1));
+                setEscolhendoData(false);
+              }}
+            />
+            <Chip
+              rotulo={
+                escolhendoData || (data !== diaISO(0) && data !== diaISO(1))
+                  ? rotuloDia(data)
+                  : "Escolher data…"
+              }
+              ativo={data !== diaISO(0) && data !== diaISO(1)}
+              onPress={() => setEscolhendoData((v) => !v)}
+            />
+          </View>
+          {escolhendoData && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.fitaDias}
+            >
+              {maisDias.map((d) => (
+                <Chip
+                  key={d}
+                  rotulo={rotuloDia(d)}
+                  ativo={data === d}
+                  onPress={() => setData(d)}
+                />
+              ))}
+            </ScrollView>
+          )}
 
           <Kicker>A partir de que horas (opcional)</Kicker>
           <TextInput
@@ -156,16 +196,20 @@ export function NovaVisitaScreen({ navigation }: Props) {
             onChangeText={setDocumento}
             maxLength={40}
           />
-          <Text style={styles.nota}>
+          <Text style={styles.notaDocumento}>
             O documento fica visível só para a portaria e é apagado depois de
             90 dias.
           </Text>
 
           <Botao
-            titulo="Autorizar"
+            titulo="Autorizar e gerar código"
             onPress={autorizar}
             carregando={enviando}
             estilo={{ marginTop: 18 }}
+          />
+          <Nota
+            texto="A portaria recebe o nome e o código na lista de visitas do dia"
+            estilo={{ marginTop: 12 }}
           />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -186,9 +230,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 14,
   },
-  nota: {
+  notaDocumento: {
     fontSize: 12.5,
     color: theme.colors.textSecondary,
     marginTop: -6,
   },
+  linhaChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
+  fitaDias: { gap: 8, paddingTop: 10, paddingRight: theme.spacing.lg },
 });

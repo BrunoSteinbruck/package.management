@@ -4,6 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import {
+  competenciaDeData,
+  mesCurtoAno,
+  rotuloUnidade,
+} from "@pacotes/shared";
 import type {
   AceitarConciliacaoDto,
   CriarDespesaDto,
@@ -27,16 +32,6 @@ function centavos(v: unknown): number {
 
 function iso(d: Date): string {
   return d.toISOString().slice(0, 10);
-}
-
-function rotuloUnidade(u: { bloco: string | null; identificacao: string }): string {
-  return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
-}
-
-const MES_CURTO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-
-function rotuloCompetencia(c: Date): string {
-  return `${MES_CURTO[c.getUTCMonth()]}/${c.getUTCFullYear()}`;
 }
 
 /**
@@ -211,7 +206,7 @@ export class ConciliacaoService {
         // sem ele (baixa manual antiga), o vencimento é a melhor âncora.
         data: iso(c.pagoEm ?? c.vencimento),
         valorCentavos: centavos(c.valorPago ?? c.valor),
-        rotulo: `${rotuloUnidade(c.unidade)}, ${rotuloCompetencia(c.competencia)}`,
+        rotulo: `${rotuloUnidade(c.unidade)}, ${mesCurtoAno(competenciaDeData(c.competencia))}`,
       })),
       ...despesas.map((d) => ({
         id: d.id,

@@ -19,7 +19,7 @@ import {
   type Pacote,
   type Unidade,
 } from "../api/types";
-import { BotaoCta, Chip, HeaderTela, Kicker } from "../components/ui";
+import { BotaoCta, Chip, HeaderTela, Kicker, Nota } from "../components/ui";
 import { Icone } from "../components/icones";
 import { rotuloCurto } from "../nomes";
 import { theme } from "../theme";
@@ -168,9 +168,7 @@ export function RetiradaScreen({ navigation, route }: Props) {
           <>
             <View style={styles.cabecalhoUnidade}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.tituloUnidade}>
-                  {unidade.bloco ? `${unidade.bloco} · ${unidade.identificacao}` : unidade.identificacao}
-                </Text>
+                <Text style={styles.tituloUnidade}>{rotuloUnidade(unidade)}</Text>
                 <Text style={styles.subUnidade}>
                   {pendentes
                     ? `${pendentes.length} encomenda${pendentes.length !== 1 ? "s" : ""} na portaria`
@@ -193,12 +191,12 @@ export function RetiradaScreen({ navigation, route }: Props) {
               }
               ListFooterComponent={
                 pendentes && pendentes.length > 0 && restantes > 0 ? (
-                  <View style={styles.nota}>
-                    <Text style={styles.notaTexto}>
-                      {restantes} encomenda{restantes !== 1 ? "s" : ""} permanece
-                      {restantes === 1 ? "" : "m"} na portaria
-                    </Text>
-                  </View>
+                  <Nota
+                    texto={`${restantes} encomenda${restantes !== 1 ? "s" : ""} permanece${
+                      restantes === 1 ? "" : "m"
+                    } na portaria`}
+                    estilo={{ marginTop: 4 }}
+                  />
                 ) : null
               }
               renderItem={({ item }) => {
@@ -314,6 +312,7 @@ export function RetiradaScreen({ navigation, route }: Props) {
                 recebidoPorNome: recebedor
                   ? undefined
                   : outroNome.trim() || undefined,
+                recebedorRotulo: recebedor?.nome ?? (outroNome.trim() || undefined),
               })
             }
           />
@@ -424,18 +423,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-  },
-  nota: {
-    backgroundColor: theme.colors.notaBg,
-    borderRadius: theme.radius.card,
-    padding: 14,
-    marginTop: 4,
-  },
-  notaTexto: {
-    textAlign: "center",
-    fontSize: 13.5,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
   },
   rodape: {
     paddingHorizontal: theme.spacing.lg,

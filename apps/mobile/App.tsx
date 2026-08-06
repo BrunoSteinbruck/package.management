@@ -26,6 +26,7 @@ import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
 import { ComunicadoScreen } from "./src/screens/ComunicadoScreen";
 import { ComunicadosScreen } from "./src/screens/ComunicadosScreen";
+import { ComunicadosMoradorScreen } from "./src/screens/ComunicadosMoradorScreen";
 import { DocumentosScreen } from "./src/screens/DocumentosScreen";
 import { NovoComunicadoScreen } from "./src/screens/NovoComunicadoScreen";
 import { NovaVisitaScreen } from "./src/screens/NovaVisitaScreen";
@@ -33,6 +34,7 @@ import { VisitasHojeScreen } from "./src/screens/VisitasHojeScreen";
 import { VisitasScreen } from "./src/screens/VisitasScreen";
 import { CobrancasScreen } from "./src/screens/CobrancasScreen";
 import { DetalheScreen } from "./src/screens/DetalheScreen";
+import { EncomendasScreen } from "./src/screens/EncomendasScreen";
 import { EntradaCameraScreen } from "./src/screens/EntradaCameraScreen";
 import { EntradaConfirmScreen } from "./src/screens/EntradaConfirmScreen";
 import { ConsumosScreen } from "./src/screens/ConsumosScreen";
@@ -152,6 +154,7 @@ function PilhaMorador({ perfil, aoSair }: PropsPilha) {
         <Morador.Screen name="Home">
           {(props) => <MoradorHomeScreen {...props} perfil={perfil} />}
         </Morador.Screen>
+        <Morador.Screen name="Encomendas" component={EncomendasScreen} />
         <Morador.Screen name="Qr" component={QrScreen} />
         <Morador.Screen name="Detalhe" component={DetalheScreen} />
         <Morador.Screen name="MinhaUnidade">
@@ -159,6 +162,7 @@ function PilhaMorador({ perfil, aoSair }: PropsPilha) {
         </Morador.Screen>
         <Morador.Screen name="Avisos" component={AvisosScreen} />
         <Morador.Screen name="Reportar" component={ReportarScreen} />
+        <Morador.Screen name="Comunicados" component={ComunicadosMoradorScreen} />
         <Morador.Screen name="Comunicado" component={ComunicadoScreen} />
         <Morador.Screen name="Documentos" component={DocumentosScreen} />
         <Morador.Screen name="Visitas" component={VisitasScreen} />

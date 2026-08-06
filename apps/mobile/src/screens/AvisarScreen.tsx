@@ -22,7 +22,7 @@ import {
   type AlvoIdentificado,
   type Unidade,
 } from "../api/types";
-import { BotaoCta, Chip, HeaderTela, Kicker } from "../components/ui";
+import { BotaoCta, Chip, HeaderTela, Kicker, Nota } from "../components/ui";
 import { Icone } from "../components/icones";
 import { theme } from "../theme";
 import type { PortariaStackParamList } from "../navigation";
@@ -111,8 +111,14 @@ export function AvisarScreen({ navigation }: Props) {
     return base.slice(0, 12);
   }, [busca, unidades]);
 
+  // Sem pílula marcada, o texto livre É o motivo. O desenho põe o campo logo
+  // abaixo das pílulas dizendo "Outro motivo", e antes disso quem digitava lá
+  // sem escolher pílula ficava com o botão desligado e nenhuma explicação.
+  const textoLivre = descricao.trim();
+  const motivoEnviado = motivo || textoLivre.slice(0, 120);
+
   async function enviar() {
-    if (!unidade || !motivo) return;
+    if (!unidade || !motivoEnviado) return;
     setSalvando(true);
     try {
       let fotoKey: string | undefined;
@@ -128,7 +134,18 @@ export function AvisarScreen({ navigation }: Props) {
       }
       const resultado = await postOuEnfileirar<{ temApp: boolean }>(
         "/portaria/avisos",
-        { unidadeId: unidade.id, motivo, descricao: descricao || undefined, fotoKey },
+        {
+          unidadeId: unidade.id,
+          motivo: motivoEnviado,
+          // Só manda a descrição quando ela não é o próprio motivo. A exceção
+          // é o texto longo, que o motivo corta em 120 e perderia o resto.
+          descricao: motivo
+            ? textoLivre || undefined
+            : textoLivre.length > 120
+              ? textoLivre
+              : undefined,
+          fotoKey,
+        },
         fotoPendente,
       );
       if (resultado.queued) {
@@ -183,6 +200,9 @@ export function AvisarScreen({ navigation }: Props) {
         contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 6, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* A foto vem antes do resto porque é ela que identifica a unidade:
+            o OCR lê a placa ou a vaga e sugere o apartamento. */}
+        <Kicker>Foto (opcional)</Kicker>
         {fotoUri ? (
           <Pressable onPress={abrirCamera}>
             <Image source={{ uri: fotoUri }} style={styles.foto} />
@@ -191,7 +211,7 @@ export function AvisarScreen({ navigation }: Props) {
         ) : (
           <Pressable style={styles.addFoto} onPress={abrirCamera}>
             <Icone nome="camera" tamanho={22} cor={theme.colors.marca} />
-            <Text style={styles.addFotoTexto}>Adicionar foto</Text>
+            <Text style={styles.addFotoTexto}>Tirar foto</Text>
           </Pressable>
         )}
 
@@ -199,9 +219,7 @@ export function AvisarScreen({ navigation }: Props) {
           <Kicker cor={theme.colors.ok}>Unidade</Kicker>
           {unidade ? (
             <>
-              <Text style={styles.unidadeValor}>
-                {unidade.bloco ? `${unidade.bloco} · ${unidade.identificacao}` : unidade.identificacao}
-              </Text>
+              <Text style={styles.unidadeValor}>{rotuloUnidade(unidade)}</Text>
               <Text style={styles.unidadeHint} onPress={() => { setUnidade(null); setOrigem(null); }}>
                 {origem === "placa"
                   ? "Identificada pela placa · toque para trocar"
@@ -237,17 +255,15 @@ export function AvisarScreen({ navigation }: Props) {
               <Chip key={m} rotulo={m} ativo={motivo === m} onPress={() => setMotivo(m)} />
             ))}
           </View>
+          <TextInput
+            style={styles.campo}
+            placeholder="Outro motivo — digite aqui…"
+            maxLength={500}
+            placeholderTextColor={theme.colors.textFaint}
+            value={descricao}
+            onChangeText={setDescricao}
+          />
         </View>
-
-        <Kicker>Detalhe (opcional)</Kicker>
-        <TextInput
-          style={styles.campo}
-          placeholder="Ex.: farol aceso, vaga 42"
-          maxLength={500}
-          placeholderTextColor={theme.colors.textFaint}
-          value={descricao}
-          onChangeText={setDescricao}
-        />
 
         <BotaoCta
           titulo="Enviar aviso"
@@ -255,8 +271,16 @@ export function AvisarScreen({ navigation }: Props) {
           altura={66}
           onPress={enviar}
           carregando={salvando}
-          desabilitado={!unidade || !motivo}
+          desabilitado={!unidade || !motivoEnviado}
           estilo={{ marginTop: 22 }}
+        />
+        <Nota
+          texto={
+            unidade
+              ? `Notificará todos os vinculados de ${rotuloUnidade(unidade)}`
+              : "Notificará todos os vinculados desta unidade"
+          }
+          estilo={{ marginTop: 12 }}
         />
       </ScrollView>
     </View>

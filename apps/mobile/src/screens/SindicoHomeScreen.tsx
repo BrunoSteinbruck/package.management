@@ -22,6 +22,7 @@ import {
 import { apiFetch } from "../api/client";
 import { excluirConta } from "../api/excluirConta";
 import { limparSessao } from "../api/session";
+import { iniciais } from "../api/types";
 import { BotaoModulo } from "../components/ui";
 import { Icone } from "../components/icones";
 import { MODULOS_SINDICO, modulosDe } from "../modulos";
@@ -33,11 +34,6 @@ type Props = NativeStackScreenProps<SindicoStackParamList, "Home"> & {
   perfil: JwtPayload;
   aoSair: () => void;
 };
-
-function iniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/);
-  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase();
-}
 
 export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
   const insets = useSafeAreaInsets();

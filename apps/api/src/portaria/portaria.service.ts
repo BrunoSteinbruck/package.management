@@ -247,15 +247,31 @@ export class PortariaService {
     }
     return this.prisma.withTenant(condominioId, async (tx) => {
       const total = await tx.pacote.count({ where });
-      const itens = await tx.pacote.findMany({
+      const linhas = await tx.pacote.findMany({
         where,
-        include: { unidade: true, retirada: true },
+        include: {
+          unidade: true,
+          retirada: { include: { recebidoPor: { select: { nome: true } } } },
+        },
         orderBy: filtro.retiradasHoje
           ? { retirada: { retiradoEm: "desc" } }
           : { recebidoEm: "desc" },
         skip: (filtro.pagina - 1) * porPagina,
         take: porPagina,
       });
+      // A retirada é remontada em vez de devolvida crua: a linha do Prisma
+      // carrega a key da foto de saída e a FK do morador, que ninguém desta
+      // tela usa e que não precisavam estar no fio.
+      const itens = linhas.map(({ retirada, ...pacote }) => ({
+        ...pacote,
+        retirada: retirada
+          ? {
+              retiradoEm: retirada.retiradoEm,
+              retiradoPorNome:
+                retirada.recebidoPor?.nome ?? retirada.recebidoPorNome ?? null,
+            }
+          : null,
+      }));
       return { total, pagina: filtro.pagina, porPagina, itens };
     });
   }

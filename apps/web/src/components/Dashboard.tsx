@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  formatarTelefone,
   perfilDe,
+  rotuloUnidade,
   type Adocao,
   type Capacidades,
   type ModuloCondominio,
@@ -17,6 +19,7 @@ import {
   type Relatorios,
   type ResumoFinanceiro,
   type Resumo,
+  type UnidadePanorama,
   type UnidadeRotulo,
   type VagaLinha,
   type VinculoPendente,
@@ -45,11 +48,6 @@ type Visao =
   | "financeiro"
   | "configuracoes"
   | "minha-conta";
-
-function rotulo(u?: UnidadeRotulo) {
-  if (!u) return "-";
-  return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
-}
 
 function urlFoto(foto: FotoRef): string {
   return `${API_URL}/uploads/${foto.key}?t=${encodeURIComponent(foto.token)}`;
@@ -82,7 +80,7 @@ export function Dashboard({
   const gestor = perfilDe(perfil) === "sindico";
   const [visao, setVisao] = useState<Visao>("visao-geral");
   const [pendentesAprovacao, setPendentesAprovacao] = useState(0);
-  const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState(0);
+  const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState<Ocorrencia[]>([]);
   const [modulos, setModulos] = useState<ModuloCondominio[]>([]);
   const ligado = (m: ModuloCondominio) => modulos.includes(m);
 
@@ -120,8 +118,11 @@ export function Dashboard({
       apiFetch<VinculoPendente[]>("/cadastro/vinculos/pendentes")
         .then((v) => setPendentesAprovacao(v.length))
         .catch(() => {});
+      // Guarda a lista, não só o tamanho: a visão geral diz há quanto tempo a
+      // mais antiga está esperando e de que categoria ela é, que é o que faz
+      // o síndico clicar. Era a mesma requisição jogando o resto fora.
       apiFetch<Ocorrencia[]>("/cadastro/ocorrencias?status=ABERTO")
-        .then((o) => setOcorrenciasAbertas(o.length))
+        .then(setOcorrenciasAbertas)
         .catch(() => {});
     }
   }, [gestor, visao]);
@@ -163,9 +164,9 @@ export function Dashboard({
               onClick={() => setVisao("ocorrencias")}
             >
               Ocorrências
-              {ocorrenciasAbertas > 0 && (
+              {ocorrenciasAbertas.length > 0 && (
                 <span className="embreve" style={{ color: "#7CE3A8" }}>
-                  {ocorrenciasAbertas}
+                  {ocorrenciasAbertas.length}
                 </span>
               )}
             </button>
@@ -283,7 +284,7 @@ function VisaoGeral({
   aoNavegar,
 }: {
   gestor: boolean;
-  ocorrenciasAbertas: number;
+  ocorrenciasAbertas: Ocorrencia[];
   pendentesAprovacao: number;
   modulos: ModuloCondominio[];
   aoNavegar: (v: Visao) => void;
@@ -294,6 +295,7 @@ function VisaoGeral({
   const [serie, setSerie] = useState<DiaSerie[]>([]);
   const [financeiro, setFinanceiro] = useState<ResumoFinanceiro | null>(null);
   const [visitasHoje, setVisitasHoje] = useState<number | null>(null);
+  const [relatorios, setRelatorios] = useState<Relatorios | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const temFinanceiro = gestor && modulos.includes("financeiro");
@@ -311,6 +313,11 @@ function VisaoGeral({
         setErro((e as Error).message);
       }
     })();
+    // Fora do bloco acima porque só alimenta uma legenda: se os relatórios
+    // caírem, a visão geral continua de pé sem o tempo médio.
+    apiFetch<Relatorios>("/portaria/relatorios?dias=30")
+      .then(setRelatorios)
+      .catch(() => {});
   }, []);
 
   // Os blocos dos módulos falham sozinhos: um endpoint fora do ar não pode
@@ -329,6 +336,18 @@ function VisaoGeral({
   }, [temFinanceiro, temVisitantes]);
 
   const maxSerie = Math.max(1, ...serie.map((d) => Math.max(d.entradas, d.retiradas)));
+
+  const maisAntiga = ocorrenciasAbertas.reduce<Ocorrencia | null>(
+    (velha, o) => (!velha || o.criadoEm < velha.criadoEm ? o : velha),
+    null,
+  );
+  // Entradas de hoje e a média do período saem da própria série de 14 dias: o
+  // resumo da portaria conta o que ESTÁ na portaria, não o que entrou.
+  const entradasHoje = serie.length > 0 ? serie[serie.length - 1].entradas : null;
+  const mediaEntradas =
+    serie.length > 0
+      ? Math.round(serie.reduce((soma, d) => soma + d.entradas, 0) / serie.length)
+      : null;
 
   return (
     <>
@@ -353,12 +372,18 @@ function VisaoGeral({
             className="metrica metrica-acao"
             onClick={() => aoNavegar("ocorrencias")}
           >
-            <div className={`valor ${ocorrenciasAbertas > 0 ? "" : "verde"}`}>
-              {ocorrenciasAbertas}
+            <div className={`valor ${ocorrenciasAbertas.length > 0 ? "" : "verde"}`}>
+              {ocorrenciasAbertas.length}
             </div>
             <div className="rotulo">relatos de moradores abertos</div>
+            {/* A mais antiga e de que assunto: "3 abertos" não diz se são
+                três lâmpadas de hoje ou um elevador parado há dois dias. */}
             <div className="sub">
-              {ocorrenciasAbertas > 0 ? "aguardando resposta" : "fila limpa"}
+              {maisAntiga
+                ? `mais antiga há ${diasDesde(maisAntiga.criadoEm)} dia${
+                    diasDesde(maisAntiga.criadoEm) === 1 ? "" : "s"
+                  } · ${maisAntiga.categoria}`
+                : "fila limpa"}
             </div>
           </button>
           <button
@@ -371,7 +396,9 @@ function VisaoGeral({
             </div>
             <div className="rotulo">moradores para aprovar</div>
             <div className="sub">
-              {pendentesAprovacao > 0 ? "cadastro aguardando" : "ninguém esperando"}
+              {pendentesAprovacao > 0
+                ? "vínculos pedidos pelo app"
+                : "ninguém esperando"}
             </div>
           </button>
           {temFinanceiro && financeiro && (
@@ -419,8 +446,21 @@ function VisaoGeral({
           )}
         </div>
         <div className="metrica">
+          <div className="valor">{entradasHoje ?? "-"}</div>
+          <div className="rotulo">entradas hoje</div>
+          {mediaEntradas !== null && (
+            <div className="sub">média: {mediaEntradas}/dia</div>
+          )}
+        </div>
+        <div className="metrica">
           <div className="valor">{resumo?.retiradasHoje ?? "-"}</div>
           <div className="rotulo">retiradas hoje</div>
+          {relatorios && (
+            <div className="sub">
+              tempo médio: {relatorios.tempoMedioDias.toLocaleString("pt-BR")} dia
+              {relatorios.tempoMedioDias === 1 ? "" : "s"}
+            </div>
+          )}
         </div>
         <div className="metrica">
           <div className="valor verde">{adocao ? `${adocao.percentual}%` : "-"}</div>
@@ -461,7 +501,25 @@ function VisaoGeral({
         </section>
 
         <section className="card">
-          <h2>Paradas há 3+ dias</h2>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <h2 style={{ margin: 0 }}>Paradas há 3+ dias</h2>
+            {/* A lista mostra 6. Sem esta saída, o síndico com 12 unidades
+                paradas via metade e não tinha para onde ir. */}
+            <button
+              type="button"
+              className="link"
+              onClick={() => aoNavegar("pacotes")}
+            >
+              ver todas
+            </button>
+          </div>
           {pendencias.filter((p) => diasDesde(p.maisAntigoEm) >= 3).length === 0 ? (
             <p className="aviso">Nenhuma encomenda parada há 3+ dias.</p>
           ) : (
@@ -480,7 +538,7 @@ function VisaoGeral({
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{rotulo(p.unidade)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{rotuloUnidade(p.unidade)}</div>
                     <div className="aviso">{p.pendentes} pacote(s)</div>
                   </div>
                   <span className="selo alerta">{diasDesde(p.maisAntigoEm)} dias</span>
@@ -545,7 +603,7 @@ function PacotesView() {
         for (const i of lote.itens) {
           linhas.push(
             [
-              rotulo(i.unidade),
+              rotuloUnidade(i.unidade),
               i.transportadora ?? "",
               i.codigoRastreio ?? "",
               i.localArmazenamento ?? "",
@@ -682,7 +740,7 @@ function PacotesView() {
               const atrasado = p.status === "ARMAZENADO" && dias >= 3;
               return (
                 <tr key={p.id}>
-                  <td className="unidade">{rotulo(p.unidade)}</td>
+                  <td className="unidade">{rotuloUnidade(p.unidade)}</td>
                   <td>{p.transportadora ?? "-"}</td>
                   <td className="mono">{p.codigoRastreio ?? "-"}</td>
                   <td>{p.localArmazenamento ?? "-"}</td>
@@ -711,6 +769,13 @@ function PacotesView() {
             )}
           </tbody>
         </table>
+        {/* Quantos de quantos: a paginação sozinha não diz se a página 3 de 4
+            tem 12 linhas ou 2, e o CSV exporta o filtro inteiro, não a página. */}
+        {dados && dados.itens.length > 0 && (
+          <p className="aviso" style={{ marginTop: 10 }}>
+            Mostrando {dados.itens.length} de {dados.total}
+          </p>
+        )}
         {totalPaginas > 1 && (
           <div className="paginacao">
             {janelaDePaginas(pagina, totalPaginas).map((item, i) =>
@@ -767,7 +832,8 @@ function RelatoriosView() {
         </div>
         <div className="metrica">
           <div className="valor">{dados?.volume.toLocaleString("pt-BR") ?? "-"}</div>
-          <div className="rotulo">encomendas no período</div>
+          <div className="rotulo">volume no período</div>
+          <div className="sub">pacotes recebidos</div>
         </div>
         <div className="metrica">
           <div className="valor verde">{dados ? `${dados.notificacoesPct}%` : "-"}</div>
@@ -1078,7 +1144,7 @@ function OcorrenciasView() {
             className={`chip ${filtro === f.valor ? "ativo" : ""}`}
             onClick={() => setFiltro(f.valor)}
           >
-            {f.rotulo}
+            {filtro === f.valor ? `${f.rotulo} · ${ocorrencias.length}` : f.rotulo}
           </button>
         ))}
       </div>
@@ -1088,12 +1154,15 @@ function OcorrenciasView() {
       <section className="card">
         <table>
           <thead>
+            {/* O relato antes da foto: é o texto que diz o que houve, e ele
+                estava espremido embaixo da categoria enquanto a miniatura
+                abria a linha. */}
             <tr>
-              <th>Foto</th>
               <th>Categoria</th>
+              <th>Relato</th>
               <th>Unidade</th>
-              <th>Morador</th>
-              <th>Data</th>
+              <th>Aberta há</th>
+              <th>Foto</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -1103,6 +1172,23 @@ function OcorrenciasView() {
               const s = STATUS_OCORRENCIA[o.status];
               return (
                 <tr key={o.id}>
+                  <td className="unidade">{o.categoria}</td>
+                  <td>{o.descricao || <span className="aviso">sem descrição</span>}</td>
+                  <td>
+                    {rotuloUnidade(o.unidade)}
+                    {/* A API devolve "-" quando o autor foi anonimizado; um
+                        travessão solto embaixo da unidade não informa nada. */}
+                    {o.autor && o.autor !== "-" && (
+                      <div className="aviso" style={{ marginTop: 2 }}>
+                        {o.autor}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    {diasDesde(o.criadoEm) === 0
+                      ? "hoje"
+                      : `${diasDesde(o.criadoEm)} dia${diasDesde(o.criadoEm) === 1 ? "" : "s"}`}
+                  </td>
                   <td>
                     {o.foto ? (
                       <img
@@ -1122,24 +1208,6 @@ function OcorrenciasView() {
                     ) : (
                       <span className="aviso">-</span>
                     )}
-                  </td>
-                  <td>
-                    <div className="unidade">{o.categoria}</div>
-                    {o.descricao && (
-                      <div className="aviso" style={{ marginTop: 2 }}>
-                        {o.descricao}
-                      </div>
-                    )}
-                  </td>
-                  <td>{rotulo(o.unidade)}</td>
-                  <td>{o.autor}</td>
-                  <td>
-                    {new Date(o.criadoEm).toLocaleString("pt-BR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
                   </td>
                   <td>
                     <span className={`selo ${s.selo}`}>{s.rotulo}</span>
@@ -1173,6 +1241,9 @@ function OcorrenciasView() {
             )}
           </tbody>
         </table>
+        <p className="aviso" style={{ marginTop: 12 }}>
+          O morador que relatou recebe push quando a ocorrência é resolvida.
+        </p>
       </section>
 
       {ampliada &&
@@ -1279,7 +1350,7 @@ function VagasSection({ aoImportar }: { aoImportar: () => void }) {
             {vagas.map((v) => (
               <tr key={v.id}>
                 <td className="unidade">{v.identificacao}</td>
-                <td>{rotulo(v.unidade)}</td>
+                <td>{rotuloUnidade(v.unidade)}</td>
               </tr>
             ))}
           </tbody>
@@ -1307,12 +1378,18 @@ function VagasSection({ aoImportar }: { aoImportar: () => void }) {
 
 function MoradoresView() {
   const [vinculos, setVinculos] = useState<VinculoPendente[]>([]);
+  const [unidades, setUnidades] = useState<UnidadePanorama[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [emVoo, setEmVoo] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      setVinculos(await apiFetch<VinculoPendente[]>("/cadastro/vinculos/pendentes"));
+      const [pendentes, panorama] = await Promise.all([
+        apiFetch<VinculoPendente[]>("/cadastro/vinculos/pendentes"),
+        apiFetch<UnidadePanorama[]>("/cadastro/unidades/panorama"),
+      ]);
+      setVinculos(pendentes);
+      setUnidades(panorama);
       setErro(null);
     } catch (e) {
       setErro((e as Error).message);
@@ -1334,7 +1411,7 @@ function MoradoresView() {
    */
   async function aprovar(v: VinculoPendente) {
     if (emVoo) return;
-    const onde = rotulo(v.unidade);
+    const onde = rotuloUnidade(v.unidade);
     if (
       !confirm(
         `Dar a ${v.morador.nome} (${v.morador.telefone}) acesso à unidade ${onde}?\n\n` +
@@ -1357,6 +1434,39 @@ function MoradoresView() {
     }
   }
 
+  /**
+   * Recusar tem a mesma trava e a mesma confirmação nominal de `aprovar`.
+   *
+   * Antes só existia aprovar: quem pediu a unidade errada ficava para sempre
+   * na fila, e o síndico convivia com um contador que nunca zerava. O vínculo
+   * vai para REMOVIDO, não some: recusar não é banir, e um pedido novo pelo
+   * convite ou pela importação reabre normalmente.
+   */
+  async function recusar(v: VinculoPendente) {
+    if (emVoo) return;
+    const onde = rotuloUnidade(v.unidade);
+    if (
+      !confirm(
+        `Recusar o pedido de ${v.morador.nome} (${v.morador.telefone}) para a unidade ${onde}?\n\n` +
+          "A pessoa não passa a ver os dados da unidade. Ela pode pedir de novo depois.",
+      )
+    ) {
+      return;
+    }
+    setEmVoo(v.id);
+    try {
+      await apiFetch(`/cadastro/vinculos/${v.id}/recusar`, { method: "POST" });
+      setErro(null);
+      carregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setEmVoo(null);
+    }
+  }
+
+  const comApp = unidades.filter((u) => u.temApp).length;
+
   return (
     <>
       <h1>Moradores</h1>
@@ -1365,7 +1475,11 @@ function MoradoresView() {
 
       {vinculos.length > 0 && (
         <section className="card">
-          <h2>Vínculos aguardando aprovação</h2>
+          <h2>
+            {vinculos.length} pedido{vinculos.length === 1 ? "" : "s"} de vínculo
+            aguardando
+          </h2>
+          <p className="aviso">Confirme com a unidade antes de aprovar.</p>
           <table>
             <thead>
               <tr>
@@ -1379,21 +1493,77 @@ function MoradoresView() {
               {vinculos.map((v) => (
                 <tr key={v.id}>
                   <td className="unidade">{v.morador.nome}</td>
-                  <td>{v.morador.telefone}</td>
-                  <td>{rotulo(v.unidade)}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td>{formatarTelefone(v.morador.telefone)}</td>
+                  <td>{rotuloUnidade(v.unidade)}</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     <button
                       className="acao"
                       onClick={() => aprovar(v)}
                       disabled={emVoo !== null}
                     >
                       {emVoo === v.id ? "Aprovando..." : "Aprovar"}
+                    </button>{" "}
+                    <button
+                      className="outline"
+                      onClick={() => recusar(v)}
+                      disabled={emVoo !== null}
+                    >
+                      Recusar
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </section>
+      )}
+
+      {unidades.length > 0 && (
+        <section className="card">
+          <h2>Unidades</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Unidade</th>
+                <th>Titular</th>
+                <th>Telefone</th>
+                <th>Vinculados</th>
+                <th>Adoção</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unidades.map((u) => (
+                <tr key={u.unidadeId}>
+                  <td className="unidade">{rotuloUnidade(u)}</td>
+                  <td>
+                    {u.titular?.nome ?? (
+                      <span style={{ color: "var(--texto-3)" }}>
+                        sem titular cadastrado
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {u.titular ? formatarTelefone(u.titular.telefone) : "—"}
+                  </td>
+                  <td>
+                    {u.vinculados === 0
+                      ? "—"
+                      : `${u.vinculados} pessoa${u.vinculados === 1 ? "" : "s"}`}
+                  </td>
+                  <td>
+                    <span className={`selo ${u.temApp ? "ok" : "neutro"}`}>
+                      {u.temApp ? "no app" : "sem app"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="aviso">
+            {comApp} de {unidades.length} unidades com app (
+            {Math.round((comApp / unidades.length) * 100)}%) · convites por SMS
+            contam como adoção quando aceitos.
+          </p>
         </section>
       )}
 

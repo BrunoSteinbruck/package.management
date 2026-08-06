@@ -10,22 +10,10 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import {
-  STATUS_AVISO,
-  type OcorrenciaGestor,
-  type StatusAviso,
-} from "@pacotes/shared";
+import type { OcorrenciaGestor, StatusAviso } from "@pacotes/shared";
 import { apiFetch, urlFoto } from "../api/client";
-import { dataCurta, rotuloStatusAviso, rotuloUnidade } from "../api/types";
-import {
-  Botao,
-  Card,
-  HeaderTela,
-  Kicker,
-  Selo,
-  Tela,
-  tomDoStatus,
-} from "../components/ui";
+import { diasAtras, rotuloStatusAviso, rotuloUnidade } from "../api/types";
+import { Botao, HeaderTela, Selo, Tela, tomDoStatus } from "../components/ui";
 import { theme } from "../theme";
 import type { SindicoStackParamList } from "../navigation";
 
@@ -88,23 +76,27 @@ export function OcorrenciaDetalheScreen({ navigation, route }: Props) {
           </Text>
         ) : (
           <>
+            {/* O que o morador escreveu é o título. A categoria vira selo:
+                sozinha ela dizia "Elevador" e o síndico tinha que rolar para
+                descobrir o que houve com o elevador. */}
             <View style={styles.linhaTitulo}>
-              <Text style={styles.titulo}>{item.categoria}</Text>
+              <Text style={styles.titulo}>
+                {item.descricao?.trim() || item.categoria}
+              </Text>
               <Selo
                 texto={rotuloStatusAviso(item.status)}
                 tom={tomDoStatus(item.status)}
               />
             </View>
+            {item.descricao?.trim() ? (
+              <View style={{ alignSelf: "flex-start" }}>
+                <Selo texto={item.categoria} tom="marca" />
+              </View>
+            ) : null}
             <Text style={styles.sub}>
               {rotuloUnidade(item.unidade)} · {item.autor} ·{" "}
-              {dataCurta(item.criadoEm)}
+              {diasAtras(item.criadoEm)}
             </Text>
-
-            {item.descricao ? (
-              <Card>
-                <Text style={styles.descricao}>{item.descricao}</Text>
-              </Card>
-            ) : null}
 
             {item.foto && (
               <Image source={{ uri: urlFoto(item.foto) }} style={styles.foto} />
@@ -127,7 +119,9 @@ export function OcorrenciaDetalheScreen({ navigation, route }: Props) {
                 }
               />
               <Text style={styles.nota}>
-                O morador que abriu recebe a mudança no aparelho dele.
+                {item.status === "ABERTO"
+                  ? "O morador é avisado quando você marcar como resolvido"
+                  : "O morador que abriu recebe a mudança no aparelho dele."}
               </Text>
             </View>
           </>
@@ -146,7 +140,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   sub: { fontSize: 14, color: theme.colors.textSecondary, fontWeight: "500" },
-  descricao: { fontSize: theme.font.corpo, color: theme.colors.text, lineHeight: 23 },
   foto: { width: "100%", height: 220, borderRadius: theme.radius.card },
   nota: {
     fontSize: 13,

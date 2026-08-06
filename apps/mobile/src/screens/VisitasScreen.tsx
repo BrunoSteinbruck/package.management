@@ -1,9 +1,17 @@
 import React, { useCallback, useState } from "react";
-import { Alert, FlatList, RefreshControl, View } from "react-native";
+import {
+  Alert,
+  RefreshControl,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { VisitaMorador } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
+import { iniciais } from "../api/types";
 import { Botao, HeaderTela, ItemLista, Selo, Tela, Vazio } from "../components/ui";
 import { theme } from "../theme";
 import type { MoradorStackParamList } from "../navigation";
@@ -12,14 +20,33 @@ type Props = NativeStackScreenProps<MoradorStackParamList, "Visitas">;
 
 const ROTULO_STATUS = {
   AUTORIZADA: { texto: "autorizada", tom: "neutro" },
-  CHEGOU: { texto: "entrou", tom: "ok" },
+  CHEGOU: { texto: "chegou", tom: "ok" },
   CANCELADA: { texto: "cancelada", tom: "alerta" },
 } as const;
 
-/** "2026-07-28" vira "28/07" sem passar por Date (que deslocaria o dia). */
-function diaCurto(iso: string): string {
+/** Data local em ISO, sem passar por UTC (que deslocaria o dia). */
+function diaLocal(offsetDias = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDias);
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+/** "2026-07-28" vira "hoje", "amanhã" ou "28/07". */
+function quandoDia(iso: string): string {
+  if (iso === diaLocal(0)) return "hoje";
+  if (iso === diaLocal(1)) return "amanhã";
   const [, mes, dia] = iso.split("-");
   return `${dia}/${mes}`;
+}
+
+function janela(v: VisitaMorador): string {
+  const dia = quandoDia(v.dataPrevista);
+  if (!v.janelaInicio) return dia;
+  return v.janelaFim
+    ? `${dia} · ${v.janelaInicio} às ${v.janelaFim}`
+    : `${dia} · a partir de ${v.janelaInicio}`;
 }
 
 export function VisitasScreen({ navigation }: Props) {
@@ -63,9 +90,20 @@ export function VisitasScreen({ navigation }: Props) {
     ]);
   }
 
+  // O que ainda vai acontecer separado do que já passou. Visita autorizada
+  // para ontem que ninguém deu baixa também é passado: deixá-la no topo dava
+  // a impressão de que a portaria ainda espera alguém.
+  const hoje = diaLocal(0);
+  const proxima = (v: VisitaMorador) =>
+    v.status === "AUTORIZADA" && v.dataPrevista >= hoje;
+  const secoes = [
+    { titulo: "Autorizadas", dados: itens.filter(proxima) },
+    { titulo: "Anteriores", dados: itens.filter((v) => !proxima(v)) },
+  ].filter((s) => s.dados.length > 0);
+
   return (
     <Tela comInsetTop>
-      <HeaderTela titulo="Visitas" aoVoltar={() => navigation.goBack()} />
+      <HeaderTela titulo="Minhas visitas" aoVoltar={() => navigation.goBack()} />
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingBottom: 12 }}>
         <Botao
           titulo="Autorizar visita"
@@ -73,8 +111,8 @@ export function VisitasScreen({ navigation }: Props) {
           onPress={() => navigation.navigate("NovaVisita")}
         />
       </View>
-      <FlatList
-        data={itens}
+      <SectionList
+        sections={secoes.map((s) => ({ title: s.titulo, data: s.dados }))}
         keyExtractor={(v) => v.id}
         contentContainerStyle={{
           paddingHorizontal: theme.spacing.lg,
@@ -94,22 +132,20 @@ export function VisitasScreen({ navigation }: Props) {
             />
           ) : null
         }
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.secao}>{section.title}</Text>
+        )}
         renderItem={({ item }) => {
           const status = ROTULO_STATUS[item.status];
           return (
             <>
               <ItemLista
                 titulo={item.nomeVisitante}
-                sub={
-                  item.janelaInicio
-                    ? `${diaCurto(item.dataPrevista)} · a partir de ${item.janelaInicio}`
-                    : diaCurto(item.dataPrevista)
-                }
-                media={{
-                  icone: "pessoa",
-                  corFundo: theme.colors.okBg,
-                  corIcone: theme.colors.marca,
-                }}
+                sub={janela(item)}
+                // O código é o que o morador manda para quem vem. Em
+                // monoespaçada como o rastreio: é para ser lido em voz alta.
+                detalhe={item.codigo ?? undefined}
+                media={{ iniciais: iniciais(item.nomeVisitante) }}
                 direita={<Selo texto={status.texto} tom={status.tom} />}
               />
               {item.status === "AUTORIZADA" && (
@@ -126,3 +162,14 @@ export function VisitasScreen({ navigation }: Props) {
     </Tela>
   );
 }
+
+const styles = StyleSheet.create({
+  secao: {
+    fontSize: 16.5,
+    fontWeight: "700",
+    color: theme.colors.text,
+    backgroundColor: theme.colors.bg,
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+});

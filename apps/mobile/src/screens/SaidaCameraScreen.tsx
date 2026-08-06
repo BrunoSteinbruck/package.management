@@ -15,8 +15,13 @@ type Props = NativeStackScreenProps<PortariaStackParamList, "SaidaCamera">;
 
 export function SaidaCameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { pacoteIds, unidadeLabel, recebidoPorMoradorId, recebidoPorNome } =
-    route.params;
+  const {
+    pacoteIds,
+    unidadeLabel,
+    recebidoPorMoradorId,
+    recebidoPorNome,
+    recebedorRotulo,
+  } = route.params;
   const [permissao, pedirPermissao] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [enviando, setEnviando] = useState(false);
@@ -89,16 +94,20 @@ export function SaidaCameraScreen({ navigation, route }: Props) {
         <Pressable style={styles.botaoRedondo} onPress={() => navigation.goBack()}>
           <Icone nome="fechar" tamanho={20} traco={2.2} />
         </Pressable>
-        <Text style={styles.titulo}>Comprovante de entrega</Text>
+        <Text style={styles.titulo}>Foto de comprovação</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      <View style={{ flex: 1 }} />
+      <View style={styles.centroTela}>
+        <Text style={styles.contexto}>
+          {pacoteIds.length} pacote{pacoteIds.length === 1 ? "" : "s"} ·{" "}
+          {unidadeLabel}
+          {recebedorRotulo ? ` · recebe ${recebedorRotulo}` : ""}
+        </Text>
+      </View>
 
       <View style={[styles.rodape, { paddingBottom: insets.bottom + 16 }]}>
-        <Text style={styles.hint}>
-          Fotografe as {pacoteIds.length} encomenda(s) sendo entregues a {unidadeLabel}
-        </Text>
+        <Text style={styles.hint}>Enquadre os pacotes</Text>
         <View style={styles.linhaAcoes}>
           <Pressable style={styles.piloAcao} onPress={() => concluir(false)}>
             <Text style={styles.piloAcaoTexto}>Sem foto</Text>
@@ -144,6 +153,18 @@ const styles = StyleSheet.create({
   titulo: { flex: 1, textAlign: "center", color: "#FFF", fontSize: theme.font.titulo, fontWeight: "700" },
   rodape: { paddingHorizontal: theme.spacing.lg, gap: 14 },
   hint: { color: "rgba(255,255,255,0.8)", fontSize: 13.5, textAlign: "center", fontWeight: "500" },
+  centroTela: { flex: 1, alignItems: "center", justifyContent: "flex-start", paddingTop: 18 },
+  contexto: {
+    color: "#FFF",
+    fontSize: 14.5,
+    fontWeight: "600",
+    textAlign: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    overflow: "hidden",
+  },
   linhaAcoes: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   piloAcao: {
     width: 92,

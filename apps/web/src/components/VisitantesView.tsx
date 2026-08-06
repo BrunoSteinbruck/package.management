@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { StatusVisita, VisitaPortaria } from "@pacotes/shared";
+import {
+  rotuloUnidade,
+  type StatusVisita,
+  type VisitaPortaria,
+} from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
 
 const STATUS: Record<StatusVisita, { rotulo: string; selo: string }> = {
@@ -22,10 +26,6 @@ function hora(iso: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function rotulo(u: VisitaPortaria["unidade"]): string {
-  return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
 }
 
 export function VisitantesView() {
@@ -57,7 +57,7 @@ export function VisitantesView() {
     ? historico.filter(
         (v) =>
           v.nomeVisitante.toLowerCase().includes(termo) ||
-          rotulo(v.unidade).toLowerCase().includes(termo) ||
+          rotuloUnidade(v.unidade).toLowerCase().includes(termo) ||
           v.autorizadoPor.toLowerCase().includes(termo),
       )
     : historico;
@@ -115,13 +115,13 @@ export function VisitantesView() {
               <tr key={v.id}>
                 <td>
                   <div className="unidade">{v.nomeVisitante}</div>
-                  {v.documento && (
+                  {(v.codigo || v.documento) && (
                     <div style={{ fontSize: 13, color: "var(--texto-3)" }}>
-                      {v.documento}
+                      {[v.codigo, v.documento].filter(Boolean).join(" · ")}
                     </div>
                   )}
                 </td>
-                <td>{rotulo(v.unidade)}</td>
+                <td>{rotuloUnidade(v.unidade)}</td>
                 <td>{v.autorizadoPor}</td>
                 <td>
                   {diaCurto(v.dataPrevista)}

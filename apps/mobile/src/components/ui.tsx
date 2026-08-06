@@ -233,9 +233,10 @@ export function tomDoStatus(s: StatusAviso): TomSelo {
   return s === "RESOLVIDO" ? "ok" : "alerta";
 }
 
-/** Miniatura do item: foto real ou ícone em círculo colorido. */
+/** Miniatura do item: foto real, iniciais da pessoa, ou ícone em círculo. */
 type MediaItem =
   | { fotoUri: string }
+  | { iniciais: string }
   | { icone: NomeIcone; corFundo: string; corIcone: string };
 
 /**
@@ -257,6 +258,10 @@ export function ItemLista(props: {
       {props.media &&
         ("fotoUri" in props.media ? (
           <Image source={{ uri: props.media.fotoUri }} style={styles.itemFoto} />
+        ) : "iniciais" in props.media ? (
+          <View style={[styles.itemCirculo, { backgroundColor: theme.colors.okBg }]}>
+            <Text style={styles.itemIniciais}>{props.media.iniciais}</Text>
+          </View>
         ) : (
           <View
             style={[
@@ -316,7 +321,11 @@ export function BotaoModulo(props: {
   icone: NomeIcone;
   onPress: () => void;
   variante?: "card" | "pill";
-  contagem?: number;
+  /**
+   * Pílula à direita. `destaque` a pinta de verde cheio, para o que espera
+   * ação do usuário ("2 na portaria"); sem ele é a contagem discreta.
+   */
+  badge?: { texto: string; destaque?: boolean };
   estilo?: ViewStyle;
 }) {
   const pill = props.variante === "pill";
@@ -330,17 +339,69 @@ export function BotaoModulo(props: {
         props.estilo,
       ]}
     >
-      <Icone
-        nome={props.icone}
-        tamanho={pill ? 19 : 20}
-        cor={theme.colors.marca}
-        traco={2.2}
-      />
-      <Text style={styles.moduloTexto}>{props.titulo}</Text>
-      {props.contagem !== undefined && (
-        <Text style={styles.moduloContagem}>{props.contagem}</Text>
+      {/* No card o ícone ganha o disco claro atrás: sem ele, a coluna de
+          ícones some contra o branco e as linhas viram texto puro. */}
+      {pill ? (
+        <Icone nome={props.icone} tamanho={19} cor={theme.colors.marca} traco={2.2} />
+      ) : (
+        <View style={styles.moduloDisco}>
+          <Icone nome={props.icone} tamanho={20} cor={theme.colors.marca} traco={2.2} />
+        </View>
+      )}
+      <Text style={[styles.moduloTexto, !pill && { flex: 1 }]}>
+        {props.titulo}
+      </Text>
+      {props.badge ? (
+        <Text
+          style={[
+            styles.moduloBadge,
+            props.badge.destaque && styles.moduloBadgeDestaque,
+          ]}
+        >
+          {props.badge.texto}
+        </Text>
+      ) : (
+        !pill && (
+          <Icone nome="chevron" tamanho={18} cor={theme.colors.textFaint} />
+        )
       )}
     </Pressable>
+  );
+}
+
+/**
+ * A frase de rodapé que explica o que a tela faz com o que foi preenchido
+ * ("notificará todos os vinculados desta unidade"). Existia copiada em quatro
+ * telas com o mesmo estilo `nota`/`notaTexto`.
+ *
+ * Com `icone` vira linha (ícone à esquerda, texto à esquerda); sem ícone fica
+ * centrada, que é como as quatro originais eram.
+ */
+export function Nota(props: {
+  texto: string;
+  icone?: NomeIcone;
+  corIcone?: string;
+  estilo?: ViewStyle;
+}) {
+  if (!props.icone) {
+    return (
+      <View style={[styles.nota, props.estilo]}>
+        <Text style={[styles.notaTexto, { textAlign: "center" }]}>
+          {props.texto}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.nota, styles.notaLinha, props.estilo]}>
+      <Icone
+        nome={props.icone}
+        tamanho={18}
+        cor={props.corIcone ?? theme.colors.alerta}
+        traco={2}
+      />
+      <Text style={[styles.notaTexto, { flex: 1 }]}>{props.texto}</Text>
+    </View>
   );
 }
 
@@ -458,6 +519,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  itemIniciais: { fontSize: 14, fontWeight: "700", color: theme.colors.marca },
   itemTitulo: { fontSize: 17, fontWeight: "700", color: theme.colors.text },
   itemSub: {
     fontSize: 13.5,
@@ -479,10 +541,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   moduloCard: {
-    minHeight: 56,
+    minHeight: 66,
     borderRadius: theme.radius.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    paddingHorizontal: 16,
+    gap: 13,
   },
   moduloPill: {
     flex: 1,
@@ -491,16 +555,37 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: theme.colors.chipBorder,
   },
+  moduloDisco: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.okBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   moduloTexto: { fontSize: 16, fontWeight: "600", color: theme.colors.text },
-  moduloContagem: {
-    fontSize: 13,
+  moduloBadge: {
+    fontSize: 12.5,
     fontWeight: "700",
     color: theme.colors.ok,
     backgroundColor: theme.colors.okBg,
     borderRadius: theme.radius.pill,
     paddingHorizontal: 9,
-    paddingVertical: 2,
+    paddingVertical: 3,
     overflow: "hidden",
+  },
+  moduloBadgeDestaque: { color: "#FFF", backgroundColor: theme.colors.acao },
+  nota: {
+    backgroundColor: theme.colors.notaBg,
+    borderRadius: theme.radius.card,
+    padding: 14,
+  },
+  notaLinha: { flexDirection: "row", alignItems: "center", gap: 10 },
+  notaTexto: {
+    fontSize: 13.5,
+    color: theme.colors.textSecondary,
+    fontWeight: "500",
+    lineHeight: 19,
   },
   vazioLinha: {
     color: theme.colors.textSecondary,

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type {
-  ComunicadoGestor,
-  LeituraComunicado,
-  Unidade,
+import {
+  rotuloUnidade,
+  type ComunicadoGestor,
+  type LeituraComunicado,
+  type Unidade,
 } from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
 
@@ -14,10 +15,6 @@ function dataCurta(iso: string): string {
     month: "2-digit",
     year: "2-digit",
   });
-}
-
-function rotulo(u: LeituraComunicado["unidade"]): string {
-  return u.bloco ? `${u.identificacao} · ${u.bloco}` : u.identificacao;
 }
 
 export function ComunicadosView() {
@@ -227,7 +224,8 @@ export function ComunicadosView() {
                       ) : (
                         abertas[c.id].map((l, i) => (
                           <div key={i} style={{ color: "var(--texto-3)" }}>
-                            {l.nome} · {rotulo(l.unidade)} · {dataCurta(l.lidoEm)}
+                            {l.nome} · {rotuloUnidade(l.unidade)} ·{" "}
+                            {dataCurta(l.lidoEm)}
                           </div>
                         ))
                       )}

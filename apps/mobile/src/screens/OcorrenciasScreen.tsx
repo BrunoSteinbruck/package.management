@@ -4,16 +4,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { STATUS_AVISO, type OcorrenciaGestor, type StatusAviso } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
-import { dataCurta, rotuloStatusAviso, rotuloUnidade } from "../api/types";
-import {
-  Chip,
-  HeaderTela,
-  ItemLista,
-  Selo,
-  Tela,
-  Vazio,
-  tomDoStatus,
-} from "../components/ui";
+import { diasAtras, rotuloUnidade } from "../api/types";
+import { Chip, HeaderTela, ItemLista, Selo, Tela, Vazio } from "../components/ui";
 import { theme } from "../theme";
 import type { SindicoStackParamList } from "../navigation";
 
@@ -22,9 +14,12 @@ type Props = NativeStackScreenProps<SindicoStackParamList, "Ocorrencias">;
 type Filtro = StatusAviso | "TODOS";
 const FILTROS: readonly Filtro[] = ["TODOS", ...STATUS_AVISO];
 
-function rotuloFiltro(f: Filtro): string {
-  return f === "TODOS" ? "Todos" : rotuloStatusAviso(f);
-}
+/** Plural nos filtros, singular no selo do item: "Abertos" filtra, "Aberto" é. */
+const ROTULO_FILTRO: Record<Filtro, string> = {
+  TODOS: "Todos",
+  ABERTO: "Abertos",
+  RESOLVIDO: "Resolvidos",
+};
 
 export function OcorrenciasScreen({ navigation }: Props) {
   const [filtro, setFiltro] = useState<Filtro>("ABERTO");
@@ -52,14 +47,20 @@ export function OcorrenciasScreen({ navigation }: Props) {
   return (
     <Tela comInsetTop>
       <HeaderTela
-        titulo={`Relatos (${itens.length})`}
+        titulo="Relatos dos moradores"
         aoVoltar={() => navigation.goBack()}
       />
       <View style={styles.filtros}>
         {FILTROS.map((f) => (
           <Chip
             key={f}
-            rotulo={rotuloFiltro(f)}
+            // A contagem acompanha o filtro ativo em vez do título: é o que
+            // está na tela agora, e no título ela competia com o nome.
+            rotulo={
+              filtro === f
+                ? `${ROTULO_FILTRO[f]} · ${itens.length}`
+                : ROTULO_FILTRO[f]
+            }
             ativo={filtro === f}
             onPress={() => setFiltro(f)}
           />
@@ -95,15 +96,10 @@ export function OcorrenciasScreen({ navigation }: Props) {
         }
         renderItem={({ item }) => (
           <ItemLista
-            titulo={item.categoria}
-            sub={
-              // A API devolve "-" quando o autor sumiu; melhor omitir do que
-              // mostrar um travessão solto depois da unidade.
-              item.autor && item.autor !== "-"
-                ? `${rotuloUnidade(item.unidade)} · ${item.autor}`
-                : rotuloUnidade(item.unidade)
-            }
-            detalhe={dataCurta(item.criadoEm)}
+            // O relato do morador é o título, não a categoria: numa fila com
+            // três "Elevador" era impossível saber qual é qual sem abrir.
+            titulo={item.descricao?.trim() || item.categoria}
+            sub={`${rotuloUnidade(item.unidade)} · ${diasAtras(item.criadoEm)}`}
             media={{
               icone: "escudo",
               corFundo: theme.colors.divisor,
@@ -111,8 +107,8 @@ export function OcorrenciasScreen({ navigation }: Props) {
             }}
             direita={
               <Selo
-                texto={rotuloStatusAviso(item.status)}
-                tom={tomDoStatus(item.status)}
+                texto={item.status === "RESOLVIDO" ? "resolvida" : item.categoria}
+                tom={item.status === "RESOLVIDO" ? "ok" : "neutro"}
               />
             }
             chevron
