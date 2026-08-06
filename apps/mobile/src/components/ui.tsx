@@ -62,9 +62,16 @@ export function Botao(props: {
   icone?: NomeIcone;
   desabilitado?: boolean;
   carregando?: boolean;
+  /**
+   * Sobrescreve o verde do texto e do ícone no outline. Existe para a ação
+   * destrutiva ("Excluir minha conta"), que precisa não parecer com as
+   * outras: a borda sozinha não avisa o suficiente.
+   */
+  corTexto?: string;
   estilo?: ViewStyle;
 }) {
   const outline = props.variante === "outline";
+  const cor = props.corTexto ?? (outline ? theme.colors.marca : "#FFF");
   return (
     <Pressable
       onPress={props.onPress}
@@ -79,25 +86,13 @@ export function Botao(props: {
       ]}
     >
       {props.carregando ? (
-        <ActivityIndicator color={outline ? theme.colors.marca : "#FFF"} />
+        <ActivityIndicator color={cor} />
       ) : (
         <View style={styles.ctaConteudo}>
           {props.icone && (
-            <Icone
-              nome={props.icone}
-              tamanho={20}
-              traco={2.2}
-              cor={outline ? theme.colors.marca : "#FFF"}
-            />
+            <Icone nome={props.icone} tamanho={20} traco={2.2} cor={cor} />
           )}
-          <Text
-            style={[
-              styles.botaoTexto,
-              { color: outline ? theme.colors.marca : "#FFF" },
-            ]}
-          >
-            {props.titulo}
-          </Text>
+          <Text style={[styles.botaoTexto, { color: cor }]}>{props.titulo}</Text>
         </View>
       )}
     </Pressable>
