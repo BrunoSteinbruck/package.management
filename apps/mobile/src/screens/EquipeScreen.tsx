@@ -36,6 +36,14 @@ const PAPEIS = [
   { valor: "SINDICO", rotulo: "Síndico" },
 ] as const;
 
+/** O enum é ASCII; a tela é em português. "sindico" não é palavra. */
+function rotuloPapel(papel: string): string {
+  return (
+    PAPEIS.find((p) => p.valor === papel)?.rotulo.toLowerCase() ??
+    papel.toLowerCase()
+  );
+}
+
 /**
  * Quem opera a portaria: porteiros, apoio e outros síndicos.
  *
@@ -255,7 +263,7 @@ export function EquipeScreen({ navigation }: Props) {
           <View>
             <ItemLista
               titulo={item.nome}
-              sub={`${contatoDeMembro(item.telefone)} · ${String(item.papel).toLowerCase()}`}
+              sub={`${contatoDeMembro(item.telefone)} · ${rotuloPapel(String(item.papel))}`}
               detalhe={item.email ?? undefined}
               media={{ iniciais: iniciais(item.nome) }}
               direita={
@@ -286,6 +294,9 @@ export function EquipeScreen({ navigation }: Props) {
                 />
               </View>
             ) : (
+              // Compactas e à direita: a tela responde "quem está na equipe",
+              // e dois botões de largura inteira por linha dobravam a altura
+              // da lista para ações que são ocasionais.
               <View style={styles.acoes}>
                 {/* Só para quem NÃO tem e-mail: trocar o de quem já tem
                     redireciona o "esqueci a senha" para outra caixa, e o
@@ -298,14 +309,14 @@ export function EquipeScreen({ navigation }: Props) {
                       setCompletando(item.id);
                       setEmailDoMembro("");
                     }}
-                    estilo={{ flex: 1, minHeight: 44 }}
+                    estilo={styles.botaoAcao}
                   />
                 )}
                 <Botao
                   titulo={item.ativo ? "Desativar" : "Reativar"}
                   variante="outline"
                   onPress={() => alternar(item)}
-                  estilo={{ flex: 1, minHeight: 44 }}
+                  estilo={styles.botaoAcao}
                 />
               </View>
             )}
@@ -329,5 +340,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
-  acoes: { flexDirection: "row", gap: 10, marginTop: 8 },
+  acoes: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 6,
+  },
+  botaoAcao: { minHeight: 38, paddingHorizontal: 14 },
 });

@@ -86,7 +86,9 @@ export function RelatoriosScreen({ navigation }: Props) {
 
         <Card estilo={{ marginTop: 12 }}>
           <Text style={[styles.valor, { color: theme.colors.ok }]}>
-            {dados ? `${dados.notificacoesPct}%` : "-"}
+            {dados
+              ? `${dados.notificacoesPct.toLocaleString("pt-BR")}%`
+              : "-"}
           </Text>
           <Text style={styles.rotulo}>notificações entregues</Text>
           <Text style={styles.sub}>push · WhatsApp fallback em breve</Text>

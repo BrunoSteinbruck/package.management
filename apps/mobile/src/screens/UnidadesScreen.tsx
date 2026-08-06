@@ -164,12 +164,20 @@ export function UnidadesScreen({ navigation, condominio }: Props) {
             />
             {/* Só onde há alguém para convidar: unidade sem titular não tem
                 número, e quem já está no app não precisa de convite. */}
+            {/* Ancorado à direita e colado no card: em largura inteira,
+                com o gap da lista quase igual à margem, ele ficava boiando
+                entre duas unidades e não dava para saber qual convidava. */}
             {!item.temApp && item.titular && (
               <Botao
                 titulo="Convidar por WhatsApp"
                 variante="outline"
                 onPress={() => convidar(item)}
-                estilo={{ marginTop: 8, minHeight: 44 }}
+                estilo={{
+                  alignSelf: "flex-end",
+                  marginTop: 6,
+                  minHeight: 40,
+                  paddingHorizontal: 16,
+                }}
               />
             )}
           </View>
