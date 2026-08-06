@@ -24,6 +24,7 @@ import { SindicoHomeScreen } from "./src/screens/SindicoHomeScreen";
 import { UnidadesScreen } from "./src/screens/UnidadesScreen";
 import { EquipeScreen } from "./src/screens/EquipeScreen";
 import { RelatoriosScreen } from "./src/screens/RelatoriosScreen";
+import { FinanceiroScreen } from "./src/screens/FinanceiroScreen";
 import { ArmazenadosScreen } from "./src/screens/ArmazenadosScreen";
 import { AvisarScreen } from "./src/screens/AvisarScreen";
 import { AvisosScreen } from "./src/screens/AvisosScreen";
@@ -148,6 +149,7 @@ function PilhaSindico({ perfil, aoSair }: PropsPilha) {
         </Sindico.Screen>
         <Sindico.Screen name="RetiradasHoje" component={RetiradasHojeScreen} />
         <Sindico.Screen name="Relatorios" component={RelatoriosScreen} />
+        <Sindico.Screen name="Financeiro" component={FinanceiroScreen} />
         <Sindico.Screen name="Avisar" component={AvisarScreen} />
         {/* Consumos em modo leitura: registrar leitura é rota da portaria e
             nem compila nesta pilha. */}

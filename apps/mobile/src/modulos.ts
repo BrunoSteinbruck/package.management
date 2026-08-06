@@ -141,6 +141,14 @@ export const MODULOS_SINDICO: readonly Modulo<
     slot: "secundario",
   },
   {
+    id: "Financeiro",
+    titulo: "Financeiro",
+    icone: "boleto",
+    perfis: ["sindico"],
+    slot: "secundario",
+    flag: "financeiro",
+  },
+  {
     id: "Comunicados",
     titulo: "Comunicados",
     icone: "megafone",

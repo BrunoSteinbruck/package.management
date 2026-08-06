@@ -66,6 +66,8 @@ export type SindicoStackParamList = Omit<
   Equipe: undefined;
   // Os números do mês da portaria, no mesmo recorte do painel.
   Relatorios: undefined;
+  // Cobranças, valor por unidade e conciliação bancária.
+  Financeiro: undefined;
   // Painel de consumos: o síndico acompanha e exporta, não registra leitura.
   Consumos: undefined;
   // Comunicados: quem publica é o síndico, então a lista e o compositor
