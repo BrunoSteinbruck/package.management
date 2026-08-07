@@ -23,6 +23,7 @@ import {
 } from "@pacotes/shared";
 import { apiFetch } from "../api/client";
 import { excluirConta } from "../api/excluirConta";
+import { registrarPush } from "../api/push";
 import { limparSessao } from "../api/session";
 import { iniciais } from "../api/types";
 import { BotaoModulo } from "../components/ui";
@@ -97,6 +98,10 @@ export function SindicoHomeScreen({ navigation, perfil, aoSair }: Props) {
   useFocusEffect(
     useCallback(() => {
       carregar();
+      // Re-registra o aparelho, como a home do morador já fazia. Sem isto,
+      // "sair dos outros aparelhos" (que apaga todos os devices) deixava o
+      // síndico sem push até o próximo login.
+      registrarPush();
     }, [carregar]),
   );
 

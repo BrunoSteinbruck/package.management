@@ -353,9 +353,24 @@ export class ContaService {
         data: { sessoesValidasApos: agora },
       });
     }
-    // O device do outro aparelho fica: ele para de conseguir chamar a API, e
-    // apagá-lo aqui exigiria saber QUAL device é este, que o token não diz.
-    // Sem sessão, o push que chegar lá não abre nada.
+
+    /**
+     * Os devices vão junto, TODOS.
+     *
+     * Cortar só o acesso deixava o celular perdido recebendo push com
+     * conteúdo na tela de bloqueio: "Sua encomenda chegou", "Sua visita
+     * chegou". Quem perdeu o telefone não quer que ele continue anunciando a
+     * rotina da casa para quem estiver com ele.
+     *
+     * Apaga todos porque o token não diz qual device é ESTE; o aparelho em
+     * uso se registra de novo na primeira abertura (ver `registrarPush`, que
+     * agora roda nas três homes e no login). O custo é uma janela curta sem
+     * push neste aparelho, contra o benefício de calar o que foi perdido.
+     */
+    await (user.tipo === "morador"
+      ? this.prisma.device.deleteMany({ where: { moradorId: user.sub } })
+      : this.prisma.device.deleteMany({ where: { usuarioId: user.sub } }));
+
     return this.auth.reassinar(user);
   }
 

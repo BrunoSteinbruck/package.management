@@ -18,6 +18,7 @@ import { limparEstado } from "../api/estadoLeituras";
 import { drenarFila, tamanhoFila } from "../api/offlineQueue";
 import { relatarDrenagem } from "../api/relatoDrenagem";
 import { excluirConta } from "../api/excluirConta";
+import { registrarPush } from "../api/push";
 import { limparSessao } from "../api/session";
 import { iniciais } from "../api/types";
 import { BotaoModulo } from "../components/ui";
@@ -73,6 +74,10 @@ export function PortariaHomeScreen({ navigation, perfil, aoSair }: Props) {
   useFocusEffect(
     useCallback(() => {
       carregar();
+      // Re-registra o aparelho, como a home do morador já fazia. Sem isto,
+      // "sair dos outros aparelhos" (que apaga todos os devices) deixava a
+      // portaria sem push até o próximo login.
+      registrarPush();
     }, [carregar]),
   );
 

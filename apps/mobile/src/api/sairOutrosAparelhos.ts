@@ -17,7 +17,7 @@ import { salvarSessao } from "./session";
 export async function sairDosOutrosAparelhos() {
   Alert.alert(
     "Sair dos outros aparelhos?",
-    "Quem estiver com sua conta aberta em outro celular ou no computador precisa entrar de novo. Você continua conectado aqui.",
+    "Quem estiver com sua conta aberta em outro celular ou no computador precisa entrar de novo, e os avisos param de chegar lá. Você continua conectado aqui.",
     [
       { text: "Cancelar", style: "cancel" },
       {

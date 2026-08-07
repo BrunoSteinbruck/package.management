@@ -260,8 +260,9 @@ export function MinhaContaView() {
         <h2>Outros aparelhos</h2>
         <p className="aviso">
           Encerra sua conta em todo lugar menos aqui: outro computador, o
-          celular, um aparelho perdido. Use se desconfiar que alguém entrou, ou
-          depois de trocar de telefone. Trocar a senha acima já faz isso junto.
+          celular, um aparelho perdido. Eles saem e param de receber avisos no
+          app. Use se desconfiar que alguém entrou, ou depois de trocar de
+          telefone. Trocar a senha acima já faz isso junto.
         </p>
         <button
           className="outline"

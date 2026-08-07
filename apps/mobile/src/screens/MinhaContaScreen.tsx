@@ -249,7 +249,7 @@ export function MinhaContaScreen({ navigation, aoSair }: Props) {
               onPress={sairDosOutrosAparelhos}
             />
             <Nota
-              texto="Use se perder o celular ou se achar que alguém entrou na sua conta. Você continua conectado neste aparelho."
+              texto="Use se perder o celular ou se achar que alguém entrou na sua conta: os outros aparelhos saem e param de receber avisos. Você continua conectado neste."
               estilo={{ marginTop: 12 }}
             />
           </Card>
