@@ -535,7 +535,32 @@ export class PushWorker implements OnModuleInit, OnModuleDestroy {
             gte: new Date(`${hoje}T00:00:00.000Z`),
             lte: new Date(`${daquiATres}T00:00:00.000Z`),
           },
-          notificacoes: { none: { tipo: "COBRANCA_LEMBRETE" } },
+          /**
+           * Nada de lembrete para cobrança avisada HOJE.
+           *
+           * Os dois avisos têm o MESMO corpo ("Taxa de agosto · R$ 480,00,
+           * vence 08/08"); só o título muda. Uma cobrança que nasce a três
+           * dias ou menos do vencimento ganhava os dois no mesmo ciclo, e o
+           * morador recebia a mesma frase duas vezes com segundos de
+           * diferença. Com a geração automática isso deixou de ser acidente
+           * de quem clicou tarde e virou rotina de todo mês.
+           *
+           * O corte usa meia-noite UTC do dia local. Em fuso negativo, como
+           * o do Brasil, isso alcança também as últimas horas de ontem: erra
+           * para o lado de calar um lembrete a mais, que é o lado certo
+           * quando o assunto é push sobre dinheiro.
+           */
+          notificacoes: {
+            none: {
+              OR: [
+                { tipo: "COBRANCA_LEMBRETE" },
+                {
+                  tipo: "COBRANCA_GERADA",
+                  criadoEm: { gte: new Date(`${hoje}T00:00:00.000Z`) },
+                },
+              ],
+            },
+          },
         },
         select: { id: true },
       });
