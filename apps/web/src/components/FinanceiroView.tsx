@@ -584,6 +584,19 @@ export function FinanceiroView() {
               </tr>
             </tbody>
           </table>
+          {/*
+            Com vencimento no dia 1 a geração automática nunca roda: ela só
+            age enquanto o vencimento ainda está no futuro, e não há dia do
+            mês anterior ao dia 1. Sem este aviso o síndico liga o botão, vê
+            "ligado" e espera para sempre por cobranças que não vêm.
+          */}
+          {config.geracaoAutomatica && config.diaVencimento === 1 && (
+            <p className="aviso" style={{ color: "var(--alerta)", fontWeight: 600 }}>
+              Com vencimento no dia 1, a geração automática não tem quando
+              rodar: ela só cria cobranças enquanto o vencimento ainda está no
+              futuro. Use outro dia, ou gere manualmente.
+            </p>
+          )}
           <p className="aviso">
             A credencial do provedor de cobrança e o extrato OFX do banco
             continuam sendo cadastrados fora daqui.

@@ -100,6 +100,8 @@ export function FinanceiroScreen({ navigation }: Props) {
   const [carregando, setCarregando] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
+  /** Nulo = mostrar o dia que o servidor tem. Ver o campo em Ajustes. */
+  const [rascunhoDia, setRascunhoDia] = useState<string | null>(null);
   const [editando, setEditando] = useState<TaxaLinha | null>(null);
   const [rascunho, setRascunho] = useState<RascunhoTaxa>({
     valor: "",
@@ -416,18 +418,31 @@ export function FinanceiroScreen({ navigation }: Props) {
                   dia usa o último: 31 em fevereiro vence no dia 28.
                 </Text>
               </View>
+              {/*
+                Controlado, e não `defaultValue`: o campo precisa VOLTAR
+                sozinho. Com um input não controlado, digitar 45 e sair
+                deixava o 45 na tela enquanto o dia gravado continuava 10, ou
+                seja, a tela mentia sobre quando o boleto vence.
+
+                `rascunhoDia` nulo significa "mostre o que o servidor tem".
+                Toda saída do campo o zera: valor bom, o servidor responde e
+                a tela segue a resposta; valor ruim, a tela volta ao que é
+                verdade.
+              */}
               <TextInput
                 style={styles.campoDia}
                 keyboardType="number-pad"
                 maxLength={2}
                 editable={!salvandoConfig}
-                defaultValue={String(config?.diaVencimento ?? 10)}
+                value={rascunhoDia ?? String(config?.diaVencimento ?? 10)}
+                onChangeText={setRascunhoDia}
                 selectTextOnFocus
                 // Salva ao sair do campo e não a cada tecla: digitar "25"
                 // passa por "2", que é um dia de vencimento válido e seria
                 // gravado no caminho.
                 onEndEditing={(e) => {
                   const dia = Number(e.nativeEvent.text);
+                  setRascunhoDia(null);
                   if (
                     !Number.isInteger(dia) ||
                     dia < 1 ||
@@ -481,6 +496,15 @@ export function FinanceiroScreen({ navigation }: Props) {
               />
             </View>
           </Card>
+          {/* Dia 1 deixa a geração automática inerte: ela só age enquanto o
+              vencimento está no futuro, e não há dia anterior ao dia 1. */}
+          {config?.geracaoAutomatica && config.diaVencimento === 1 && (
+            <Nota
+              icone="alerta"
+              texto="Com vencimento no dia 1, a geração automática não tem quando rodar: ela só cria cobranças enquanto o vencimento ainda está no futuro. Use outro dia, ou gere manualmente."
+              estilo={{ marginTop: 12 }}
+            />
+          )}
           <Nota
             texto="A credencial do provedor de cobrança e o extrato OFX do banco são cadastrados pelo painel, no computador."
             estilo={{ marginTop: 12 }}
