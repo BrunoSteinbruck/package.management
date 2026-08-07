@@ -183,7 +183,9 @@ export function MoradorHomeScreen({ navigation, perfil }: Props) {
               <BotaoModulo
                 variante="pill"
                 titulo="Histórico"
-                icone="lista"
+                // Relógio e não "lista": Documentos, logo acima na mesma tela,
+                // já é a lista, e as duas linhas viravam o mesmo desenho.
+                icone="relogio"
                 badge={{ texto: String(totalHistorico) }}
                 onPress={() => navigation.navigate("Encomendas")}
               />

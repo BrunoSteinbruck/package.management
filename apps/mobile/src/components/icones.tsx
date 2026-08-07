@@ -24,7 +24,8 @@ export type NomeIcone =
   | "megafone"
   | "alerta"
   | "ajustes"
-  | "grafico";
+  | "grafico"
+  | "relogio";
 
 const DESENHOS: Record<NomeIcone, React.ReactNode> = {
   camera: (
@@ -95,6 +96,15 @@ const DESENHOS: Record<NomeIcone, React.ReactNode> = {
     <>
       <Path d="M8 6h13M8 12h13M8 18h13" />
       <Path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </>
+  ),
+  // Histórico: o relógio é o desenho universal de "o que já passou". Existe
+  // porque "lista" já era Documentos, e as duas linhas ficavam visíveis ao
+  // mesmo tempo na home do morador com o mesmo ícone.
+  relogio: (
+    <>
+      <Circle cx="12" cy="12" r="9" />
+      <Path d="M12 7v5l3 2" />
     </>
   ),
   // Relatórios: colunas de altura diferente, que é o desenho da própria tela.
