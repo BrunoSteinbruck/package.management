@@ -307,6 +307,7 @@ export class FinanceiroService {
           criadas: r.criadas,
           puladas: r.puladas,
           naoCobradas: r.naoCobradas.length,
+          semBoleto: r.semBoleto,
         },
       }),
     );
@@ -346,52 +347,71 @@ export class FinanceiroService {
       }
     }
 
-    const { criadas, puladas, naoCobradas } = await this.prisma.withTenant(
-      condominioId,
-      async (tx) => {
+    /**
+     * FASE 1: só banco, transação curta, nenhuma chamada de rede.
+     *
+     * Antes o `provider.criar` acontecia DENTRO desta transação, e isso
+     * criava dois problemas de dinheiro:
+     *
+     * 1. Um erro de banco no meio do lote desfazia as linhas, mas NÃO os
+     *    boletos já emitidos: eles ficavam órfãos no provedor e a rodada
+     *    seguinte emitia outros para a mesma unidade e o mesmo mês. Cobrar
+     *    duas vezes é o pior estrago possível deste módulo.
+     * 2. A transação ficava aberta pelo tempo de todas as chamadas de rede
+     *    somadas, segurando conexão do pool pelo boleto mais lento.
+     *
+     * Aqui só se decide o que fazer com cada unidade.
+     */
+    const { paraEmitir, criadas, puladas, naoCobradas } =
+      await this.prisma.withTenant(condominioId, async (tx) => {
         const taxas = await tx.taxaUnidade.findMany({
           include: { unidade: true },
         });
         const jaExistem = await tx.cobranca.findMany({
           where: { competencia: inicio },
-          select: { unidadeId: true },
+          select: { id: true, unidadeId: true, provedorCobrancaId: true },
         });
-        const feitas = new Set(jaExistem.map((c) => c.unidadeId));
-        let criadas = 0;
+        const porUnidade = new Map(jaExistem.map((c) => [c.unidadeId, c]));
+
+        const paraEmitir: Array<{
+          cobrancaId: string;
+          taxa: (typeof taxas)[number];
+        }> = [];
         const naoCobradas: string[] = [];
+        let criadas = 0;
+
         for (const taxa of taxas) {
-          if (feitas.has(taxa.unidadeId)) continue;
           if (reais(taxa.valorMensal) <= 0) continue;
 
+          const existente = porUnidade.get(taxa.unidadeId);
+          if (existente) {
+            /**
+             * Cobrança que já existe mas está SEM boleto volta para a fila.
+             *
+             * Antes ela era pulada para sempre, apesar de o comentário aqui
+             * prometer que "a próxima execução completa": a unidade já
+             * constava como feita, então a emissão nunca era retentada. O
+             * morador nunca recebia o boleto, e a régua depois anunciava
+             * "Boleto vencido" de um boleto que jamais existiu.
+             */
+            if (!existente.provedorCobrancaId) {
+              paraEmitir.push({ cobrancaId: existente.id, taxa });
+            }
+            continue;
+          }
+
           // Com provedor real não existe boleto sem pagador: o Asaas exige
-          // nome e CPF/CNPJ para criar o cliente. Sem isso a unidade é PULADA
-          // e volta na resposta, em vez de gerar uma cobrança órfã que nunca
-          // viraria boleto e ficaria inadimplente para sempre no painel.
-          if (this.cobrancas.real && !taxa.clienteExternoId) {
-            if (!taxa.responsavelNome || !taxa.responsavelCpfCnpj) {
-              naoCobradas.push(rotuloUnidade(taxa.unidade));
-              continue;
-            }
-            try {
-              const clienteId = await this.cobrancas.provider.garantirCliente({
-                apiKey,
-                nome: taxa.responsavelNome,
-                cpfCnpj: taxa.responsavelCpfCnpj,
-                email: taxa.responsavelEmail ?? undefined,
-                referenciaExterna: taxa.unidadeId,
-              });
-              await tx.taxaUnidade.update({
-                where: { id: taxa.id },
-                data: { clienteExternoId: clienteId },
-              });
-              taxa.clienteExternoId = clienteId;
-            } catch (e) {
-              this.logger.error(
-                `Cliente da unidade ${taxa.unidadeId} nao criado: ${(e as Error).message.slice(0, 140)}`,
-              );
-              naoCobradas.push(rotuloUnidade(taxa.unidade));
-              continue;
-            }
+          // nome e CPF/CNPJ para criar o cliente. Falta de cadastro é
+          // problema de DADO, que só o síndico resolve, então a unidade fica
+          // sem linha nenhuma e volta na resposta. Falha do provedor é outra
+          // coisa: essa vira linha e é retentada (fase 2).
+          if (
+            this.cobrancas.real &&
+            !taxa.clienteExternoId &&
+            (!taxa.responsavelNome || !taxa.responsavelCpfCnpj)
+          ) {
+            naoCobradas.push(rotuloUnidade(taxa.unidade));
+            continue;
           }
 
           const cobranca = await tx.cobranca.create({
@@ -403,57 +423,97 @@ export class FinanceiroService {
               vencimento: new Date(`${vencimento}T00:00:00.000Z`),
             },
           });
-          // O provedor é chamado DEPOIS da linha existir: se a chamada falhar,
-          // a cobrança fica sem boleto e a próxima execução completa, em vez
-          // de a linha sumir e o morador ser cobrado duas vezes.
-          try {
-            const emitida = await this.cobrancas.provider.criar({
-              apiKey,
-              // O cliente do provedor, não o nosso uuid: o Asaas recusa um id
-              // que não existe na subconta dele.
-              clienteExternoId: taxa.clienteExternoId ?? taxa.unidadeId,
-              valor: reais(taxa.valorMensal),
-              vencimento,
-              descricao: `Taxa condominial de ${nomeDaCompetencia(competencia)}`,
-              referenciaExterna: `${condominioId}:${cobranca.id}`,
-            });
-            await tx.cobranca.update({
-              where: { id: cobranca.id },
-              data: {
-                provedorCobrancaId: emitida.provedorCobrancaId,
-                linhaDigitavel: emitida.linhaDigitavel,
-                urlBoleto: emitida.urlBoleto,
-                pixCopiaCola: emitida.pixCopiaCola,
-              },
-            });
-            await tx.notificacao.create({
-              data: {
-                condominioId,
-                cobrancaId: cobranca.id,
-                canal: "PUSH",
-                tipo: "COBRANCA_GERADA",
-              },
-            });
-          } catch (e) {
-            this.logger.error(
-              `Cobranca ${cobranca.id} sem boleto: ${(e as Error).message.slice(0, 120)}`,
-            );
-          }
           criadas++;
+          paraEmitir.push({ cobrancaId: cobranca.id, taxa });
         }
-        return { criadas, puladas: feitas.size, naoCobradas };
-      },
-    );
+        return { paraEmitir, criadas, puladas: porUnidade.size, naoCobradas };
+      });
+
+    /**
+     * FASE 2: a rede, com a transação já fechada.
+     *
+     * Cada boleto tem a sua própria escrita curta. Se o processo morrer no
+     * meio, o que foi emitido está gravado e o que faltou é retentado na
+     * próxima rodada, porque a linha sem `provedorCobrancaId` volta para a
+     * fila na fase 1.
+     *
+     * A `referenciaExterna` agora é estável entre tentativas (a linha
+     * persiste), o que dá ao provedor a chance de deduplicar sozinho.
+     */
+    let semBoleto = 0;
+    for (const { cobrancaId, taxa } of paraEmitir) {
+      try {
+        let clienteExternoId = taxa.clienteExternoId;
+        if (this.cobrancas.real && !clienteExternoId) {
+          clienteExternoId = await this.cobrancas.provider.garantirCliente({
+            apiKey,
+            nome: taxa.responsavelNome ?? "",
+            cpfCnpj: taxa.responsavelCpfCnpj ?? "",
+            email: taxa.responsavelEmail ?? undefined,
+            referenciaExterna: taxa.unidadeId,
+          });
+          await this.prisma.withTenant(condominioId, (tx) =>
+            tx.taxaUnidade.update({
+              where: { id: taxa.id },
+              data: { clienteExternoId },
+            }),
+          );
+        }
+
+        const emitida = await this.cobrancas.provider.criar({
+          apiKey,
+          // O cliente do provedor, não o nosso uuid: o Asaas recusa um id
+          // que não existe na subconta dele.
+          clienteExternoId: clienteExternoId ?? taxa.unidadeId,
+          valor: reais(taxa.valorMensal),
+          vencimento,
+          descricao: `Taxa condominial de ${nomeDaCompetencia(competencia)}`,
+          referenciaExterna: `${condominioId}:${cobrancaId}`,
+        });
+
+        await this.prisma.withTenant(condominioId, async (tx) => {
+          await tx.cobranca.update({
+            where: { id: cobrancaId },
+            data: {
+              provedorCobrancaId: emitida.provedorCobrancaId,
+              linhaDigitavel: emitida.linhaDigitavel,
+              urlBoleto: emitida.urlBoleto,
+              pixCopiaCola: emitida.pixCopiaCola,
+            },
+          });
+          // O aviso sai junto com o boleto, e não com a linha: avisar
+          // "Boleto disponível" antes de existir boleto manda o morador
+          // procurar no app uma coisa que não está lá.
+          await tx.notificacao.create({
+            data: {
+              condominioId,
+              cobrancaId,
+              canal: "PUSH",
+              tipo: "COBRANCA_GERADA",
+            },
+          });
+        });
+      } catch (e) {
+        semBoleto++;
+        this.logger.error(
+          `Cobranca ${cobrancaId} sem boleto: ${(e as Error).message.slice(0, 140)}`,
+        );
+      }
+    }
 
     return {
       competencia,
       vencimento,
       criadas,
       puladas,
-      // Unidades que ficaram de fora: sem responsável cadastrado OU com
-      // falha ao preparar o pagador no provedor. O painel mostra a lista,
-      // senão o síndico vê "criadas: 3" sem saber que 13 ficaram de fora.
+      // Unidades que ficaram de fora por falta de responsável cadastrado. O
+      // painel mostra a lista, senão o síndico vê "criadas: 3" sem saber que
+      // 13 ficaram de fora.
       naoCobradas,
+      // Linhas gravadas cujo boleto o provedor não emitiu. Vai na resposta
+      // porque "10 criadas" com 10 boletos faltando é uma mentira de
+      // consequência direta: o morador não tem o que pagar.
+      semBoleto,
       emissaoReal: this.cobrancas.real,
     };
   }

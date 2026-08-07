@@ -165,6 +165,7 @@ export function FinanceiroScreen({ navigation }: Props) {
         criadas: number;
         puladas: number;
         naoCobradas: string[];
+        semBoleto: number;
       }>("/cadastro/financeiro/gerar", {
         method: "POST",
         body: { competencia },
@@ -178,9 +179,15 @@ export function FinanceiroScreen({ navigation }: Props) {
           " credencial do provedor foi recusada. Corrija e gere de novo: o" +
           " que já foi criado não duplica."
         : "";
+      // Linha gravada sem boleto: o morador não tem o que pagar. A próxima
+      // geração retenta só essas, então dizer isso evita refazer tudo à mão.
+      const sem = r.semBoleto
+        ? `\n\nSEM BOLETO (${r.semBoleto}): a cobrança está registrada, mas o` +
+          " banco não emitiu. Gerar de novo retenta só essas, sem duplicar."
+        : "";
       Alert.alert(
         "Cobranças geradas",
-        `${r.criadas} criada(s), ${r.puladas} já existiam.${faltando}`,
+        `${r.criadas} criada(s), ${r.puladas} já existiam.${faltando}${sem}`,
       );
       await carregar();
     } catch (e) {

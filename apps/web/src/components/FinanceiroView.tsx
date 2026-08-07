@@ -109,6 +109,7 @@ export function FinanceiroView() {
         criadas: number;
         puladas: number;
         naoCobradas: string[];
+        semBoleto: number;
       }>("/cadastro/financeiro/gerar", { method: "POST", body: { competencia } });
       setErro(null);
       // As unidades que ficaram de fora precisam ser ditas em voz alta: sem
@@ -121,8 +122,15 @@ export function FinanceiroView() {
           " provedor foi recusada. Corrija e gere de novo: o que já foi criado" +
           " não duplica."
         : "";
+      // Linha gravada sem boleto não é detalhe técnico: o morador não tem o
+      // que pagar. A próxima geração retenta sozinha, e dizer isso evita o
+      // síndico refazer tudo à mão achando que perdeu o mês.
+      const sem = r.semBoleto
+        ? `\n\nSEM BOLETO (${r.semBoleto}): a cobrança está registrada, mas o` +
+          " banco não emitiu. Gerar de novo retenta só essas, sem duplicar."
+        : "";
       alert(
-        `${r.criadas} cobrança(s) criada(s), ${r.puladas} já existiam.${faltando}`,
+        `${r.criadas} cobrança(s) criada(s), ${r.puladas} já existiam.${faltando}${sem}`,
       );
       await carregar();
     } catch (e) {

@@ -1306,7 +1306,11 @@ async function main() {
       !!g1.vencimento?.endsWith("-10"),
       g1.vencimento,
     );
-    const g2 = await req<{ criadas?: number; puladas?: number }>(
+    const g2 = await req<{
+      criadas?: number;
+      puladas?: number;
+      semBoleto?: number;
+    }>(
       "POST",
       "/cadastro/financeiro/gerar",
       { token: sindico, corpo: { competencia } },
@@ -1316,6 +1320,61 @@ async function main() {
       g2.criadas === 0 && g2.puladas === esperadas,
       `criadas=${g2.criadas} puladas=${g2.puladas}`,
     );
+    checa("e nenhuma cobrança fica sem boleto no caminho feliz", g2.semBoleto === 0);
+
+    {
+      /**
+       * Cobrança gravada SEM boleto tem que ser retomada, não pulada.
+       *
+       * O código prometia que "a próxima execução completa" e fazia o
+       * contrário: a unidade já constava como feita, então a emissão nunca
+       * era retentada. O morador nunca recebia o boleto, e a régua depois
+       * anunciava "Boleto vencido" de um boleto que jamais existiu.
+       *
+       * Simula a falha do provedor zerando o que ele preencheu, e verifica
+       * que a rodada seguinte reemite SEM criar linha nova (o unique de
+       * unidade+competência garante que não houve duplicata).
+       */
+      // `cobrancas` tem RLS: fora do tenant a consulta volta vazia.
+      const antes = await comTenant(cid, (tx) =>
+        tx.cobranca.findFirstOrThrow({
+          where: { competencia: new Date(`${competencia}-01`) },
+          select: { id: true },
+        }),
+      );
+      await comTenant(cid, (tx) =>
+        tx.cobranca.update({
+          where: { id: antes.id },
+          data: {
+            provedorCobrancaId: null,
+            linhaDigitavel: null,
+            urlBoleto: null,
+          },
+        }),
+      );
+
+      const g3 = await req<{ criadas?: number; semBoleto?: number }>(
+        "POST",
+        "/cadastro/financeiro/gerar",
+        { token: sindico, corpo: { competencia } },
+      );
+      const depois = await comTenant(cid, (tx) =>
+        tx.cobranca.findUniqueOrThrow({
+          where: { id: antes.id },
+          select: { provedorCobrancaId: true },
+        }),
+      );
+      checa(
+        "cobrança sem boleto é retomada na geração seguinte",
+        !!depois.provedorCobrancaId,
+        `provedorCobrancaId=${depois.provedorCobrancaId}`,
+      );
+      checa(
+        "e a retomada não cria linha nova nem falha",
+        g3.criadas === 0 && g3.semBoleto === 0,
+        `criadas=${g3.criadas} semBoleto=${g3.semBoleto}`,
+      );
+    }
 
     const integ = await req<{ webhookSegredo?: string }>(
       "POST",
