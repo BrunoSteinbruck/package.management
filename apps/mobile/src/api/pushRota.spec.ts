@@ -48,11 +48,12 @@ describe("destino do toque na notificação", () => {
     });
   });
 
-  it("porteiro segue a regra do gestor no relato", () => {
-    expect(rotaDoPush(PORTEIRO, { avisoId: "a1" })).toEqual({
-      rota: "OcorrenciaDetalhe",
-      params: { avisoId: "a1" },
-    });
+  it("porteiro NÃO vai para OcorrenciaDetalhe, que não existe na pilha dele", () => {
+    // A rota é declarada só para o síndico. Mandar o porteiro para lá seria um
+    // navigate silenciosamente ignorado: o toque abre o app e não acontece
+    // nada. Hoje nenhum push de aviso chega ao porteiro, então isto guarda o
+    // dia em que alguém ampliar a audiência.
+    expect(rotaDoPush(PORTEIRO, { avisoId: "a1" })).toBeNull();
   });
 
   it("gestor com push de morador fica na home em vez de ir para o nada", () => {

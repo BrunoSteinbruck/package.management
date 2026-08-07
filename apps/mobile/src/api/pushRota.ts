@@ -43,13 +43,24 @@ export function rotaDoPush(
 
   const avisoId = id(data, "avisoId");
   if (avisoId) {
-    // O mesmo `avisoId` significa coisas diferentes dos dois lados: para o
-    // morador é o aviso que ele recebeu ou o relato que ele abriu, e a lista
-    // dá conta dos dois; para o gestor é o relato novo que chegou, e aí a
-    // tela nominal existe e é onde ele age.
-    return quem === "morador"
-      ? { rota: "Avisos" }
-      : { rota: "OcorrenciaDetalhe", params: { avisoId } };
+    /**
+     * O mesmo `avisoId` significa coisas diferentes nas três pilhas.
+     *
+     * Morador: é o aviso que ele recebeu ou o relato que ele abriu, e a lista
+     * dá conta dos dois. Síndico: é o relato novo que chegou, e aí a tela
+     * nominal existe e é onde ele age.
+     *
+     * Porteiro é null e NÃO segue a regra do síndico: `OcorrenciaDetalhe` só
+     * existe na pilha do síndico (`navigation.ts` a declara no bloco que a
+     * portaria não recebe), e `navigate` para rota inexistente o React
+     * Navigation engole calado. Hoje nenhum push de aviso chega ao porteiro
+     * (`tokensDosGestores` filtra SINDICO/ADMIN), mas escrever "gestor" aqui
+     * deixava a armadilha armada para o dia em que alguém ampliar a
+     * audiência: o toque abriria o app e não faria nada.
+     */
+    if (quem === "morador") return { rota: "Avisos" };
+    if (quem === "porteiro") return null;
+    return { rota: "OcorrenciaDetalhe", params: { avisoId } };
   }
 
   // Encomenda, comunicado, visita e cobrança só são notificados ao morador.
