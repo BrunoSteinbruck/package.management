@@ -264,13 +264,20 @@ async function zerar(cid: string): Promise<void> {
   await prisma.condominio.update({ where: { id: cid }, data: { modulos: [] } });
 
   /**
-   * O gestor volta a ser o do seed: senha, contador e link pendente.
+   * O gestor volta a ser o do seed: senha, contador, link pendente e corte
+   * de revogação.
    *
    * A suíte troca a senha dele pela de teste, e sem devolver a original quem
    * abrisse o painel de demo em seguida usaria a senha impressa no seed e
    * levaria "credencial inválida", sem nenhuma pista do porquê. O bloqueio
    * também cai: uma execução que terminasse travada deixaria a demo
    * inacessível por 15 minutos.
+   *
+   * `sessoesValidasApos` volta a nulo pelo mesmo motivo, e o estrago era
+   * maior: a suíte redefine a senha e chama sair-outros-aparelhos NESTA
+   * conta, que é a mesma do dia a dia de desenvolvimento. Cada execução
+   * derrubava o painel e o app de quem estava trabalhando, e o relogin do
+   * app gasta um dos três OTP que o telefone tem por hora.
    */
   await prisma.usuario.update({
     // A CONTA que a suíte usou, e só ela. `usuarios` é tabela global, sem
@@ -283,6 +290,7 @@ async function zerar(cid: string): Promise<void> {
       senhaBloqueadaAte: null,
       redefinicaoTokenHash: null,
       redefinicaoExpiraEm: null,
+      sessoesValidasApos: null,
     },
   });
 }
@@ -1934,6 +1942,46 @@ async function main() {
       "e a sessão devolvida funciona",
       comONovo.status === 200,
       String(comONovo.status),
+    );
+
+    /**
+     * A troca de senha COMUM revoga igual.
+     *
+     * O caminho de `POST /conta/senha` é diferente do link de redefinição:
+     * exige a senha atual, mora em outro serviço, e é o que a pessoa usa
+     * quando desconfia que entraram na conta dela. Sem asserção própria, ele
+     * poderia parar de revogar sem nada ficar vermelho.
+     */
+    const antes = await entrar();
+    const paraTrocar = await entrar();
+    await new Promise((r) => setTimeout(r, 1100));
+
+    const trocada = await req<{ token?: string; alterada?: boolean }>(
+      "POST",
+      "/conta/senha",
+      {
+        token: paraTrocar,
+        corpo: { senhaAtual: SENHA_E2E, novaSenha: SENHA_E2E },
+      },
+    );
+    checa("trocar a senha devolve a sessão reemitida", !!trocada.token);
+
+    const derrubado = await fetch(`${API}/conta/perfil`, {
+      headers: { authorization: `Bearer ${antes}` },
+    });
+    checa(
+      "trocar a senha derruba as outras sessões",
+      derrubado.status === 401,
+      String(derrubado.status),
+    );
+
+    const seguiuDentro = await fetch(`${API}/conta/perfil`, {
+      headers: { authorization: `Bearer ${trocada.token}` },
+    });
+    checa(
+      "e quem trocou continua dentro, com o token novo",
+      seguiuDentro.status === 200,
+      String(seguiuDentro.status),
     );
   }
 

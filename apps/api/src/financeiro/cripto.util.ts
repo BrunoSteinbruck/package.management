@@ -21,9 +21,17 @@ import {
 
 const ALGORITMO = "aes-256-gcm";
 
+/**
+ * Num só lugar porque `diagnosticoDeSubida` promete o que `chaveMestra`
+ * cobra: com dois números soltos, mudar um sem o outro faria a subida dizer
+ * "ok" e o primeiro uso falhar, que é justamente o buraco que o diagnóstico
+ * existe para fechar.
+ */
+const TAMANHO_MINIMO_CHAVE = 16;
+
 function chaveMestra(): Buffer {
   const bruta = process.env.FINANCEIRO_CRIPTO_CHAVE;
-  if (!bruta || bruta.length < 16) {
+  if (!bruta || bruta.length < TAMANHO_MINIMO_CHAVE) {
     throw new Error(
       "FINANCEIRO_CRIPTO_CHAVE ausente ou curta demais: sem ela as credenciais de cobrança não podem ser guardadas com segurança.",
     );
@@ -88,11 +96,11 @@ export function diagnosticoDeSubida(
   | { nivel: "ok" }
   | { nivel: "aviso" | "fatal"; mensagem: string } {
   const bruta = env.FINANCEIRO_CRIPTO_CHAVE;
-  if (bruta && bruta.length >= 16) return { nivel: "ok" };
+  if (bruta && bruta.length >= TAMANHO_MINIMO_CHAVE) return { nivel: "ok" };
 
   const problema = !bruta
     ? "FINANCEIRO_CRIPTO_CHAVE ausente"
-    : "FINANCEIRO_CRIPTO_CHAVE curta demais (mínimo 16 caracteres)";
+    : `FINANCEIRO_CRIPTO_CHAVE curta demais (mínimo ${TAMANHO_MINIMO_CHAVE} caracteres)`;
 
   return env.ASAAS_API_URL
     ? {

@@ -94,7 +94,9 @@ export function MinhaContaScreen({ navigation, aoSair }: Props) {
     }
     setSalvandoSenha(true);
     try {
-      const r = await apiFetch<{ token: string; perfil: MinhaConta & JwtPayload }>(
+      // `perfil` é o payload da sessão, não o da tela: quem descreve a conta
+      // é `MinhaConta`, que vem do GET e não desta resposta.
+      const r = await apiFetch<{ token: string; perfil: JwtPayload }>(
         "/conta/senha",
         { method: "POST", body: { senhaAtual, novaSenha } },
       );
