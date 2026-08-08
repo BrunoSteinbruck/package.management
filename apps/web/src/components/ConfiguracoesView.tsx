@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { ModuloCondominio } from "@pacotes/shared";
+import {
+  soAConvivarLiga,
+  type Capacidades,
+  type ModuloCondominio,
+} from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
 
 /**
@@ -50,6 +54,14 @@ export function ConfiguracoesView() {
   const [modulos, setModulos] = useState<LinhaModulo[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  /** Onde pedir os módulos que só a Convivar liga. Null sem o env. */
+  const [suporteUrl, setSuporteUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<Capacidades>("/conta/capacidades")
+      .then((c) => setSuporteUrl(c.suporteUrl ?? null))
+      .catch(() => {});
+  }, []);
 
   const carregar = useCallback(async () => {
     try {
@@ -97,8 +109,8 @@ export function ConfiguracoesView() {
       <h1>Configurações</h1>
       <p className="aviso">
         Encomendas, avisos e leituras são a base e estão sempre ligados. Os
-        módulos abaixo o condomínio liga quando quiser: ao ligar, eles aparecem
-        no app de quem tem o perfil certo.
+        módulos abaixo entram quando o condomínio quiser: ao ligar, eles
+        aparecem no app de quem tem o perfil certo.
       </p>
 
       {erro && (
@@ -126,14 +138,35 @@ export function ConfiguracoesView() {
                       {m.ativo ? "ligado" : "desligado"}
                     </span>
                   </td>
-                  <td style={{ width: 130, textAlign: "right" }}>
-                    <button
-                      className="outline"
-                      disabled={salvando}
-                      onClick={() => alternar(m.id)}
-                    >
-                      {m.ativo ? "Desligar" : "Ligar"}
-                    </button>
+                  <td style={{ width: 210, textAlign: "right" }}>
+                    {soAConvivarLiga(m.id) ? (
+                      /* Sem botão: estes dois são combinados com a gente. O
+                         WhatsApp tem custo por mensagem e depende da nossa
+                         conta no Meta Business; o QR muda o procedimento da
+                         portaria inteira. Quem garante é o servidor, que
+                         preserva o estado deles; aqui só se explica o porquê
+                         e se dá o caminho. */
+                      suporteUrl ? (
+                        <a
+                          className="link"
+                          href={suporteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Solicitar ao suporte
+                        </a>
+                      ) : (
+                        <span className="aviso">Fale com o suporte Convivar</span>
+                      )
+                    ) : (
+                      <button
+                        className="outline"
+                        disabled={salvando}
+                        onClick={() => alternar(m.id)}
+                      >
+                        {m.ativo ? "Desligar" : "Ligar"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
@@ -142,6 +175,13 @@ export function ConfiguracoesView() {
         </table>
         {modulos !== null && modulos.length === 0 && (
           <p className="aviso">Nenhum módulo opcional disponível.</p>
+        )}
+        {(modulos ?? []).some((m) => soAConvivarLiga(m.id)) && (
+          <p className="aviso" style={{ marginTop: 12 }}>
+            Avisos por WhatsApp e QR na retirada são ativados pela Convivar:
+            um tem custo por mensagem e o outro muda o procedimento da
+            portaria, então combinamos os dois antes de ligar.
+          </p>
         )}
       </div>
     </>

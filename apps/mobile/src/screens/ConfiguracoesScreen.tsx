@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from "react";
 import {
   Alert,
+  Linking,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,7 +12,11 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { ModuloCondominio } from "@pacotes/shared";
+import {
+  soAConvivarLiga,
+  type Capacidades,
+  type ModuloCondominio,
+} from "@pacotes/shared";
 import { apiFetch, sincronizarModulos } from "../api/client";
 import { Card, HeaderTela, Nota, Tela } from "../components/ui";
 import { theme } from "../theme";
@@ -61,17 +67,35 @@ export function ConfiguracoesScreen({ navigation }: Props) {
   const [modulos, setModulos] = useState<LinhaModulo[] | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  /** Onde pedir os módulos que só a Convivar liga. Null sem o env. */
+  const [suporteUrl, setSuporteUrl] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
       setModulos(await apiFetch<LinhaModulo[]>("/cadastro/modulos"));
+      // Falha sozinho: sem o link, o pedido ao suporte vira uma instrução em
+      // texto, e a lista de módulos continua de pé.
+      apiFetch<Capacidades>("/conta/capacidades")
+        .then((c) => setSuporteUrl(c.suporteUrl ?? null))
+        .catch(() => {});
     } catch {
       // offline: mantém o que está na tela
     } finally {
       setCarregando(false);
     }
   }, []);
+
+  function pedirAoSuporte() {
+    if (suporteUrl) {
+      Linking.openURL(suporteUrl).catch(() => {});
+      return;
+    }
+    Alert.alert(
+      "Ativado pela Convivar",
+      "Este recurso é combinado com a gente antes de ligar. Fale com o suporte Convivar.",
+    );
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -123,7 +147,7 @@ export function ConfiguracoesScreen({ navigation }: Props) {
         }
       >
         <Nota
-          texto="Encomendas, avisos e leituras são a base e estão sempre ligados. Os módulos abaixo o condomínio liga quando quiser: ao ligar, eles aparecem no app de todo mundo na próxima abertura."
+          texto="Encomendas, avisos e leituras são a base e estão sempre ligados. Os módulos abaixo entram quando o condomínio quiser: ao ligar, eles aparecem no app de todo mundo na próxima abertura."
           estilo={{ marginBottom: 12 }}
         />
         <Card estilo={{ padding: 6 }}>
@@ -136,18 +160,42 @@ export function ConfiguracoesScreen({ navigation }: Props) {
                 <Text style={styles.titulo}>{DESCRICOES[m.id].titulo}</Text>
                 <Text style={styles.sub}>{DESCRICOES[m.id].sub}</Text>
               </View>
-              <Switch
-                value={m.ativo}
-                disabled={salvando}
-                onValueChange={() => alternar(m.id)}
-                trackColor={{
-                  false: theme.colors.toggleOff,
-                  true: theme.colors.acao,
-                }}
-              />
+              {soAConvivarLiga(m.id) ? (
+                /* Sem interruptor: estes dois são combinados com a gente. O
+                   servidor preserva o estado deles de qualquer jeito; aqui
+                   só se mostra como está e por onde pedir. */
+                <Pressable
+                  onPress={pedirAoSuporte}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.pedir,
+                    { opacity: pressed ? 0.6 : 1 },
+                  ]}
+                >
+                  <Text style={styles.pedirTexto}>
+                    {m.ativo ? "ligado" : "solicitar"}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Switch
+                  value={m.ativo}
+                  disabled={salvando}
+                  onValueChange={() => alternar(m.id)}
+                  trackColor={{
+                    false: theme.colors.toggleOff,
+                    true: theme.colors.acao,
+                  }}
+                />
+              )}
             </View>
           ))}
         </Card>
+        {(modulos ?? []).some((m) => soAConvivarLiga(m.id)) && (
+          <Nota
+            texto="Avisos por WhatsApp e QR na retirada são ativados pela Convivar: um tem custo por mensagem e o outro muda o procedimento da portaria, então combinamos os dois antes de ligar."
+            estilo={{ marginTop: 12 }}
+          />
+        )}
       </ScrollView>
     </Tela>
   );
@@ -162,6 +210,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   divisor: { borderTopWidth: 1, borderTopColor: theme.colors.divisor },
+  pedir: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  pedirTexto: { fontSize: 13, fontWeight: "700", color: theme.colors.marca },
   titulo: { fontSize: 15.5, fontWeight: "700", color: theme.colors.text },
   sub: {
     fontSize: 13,
