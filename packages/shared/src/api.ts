@@ -441,6 +441,49 @@ export interface Adocao {
   percentual: number;
 }
 
+/** Um acontecimento no feed da Visão geral. */
+export type TipoAtividade =
+  | "cobranca_paga"
+  | "cobrancas_geradas"
+  | "comunicado"
+  | "documento"
+  | "relato"
+  | "visita";
+
+export interface Atividade {
+  tipo: TipoAtividade;
+  /** Texto pronto: quem sabe nomear o acontecimento é quem o leu do banco. */
+  titulo: string;
+  /** Unidade, categoria, autor. Nulo quando não acrescenta nada. */
+  detalhe: string | null;
+  quando: string;
+}
+
+/**
+ * O que a Visão geral do painel precisa e não tinha. GET /cadastro/visao-geral
+ *
+ * Uma requisição para quatro contagens e o feed, porque são todas do mesmo
+ * tenant e a home não deve abrir com seis spinners. Aprovações e relatos
+ * abertos ficam de FORA de propósito: o Dashboard já os carrega para a barra
+ * lateral e os repassa por prop, e duplicá-los aqui daria dois números que
+ * podem divergir na mesma tela.
+ */
+export interface VisaoGeralPainel {
+  moradores: number;
+  funcionarios: number;
+  /** Linhas do extrato esperando decisão. Zero sem o módulo financeiro. */
+  conciliacaoPendente: number;
+  cobrancasVencidas: number;
+  atividade: Atividade[];
+}
+
+/** Um mês na série de cobrado x recebido. GET /cadastro/financeiro/serie */
+export interface MesFinanceiro {
+  competencia: string;
+  cobrado: number;
+  recebido: number;
+}
+
 /**
  * Uma unidade na tabela de moradores do painel. GET /cadastro/unidades/panorama
  *

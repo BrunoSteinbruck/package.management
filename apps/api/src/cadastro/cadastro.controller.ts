@@ -90,6 +90,11 @@ export class CadastroController {
     return this.cadastro.adocao(user);
   }
 
+  @Get("visao-geral")
+  visaoGeral(@CurrentUser() user: JwtPayload) {
+    return this.cadastro.visaoGeral(user);
+  }
+
   @Get("equipe")
   listarEquipe(@CurrentUser() user: JwtPayload) {
     return this.cadastro.listarEquipe(user);

@@ -165,6 +165,21 @@ export class FinanceiroController {
     return this.financeiro.resumo(user, competencia);
   }
 
+  /**
+   * Cobrado x recebido por mês, para o gráfico da Visão geral.
+   *
+   * `meses` é texto livre do cliente e vem clampado, como as demais janelas
+   * do painel: sem isso, `?meses=99999` faria a API montar cem mil chaves de
+   * mês em memória antes de olhar o banco.
+   */
+  @Get("cadastro/financeiro/serie")
+  serie(@CurrentUser() user: JwtPayload, @Query("meses") meses?: string) {
+    return this.financeiro.serie(
+      user,
+      Math.min(24, Math.max(1, parseInt(meses ?? "6", 10) || 6)),
+    );
+  }
+
   /** Segunda via no app do morador. */
   @Get("morador/cobrancas")
   minhas(@CurrentUser() user: JwtPayload) {

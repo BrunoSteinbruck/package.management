@@ -11,6 +11,7 @@ import type {
   ConfigFinanceiro,
   GerarCobrancasDto,
   JwtPayload,
+  MesFinanceiro,
   ResumoFinanceiro,
   SalvarConfigFinanceiroDto,
   SalvarIntegracaoDto,
@@ -581,6 +582,56 @@ export class FinanceiroService {
       unidadesPagas: pagas.length,
       emissaoReal: this.cobrancas.real,
     };
+  }
+
+  /**
+   * Cobrado x recebido por mês, para o gráfico da Visão geral.
+   *
+   * `recebido` sai de `valorPago` e não do valor da cobrança: pagamento
+   * parcial ou a maior existe (o provedor devolve o que caiu na conta), e
+   * somar o valor cobrado faria o gráfico mostrar dinheiro que não entrou.
+   * A cobrança PAGA sem `valorPago` (conciliação manual antiga) cai para o
+   * valor dela, que é a melhor aproximação disponível.
+   *
+   * Sem groupBy do Prisma porque a competência é DateTime e o agrupamento
+   * teria de vir por SQL cru: com o teto de meses o laço em memória custa o
+   * mesmo e não sai do tipado.
+   */
+  async serie(user: JwtPayload, meses: number): Promise<MesFinanceiro[]> {
+    const cid = this.exigirGestor(user);
+    const hoje = new Date();
+    // O primeiro dia da competência mais antiga que interessa. `meses - 1`
+    // porque o mês corrente conta como um dos N.
+    const inicio = new Date(
+      Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - (meses - 1), 1),
+    );
+    const linhas = await this.prisma.withTenant(cid, (tx) =>
+      tx.cobranca.findMany({
+        where: { competencia: { gte: inicio } },
+        select: { competencia: true, valor: true, valorPago: true, status: true },
+      }),
+    );
+
+    const porMes = new Map<string, { cobrado: number; recebido: number }>();
+    // Todos os meses da janela nascem zerados: um mês sem cobrança nenhuma
+    // precisa aparecer como vazio no gráfico, senão a série "pula" o buraco
+    // e duas colunas vizinhas viram meses não consecutivos.
+    for (let i = 0; i < meses; i++) {
+      const d = new Date(
+        Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - (meses - 1 - i), 1),
+      );
+      porMes.set(d.toISOString().slice(0, 7), { cobrado: 0, recebido: 0 });
+    }
+    for (const c of linhas) {
+      const chave = c.competencia.toISOString().slice(0, 7);
+      const alvo = porMes.get(chave);
+      if (!alvo) continue;
+      alvo.cobrado += reais(c.valor);
+      if (c.status === "PAGA") {
+        alvo.recebido += c.valorPago != null ? reais(c.valorPago) : reais(c.valor);
+      }
+    }
+    return [...porMes].map(([competencia, v]) => ({ competencia, ...v }));
   }
 
   /** As cobranças das unidades do morador: a segunda via no app. */

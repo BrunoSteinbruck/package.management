@@ -5,6 +5,8 @@ import {
   Injectable,
 } from "@nestjs/common";
 import type {
+  Atividade,
+  CategoriaDocumento,
   CriarUnidadesDto,
   CriarUsuarioDto,
   CriarVagasDto,
@@ -13,13 +15,36 @@ import type {
   ModuloCondominio,
   SalvarModulosDto,
   UnidadePanorama,
+  VisaoGeralPainel,
 } from "@pacotes/shared";
-import { MODULOS_CONDOMINIO } from "@pacotes/shared";
+import { MODULOS_CONDOMINIO, rotuloUnidade } from "@pacotes/shared";
 import { registrarAcao } from "../common/auditoria.util";
+import { nomeDaCompetencia } from "../financeiro/competencia.util";
 import { PrismaService } from "../prisma/prisma.service";
 
 /** Quem entra no painel por senha precisa do e-mail para recuperá-la. */
 const PRECISA_DE_EMAIL: CriarUsuarioDto["papel"][] = ["SINDICO"];
+
+/**
+ * Teto do feed da Visão geral, e de cada fonte que o alimenta.
+ *
+ * Vale para as duas pontas: nenhuma consulta traz mais do que isto (buscar
+ * tudo para descartar quase tudo é trabalho jogado fora), e o feed junto
+ * corta no mesmo número depois de ordenado.
+ */
+const ATIVIDADE_MAX = 20;
+
+const ROTULO_CATEGORIA: Record<CategoriaDocumento, string> = {
+  ATA: "Ata",
+  REGIMENTO: "Regimento",
+  CONVENCAO: "Convenção",
+  OUTRO: "Documento",
+};
+
+/** A competência é gravada como o dia 1 em UTC; o rótulo quer "2026-07". */
+function competenciaDe(d: Date): string {
+  return d.toISOString().slice(0, 7);
+}
 
 @Injectable()
 export class CadastroService {
@@ -480,5 +505,132 @@ export class CadastroService {
       }),
     );
     return { recusado: true };
+  }
+
+  /**
+   * O que a Visão geral do painel mostra e não tinha de onde vir.
+   *
+   * Uma requisição só: são todas do mesmo tenant, e a home do síndico não
+   * pode abrir com meia dúzia de spinners. As consultas ficam dentro de UM
+   * `withTenant` porque comunicados, documentos, avisos, visitas, cobranças e
+   * a trilha têm RLS: fora do tenant voltariam vazias em silêncio, e a tela
+   * mostraria um condomínio sem nada acontecendo.
+   */
+  async visaoGeral(user: JwtPayload): Promise<VisaoGeralPainel> {
+    const condominioId = this.tenantDe(user);
+    this.exigirGestor(user);
+
+    // Morador é global e o vínculo é que pertence ao condomínio: contar
+    // `morador` traria o banco inteiro. E é por PESSOA, não por vínculo:
+    // quem tem duas unidades é um morador só.
+    const vinculos = await this.prisma.vinculo.findMany({
+      where: { condominioId, status: "ATIVO" },
+      select: { moradorId: true },
+    });
+    const moradores = new Set(vinculos.map((v) => v.moradorId)).size;
+
+    const funcionarios = await this.prisma.usuario.count({
+      where: { condominioId, ativo: true },
+    });
+
+    const dados = await this.prisma.withTenant(condominioId, async (tx) => ({
+      conciliacaoPendente: await tx.extratoItem.count({
+        where: { conciliadoEm: null, ignoradoEm: null },
+      }),
+      cobrancasVencidas: await tx.cobranca.count({ where: { status: "VENCIDA" } }),
+      // `take` em cada fonte porque o feed corta em ATIVIDADE_MAX no fim:
+      // buscar tudo para descartar quase tudo seria trabalho jogado fora.
+      pagas: await tx.cobranca.findMany({
+        where: { pagoEm: { not: null } },
+        orderBy: { pagoEm: "desc" },
+        take: ATIVIDADE_MAX,
+        include: { unidade: true },
+      }),
+      comunicados: await tx.comunicado.findMany({
+        orderBy: { criadoEm: "desc" },
+        take: ATIVIDADE_MAX,
+        select: { titulo: true, criadoEm: true },
+      }),
+      documentos: await tx.documento.findMany({
+        orderBy: { criadoEm: "desc" },
+        take: ATIVIDADE_MAX,
+        select: { titulo: true, categoria: true, criadoEm: true },
+      }),
+      relatos: await tx.aviso.findMany({
+        where: { criadoPorMoradorId: { not: null } },
+        orderBy: { criadoEm: "desc" },
+        take: ATIVIDADE_MAX,
+        include: { unidade: true },
+      }),
+      visitas: await tx.visita.findMany({
+        where: { chegadaEm: { not: null } },
+        orderBy: { chegadaEm: "desc" },
+        take: ATIVIDADE_MAX,
+        include: { unidade: true },
+      }),
+      geracoes: await tx.registroAcao.findMany({
+        where: { acao: "financeiro.gerar_cobrancas" },
+        orderBy: { criadoEm: "desc" },
+        take: ATIVIDADE_MAX,
+        select: { detalhe: true, criadoEm: true },
+      }),
+    }));
+
+    const atividade: Atividade[] = [
+      ...dados.pagas.map((c) => ({
+        tipo: "cobranca_paga" as const,
+        titulo: `Taxa de ${nomeDaCompetencia(competenciaDe(c.competencia))} paga`,
+        detalhe: rotuloUnidade(c.unidade),
+        quando: c.pagoEm!.toISOString(),
+      })),
+      ...dados.comunicados.map((c) => ({
+        tipo: "comunicado" as const,
+        titulo: c.titulo,
+        detalhe: "comunicado publicado",
+        quando: c.criadoEm.toISOString(),
+      })),
+      ...dados.documentos.map((d) => ({
+        tipo: "documento" as const,
+        titulo: d.titulo,
+        detalhe: `${ROTULO_CATEGORIA[d.categoria]} publicada`,
+        quando: d.criadoEm.toISOString(),
+      })),
+      ...dados.relatos.map((a) => ({
+        tipo: "relato" as const,
+        titulo: a.motivo,
+        detalhe: rotuloUnidade(a.unidade),
+        quando: a.criadoEm.toISOString(),
+      })),
+      ...dados.visitas.map((v) => ({
+        tipo: "visita" as const,
+        titulo: `${v.nomeVisitante} entrou`,
+        detalhe: rotuloUnidade(v.unidade),
+        quando: v.chegadaEm!.toISOString(),
+      })),
+      ...dados.geracoes.flatMap((g) => {
+        // A trilha guarda Json livre: um registro antigo, ou de uma versão que
+        // mudou o formato, não pode virar "undefined cobranças geradas".
+        const criadas = (g.detalhe as { criadas?: unknown } | null)?.criadas;
+        if (typeof criadas !== "number" || criadas === 0) return [];
+        return [
+          {
+            tipo: "cobrancas_geradas" as const,
+            titulo: `${criadas} cobrança${criadas === 1 ? "" : "s"} gerada${criadas === 1 ? "" : "s"}`,
+            detalhe: null,
+            quando: g.criadoEm.toISOString(),
+          },
+        ];
+      }),
+    ]
+      .sort((a, b) => b.quando.localeCompare(a.quando))
+      .slice(0, ATIVIDADE_MAX);
+
+    return {
+      moradores,
+      funcionarios,
+      conciliacaoPendente: dados.conciliacaoPendente,
+      cobrancasVencidas: dados.cobrancasVencidas,
+      atividade,
+    };
   }
 }
