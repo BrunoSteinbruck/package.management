@@ -711,53 +711,63 @@ function VisaoGeral({
               aqui conforme forem acontecendo.
             </p>
           ) : (
-            geral.atividade.map((a, i) => (
-              // O índice entra na chave porque duas atividades podem ter o
-              // mesmo instante (um lote de cobranças pagas na conciliação),
-              // e `tipo+quando` sozinho duplicaria a key.
-              <div
-                key={`${a.tipo}-${a.quando}-${i}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "10px 0",
-                  borderBottom:
-                    i === geral.atividade.length - 1
-                      ? "none"
-                      : "1px solid var(--divisor)",
-                }}
-              >
-                <span
-                  aria-hidden
+            /* Duas colunas quando cabe. Em uma coluna de 1700px a data ia
+               parar na borda, a meia tela de distância do texto que ela
+               data. `auto-fit` com o `min(100%, ...)` volta para uma coluna
+               em tela estreita sozinho. */
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(min(100%, 460px), 1fr))",
+                columnGap: 28,
+              }}
+            >
+              {geral.atividade.map((a, i) => (
+                // O índice entra na chave porque duas atividades podem ter o
+                // mesmo instante (um lote de cobranças pagas na conciliação),
+                // e `tipo+quando` sozinho duplicaria a key.
+                <div
+                  key={`${a.tipo}-${a.quando}-${i}`}
                   style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: "50%",
-                    background: COR_ATIVIDADE[a.tipo],
-                    flexShrink: 0,
-                    marginLeft: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 0",
+                    borderBottom: "1px solid var(--divisor)",
                   }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
+                >
+                  <span
+                    aria-hidden
                     style={{
-                      fontWeight: 600,
-                      fontSize: 14,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      width: 9,
+                      height: 9,
+                      borderRadius: "50%",
+                      background: COR_ATIVIDADE[a.tipo],
+                      flexShrink: 0,
+                      marginLeft: 3,
                     }}
-                  >
-                    {a.titulo}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {a.titulo}
+                    </div>
+                    {a.detalhe && <div className="aviso">{a.detalhe}</div>}
                   </div>
-                  {a.detalhe && <div className="aviso">{a.detalhe}</div>}
+                  <span className="aviso" style={{ flexShrink: 0 }}>
+                    {dataCurta(a.quando)}
+                  </span>
                 </div>
-                <span className="aviso" style={{ flexShrink: 0 }}>
-                  {dataCurta(a.quando)}
-                </span>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </section>
       )}

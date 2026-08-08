@@ -102,17 +102,28 @@ h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 .sidebar .rodape .nome { font-weight: 700; color: #fff; }
 .sidebar .rodape .sub { color: rgba(255, 255, 255, 0.7); font-size: 12px; }
 
-/* O teto existe para a tabela de pacotes não virar uma linha de 2000px, mas
-   com `margin: 0` o conteúdo grudava à esquerda e sobrava meia tela de vazio
-   à direita em monitor grande. Centralizar reparte a folga; o teto mais alto
-   aproveita a largura que um painel de tabelas realmente usa. */
+/* O painel OCUPA a tela. Num monitor de 2000px, o teto de 1440 deixava 162px
+   de vazio de cada lado, e um painel de tabelas é justamente o que ganha com
+   largura: mais colunas visíveis, menos rolagem.
+
+   O teto que sobrou só existe para o ultrawide (3440px), onde ir de ponta a
+   ponta separa demais o que devia ser lido junto. O que realmente sofre com
+   largura é o TEXTO CORRIDO, e esse é limitado logo abaixo, em vez de
+   encolher a tela inteira por causa dele. */
 .conteudo {
   flex: 1;
   padding: 26px 30px 64px;
-  max-width: 1440px;
+  max-width: 2400px;
   margin: 0 auto;
   width: 100%;
   min-width: 0;
+}
+
+/* Só os parágrafos de página (filhos diretos), não os de dentro de card: uma
+   linha de 1900px obriga o olho a atravessar a tela para achar a próxima, e
+   nenhuma explicação de tela precisa de tanto. */
+.conteudo > p {
+  max-width: 96ch;
 }
 
 .card {
