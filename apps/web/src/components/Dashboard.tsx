@@ -5,6 +5,8 @@ import {
   contatoDeMembro,
   formatarTelefone,
   linkWhatsApp,
+  mesAno,
+  mesCurto,
   perfilDe,
   rotuloUnidade,
   type Adocao,
@@ -15,16 +17,19 @@ import {
   type JwtPayload,
   type ListaPacotes,
   type MembroEquipe,
+  type MesFinanceiro,
   type OcorrenciaGestor as Ocorrencia,
   type PacoteLinha,
   type Pendencia,
   type Relatorios,
   type ResumoFinanceiro,
   type Resumo,
+  type TipoAtividade,
   type UnidadePanorama,
   type UnidadeRotulo,
   type VagaLinha,
   type VinculoPendente,
+  type VisaoGeralPainel,
 } from "@pacotes/shared";
 import { apiFetch, API_URL, limparSessao } from "@/lib/api";
 import { janelaDePaginas, RETICENCIAS } from "@/lib/paginacao";
@@ -51,6 +56,15 @@ type Visao =
   | "configuracoes"
   | "minha-conta";
 
+/**
+ * As abas do Financeiro, para a Visão geral mandar o síndico direto na certa.
+ *
+ * Vive aqui e é importada pelo `FinanceiroView` porque quem NAVEGA é o
+ * Dashboard: sem isso, a pendência de conciliação abriria a aba de cobranças
+ * e deixaria o clique a meio caminho.
+ */
+export type AbaFinanceiro = "cobrancas" | "taxas" | "conciliacao" | "ajustes";
+
 function urlFoto(foto: FotoRef): string {
   return `${API_URL}/uploads/${foto.key}?t=${encodeURIComponent(foto.token)}`;
 }
@@ -72,6 +86,15 @@ function dataCurta(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
+/** Sem centavos: é legenda de gráfico, não extrato. */
+function dinheiro(v: number): string {
+  return v.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  });
+}
+
 export function Dashboard({
   perfil,
   aoSair,
@@ -84,6 +107,8 @@ export function Dashboard({
   const [pendentesAprovacao, setPendentesAprovacao] = useState(0);
   const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState<Ocorrencia[]>([]);
   const [modulos, setModulos] = useState<ModuloCondominio[]>([]);
+  /** Aba que a Visão geral pediu ao mandar o síndico para o Financeiro. */
+  const [abaFinanceiro, setAbaFinanceiro] = useState<AbaFinanceiro | null>(null);
   // Vem junto das capacidades para o convite por WhatsApp anexar ao texto;
   // sem env no servidor é null e o convite sai sem link.
   const [appDownloadUrl, setAppDownloadUrl] = useState<string | null>(null);
@@ -259,7 +284,13 @@ export function Dashboard({
             ocorrenciasAbertas={ocorrenciasAbertas}
             pendentesAprovacao={pendentesAprovacao}
             modulos={modulos}
-            aoNavegar={setVisao}
+            aoNavegar={(v, aba) => {
+              // A aba pedida é consumida na próxima montagem do Financeiro e
+              // zerada logo depois, senão voltar para lá pelo menu lateral
+              // reabriria a conciliação para sempre.
+              if (aba) setAbaFinanceiro(aba);
+              setVisao(v);
+            }}
           />
         )}
         {visao === "pacotes" && <PacotesView />}
@@ -280,7 +311,10 @@ export function Dashboard({
         )}
         {visao === "visitantes" && ligado("visitantes") && <VisitantesView />}
         {visao === "financeiro" && gestor && ligado("financeiro") && (
-          <FinanceiroView />
+          <FinanceiroView
+            abaInicial={abaFinanceiro}
+            aoConsumirAba={() => setAbaFinanceiro(null)}
+          />
         )}
         {visao === "configuracoes" && gestor && <ConfiguracoesView />}
         {visao === "minha-conta" && <MinhaContaView />}
@@ -289,6 +323,46 @@ export function Dashboard({
   );
 }
 
+/** Um item das Pendências: o que espera uma decisão do síndico. */
+interface Pendencia1 {
+  chave: string;
+  quantos: number;
+  titulo: string;
+  sub: string;
+  destino: Visao;
+  aba?: AbaFinanceiro;
+}
+
+/**
+ * Um ponto colorido por tipo, e não um ícone.
+ *
+ * O painel não tem sistema de ícones (o app tem, em SVG), e símbolos de
+ * texto no lugar deles saem ilegíveis em 28px: um "§" para documento e um
+ * "@" para visita não dizem nada a ninguém. O ponto dá a leitura por cor que
+ * o feed precisa, e o que aconteceu já está escrito ao lado.
+ */
+const COR_ATIVIDADE: Record<TipoAtividade, string> = {
+  cobranca_paga: "var(--ok)",
+  cobrancas_geradas: "var(--ok)",
+  comunicado: "var(--marca)",
+  documento: "var(--texto-3)",
+  relato: "var(--alerta)",
+  visita: "var(--acao)",
+};
+
+/**
+ * A home do síndico.
+ *
+ * Ela nasceu do produto de portaria e era, na prática, um painel de
+ * encomendas: entradas de hoje, retiradas de hoje, série de 14 dias e a lista
+ * de paradas ocupavam a tela inteira. Mas o síndico não abre o painel para
+ * saber quantas caixas chegaram; ele abre para saber o que precisa dele e
+ * como está o dinheiro. Encomenda virou UM bloco entre quatro.
+ *
+ * A ordem responde três perguntas, nesta sequência: como está o condomínio
+ * (contagens), o que espera por mim (pendências, ao lado do gráfico do
+ * dinheiro) e o que aconteceu desde a última vez (feed).
+ */
 function VisaoGeral({
   gestor,
   ocorrenciasAbertas,
@@ -300,67 +374,120 @@ function VisaoGeral({
   ocorrenciasAbertas: Ocorrencia[];
   pendentesAprovacao: number;
   modulos: ModuloCondominio[];
-  aoNavegar: (v: Visao) => void;
+  aoNavegar: (v: Visao, aba?: AbaFinanceiro) => void;
 }) {
-  const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [adocao, setAdocao] = useState<Adocao | null>(null);
-  const [serie, setSerie] = useState<DiaSerie[]>([]);
-  const [financeiro, setFinanceiro] = useState<ResumoFinanceiro | null>(null);
-  const [visitasHoje, setVisitasHoje] = useState<number | null>(null);
-  const [relatorios, setRelatorios] = useState<Relatorios | null>(null);
+  const [geral, setGeral] = useState<VisaoGeralPainel | null>(null);
+  const [serieFinanceira, setSerieFinanceira] = useState<MesFinanceiro[]>([]);
+  const [seriePacotes, setSeriePacotes] = useState<DiaSerie[]>([]);
   const [erro, setErro] = useState<string | null>(null);
 
   const temFinanceiro = gestor && modulos.includes("financeiro");
-  const temVisitantes = modulos.includes("visitantes");
 
   useEffect(() => {
     (async () => {
       try {
         setResumo(await apiFetch<Resumo>("/portaria/resumo"));
-        setPendencias(await apiFetch<Pendencia[]>("/portaria/pendencias"));
         setAdocao(await apiFetch<Adocao>("/cadastro/adocao"));
-        setSerie(await apiFetch<DiaSerie[]>("/portaria/serie-diaria?dias=14"));
         setErro(null);
       } catch (e) {
         setErro((e as Error).message);
       }
     })();
-    // Fora do bloco acima porque só alimenta uma legenda: se os relatórios
-    // caírem, a visão geral continua de pé sem o tempo médio.
-    apiFetch<Relatorios>("/portaria/relatorios?dias=30")
-      .then(setRelatorios)
-      .catch(() => {});
   }, []);
 
-  // Os blocos dos módulos falham sozinhos: um endpoint fora do ar não pode
+  // Os blocos de gestão falham sozinhos: um endpoint fora do ar não pode
   // apagar a home inteira do síndico.
   useEffect(() => {
-    if (temFinanceiro) {
-      apiFetch<ResumoFinanceiro>("/cadastro/financeiro/resumo")
-        .then(setFinanceiro)
-        .catch(() => {});
-    }
-    if (temVisitantes) {
-      apiFetch<Array<unknown>>("/portaria/visitas-hoje")
-        .then((v) => setVisitasHoje(v.length))
-        .catch(() => {});
-    }
-  }, [temFinanceiro, temVisitantes]);
+    if (!gestor) return;
+    apiFetch<VisaoGeralPainel>("/cadastro/visao-geral").then(setGeral).catch(() => {});
+  }, [gestor]);
 
-  const maxSerie = Math.max(1, ...serie.map((d) => Math.max(d.entradas, d.retiradas)));
+  // O gráfico é do dinheiro quando há financeiro, e de encomendas quando não
+  // há: a home não pode ficar com um buraco no lugar do card maior.
+  useEffect(() => {
+    if (temFinanceiro) {
+      apiFetch<MesFinanceiro[]>("/cadastro/financeiro/serie?meses=6")
+        .then(setSerieFinanceira)
+        .catch(() => {});
+    } else {
+      apiFetch<DiaSerie[]>("/portaria/serie-diaria?dias=14")
+        .then(setSeriePacotes)
+        .catch(() => {});
+    }
+  }, [temFinanceiro]);
 
   const maisAntiga = ocorrenciasAbertas.reduce<Ocorrencia | null>(
     (velha, o) => (!velha || o.criadoEm < velha.criadoEm ? o : velha),
     null,
   );
-  // Entradas de hoje e a média do período saem da própria série de 14 dias: o
-  // resumo da portaria conta o que ESTÁ na portaria, não o que entrou.
-  const entradasHoje = serie.length > 0 ? serie[serie.length - 1].entradas : null;
-  const mediaEntradas =
-    serie.length > 0
-      ? Math.round(serie.reduce((soma, d) => soma + d.entradas, 0) / serie.length)
-      : null;
+
+  /**
+   * As pendências, montadas na ordem em que atrasam o condomínio.
+   *
+   * Só entra o que tem quantidade: uma lista com quatro linhas zeradas não é
+   * uma lista de pendências, é ruído com a palavra "nenhum" repetida quatro
+   * vezes. Vazia de verdade, o card inteiro vira o estado verde.
+   */
+  const pendencias: Pendencia1[] = [];
+  if (pendentesAprovacao > 0) {
+    pendencias.push({
+      chave: "aprovar",
+      quantos: pendentesAprovacao,
+      titulo: `${pendentesAprovacao} morador${pendentesAprovacao === 1 ? "" : "es"} para aprovar`,
+      sub: "pediram vínculo pelo app",
+      destino: "moradores",
+    });
+  }
+  if (ocorrenciasAbertas.length > 0) {
+    pendencias.push({
+      chave: "relatos",
+      quantos: ocorrenciasAbertas.length,
+      titulo: `${ocorrenciasAbertas.length} relato${ocorrenciasAbertas.length === 1 ? "" : "s"} de morador`,
+      // A mais antiga e de que assunto: "3 abertos" não diz se são três
+      // lâmpadas de hoje ou um elevador parado há dois dias.
+      sub: maisAntiga
+        ? `mais antigo há ${diasDesde(maisAntiga.criadoEm)} dia${
+            diasDesde(maisAntiga.criadoEm) === 1 ? "" : "s"
+          } · ${maisAntiga.categoria}`
+        : "abertos",
+      destino: "ocorrencias",
+    });
+  }
+  // As duas de dinheiro só existem com o módulo ligado: sem ele a visão
+  // Financeiro nem está no menu, e clicar na pendência devolvia o síndico
+  // para a Visão geral sem explicação nenhuma (o guard de módulo desligado
+  // redireciona). Contar o que não se pode abrir é pior do que não contar.
+  if (temFinanceiro && (geral?.cobrancasVencidas ?? 0) > 0) {
+    pendencias.push({
+      chave: "vencidas",
+      quantos: geral!.cobrancasVencidas,
+      titulo: `${geral!.cobrancasVencidas} cobrança${geral!.cobrancasVencidas === 1 ? "" : "s"} vencida${geral!.cobrancasVencidas === 1 ? "" : "s"}`,
+      sub: "passaram do vencimento sem pagamento",
+      destino: "financeiro",
+      aba: "cobrancas",
+    });
+  }
+  if (temFinanceiro && (geral?.conciliacaoPendente ?? 0) > 0) {
+    pendencias.push({
+      chave: "conciliacao",
+      quantos: geral!.conciliacaoPendente,
+      titulo: `${geral!.conciliacaoPendente} lançamento${geral!.conciliacaoPendente === 1 ? "" : "s"} no extrato`,
+      sub: "esperando conciliação",
+      destino: "financeiro",
+      aba: "conciliacao",
+    });
+  }
+
+  const maxFinanceiro = Math.max(
+    1,
+    ...serieFinanceira.map((m) => Math.max(m.cobrado, m.recebido)),
+  );
+  const maxPacotes = Math.max(
+    1,
+    ...seriePacotes.map((d) => Math.max(d.entradas, d.retiradas)),
+  );
 
   return (
     <>
@@ -374,107 +501,46 @@ function VisaoGeral({
       </p>
       {erro && <p className="erro">{erro}</p>}
 
-      {/* O dia do síndico é reativo: a primeira linha responde "o que precisa
-          de MIM agora?", em cards que já levam para a ação. Métrica de
-          acompanhamento vem depois; o quarteirão de pacotes, que era a tela
-          inteira, vira o terceiro bloco. */}
-      {gestor && (
-        <div className="metricas">
-          <button
-            type="button"
-            className="metrica metrica-acao"
-            onClick={() => aoNavegar("ocorrencias")}
-          >
-            <div className={`valor ${ocorrenciasAbertas.length > 0 ? "" : "verde"}`}>
-              {ocorrenciasAbertas.length}
-            </div>
-            <div className="rotulo">relatos de moradores abertos</div>
-            {/* A mais antiga e de que assunto: "3 abertos" não diz se são
-                três lâmpadas de hoje ou um elevador parado há dois dias. */}
-            <div className="sub">
-              {maisAntiga
-                ? `mais antiga há ${diasDesde(maisAntiga.criadoEm)} dia${
-                    diasDesde(maisAntiga.criadoEm) === 1 ? "" : "s"
-                  } · ${maisAntiga.categoria}`
-                : "fila limpa"}
-            </div>
-          </button>
+      {/* Como está o condomínio, em quatro números. Encomenda é um deles, e
+          não mais a tela toda. */}
+      <div className="metricas">
+        {gestor && (
           <button
             type="button"
             className="metrica metrica-acao"
             onClick={() => aoNavegar("moradores")}
           >
-            <div className={`valor ${pendentesAprovacao > 0 ? "" : "verde"}`}>
-              {pendentesAprovacao}
-            </div>
-            <div className="rotulo">moradores para aprovar</div>
+            <div className="valor">{geral?.moradores ?? "-"}</div>
+            <div className="rotulo">moradores</div>
             <div className="sub">
-              {pendentesAprovacao > 0
-                ? "vínculos pedidos pelo app"
-                : "ninguém esperando"}
+              {adocao ? `em ${adocao.totalUnidades} unidades` : "cadastrados"}
             </div>
           </button>
-          {temFinanceiro && financeiro && (
-            <button
-              type="button"
-              className="metrica metrica-acao"
-              onClick={() => aoNavegar("financeiro")}
-            >
-              <div
-                className={`valor ${financeiro.inadimplencia > 0 ? "" : "verde"}`}
-              >
-                {financeiro.inadimplencia.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                  maximumFractionDigits: 0,
-                })}
-              </div>
-              <div className="rotulo">em aberto no mês</div>
-              <div className="sub">
-                {financeiro.unidadesPagas} de {financeiro.unidadesCobradas}{" "}
-                unidades pagaram
-              </div>
-            </button>
-          )}
-          {temVisitantes && (
-            <button
-              type="button"
-              className="metrica metrica-acao"
-              onClick={() => aoNavegar("visitantes")}
-            >
-              <div className="valor">{visitasHoje ?? "-"}</div>
-              <div className="rotulo">visitas esperadas hoje</div>
-              <div className="sub">pré-autorizadas pelos moradores</div>
-            </button>
-          )}
-        </div>
-      )}
-
-      <div className="metricas">
-        <div className="metrica">
+        )}
+        {gestor && (
+          <button
+            type="button"
+            className="metrica metrica-acao"
+            onClick={() => aoNavegar("moradores")}
+          >
+            <div className="valor">{geral?.funcionarios ?? "-"}</div>
+            <div className="rotulo">funcionários</div>
+            <div className="sub">portaria e administração</div>
+          </button>
+        )}
+        <button
+          type="button"
+          className="metrica metrica-acao"
+          onClick={() => aoNavegar("pacotes")}
+        >
           <div className="valor">{resumo?.naPortaria ?? "-"}</div>
-          <div className="rotulo">na portaria agora</div>
-          {(resumo?.paradas3Dias ?? 0) > 0 && (
+          <div className="rotulo">encomendas na portaria</div>
+          {(resumo?.paradas3Dias ?? 0) > 0 ? (
             <div className="sub ambar">{resumo!.paradas3Dias} há 3+ dias</div>
+          ) : (
+            <div className="sub">nenhuma parada há 3+ dias</div>
           )}
-        </div>
-        <div className="metrica">
-          <div className="valor">{entradasHoje ?? "-"}</div>
-          <div className="rotulo">entradas hoje</div>
-          {mediaEntradas !== null && (
-            <div className="sub">média: {mediaEntradas}/dia</div>
-          )}
-        </div>
-        <div className="metrica">
-          <div className="valor">{resumo?.retiradasHoje ?? "-"}</div>
-          <div className="rotulo">retiradas hoje</div>
-          {relatorios && (
-            <div className="sub">
-              tempo médio: {relatorios.tempoMedioDias.toLocaleString("pt-BR")} dia
-              {relatorios.tempoMedioDias === 1 ? "" : "s"}
-            </div>
-          )}
-        </div>
+        </button>
         <div className="metrica">
           <div className="valor verde">{adocao ? `${adocao.percentual}%` : "-"}</div>
           <div className="rotulo">adoção do app</div>
@@ -486,83 +552,215 @@ function VisaoGeral({
 
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 16 }}>
         <section className="card">
-          <h2>Entradas x retiradas: 14 dias</h2>
-          <div className="grafico-pareado">
-            {serie.map((d) => (
-              <div className="dia" key={d.dia} title={`${dataCurta(d.dia)}: ${d.entradas} entradas, ${d.retiradas} retiradas`}>
-                <div
-                  className="barra entradas"
-                  style={{ height: `${(d.entradas / maxSerie) * 100}%` }}
-                />
-                <div
-                  className="barra retiradas"
-                  style={{ height: `${(d.retiradas / maxSerie) * 100}%` }}
-                />
+          <h2>
+            {temFinanceiro
+              ? "Cobrado x recebido: 6 meses"
+              : "Entradas x retiradas: 14 dias"}
+          </h2>
+          {temFinanceiro ? (
+            <>
+              <div className="grafico-pareado">
+                {serieFinanceira.map((m) => (
+                  <div
+                    className="dia"
+                    key={m.competencia}
+                    title={`${mesAno(m.competencia)}: ${dinheiro(m.cobrado)} cobrado, ${dinheiro(m.recebido)} recebido`}
+                  >
+                    <div
+                      className="barra entradas"
+                      style={{ height: `${(m.cobrado / maxFinanceiro) * 100}%` }}
+                    />
+                    <div
+                      className="barra retiradas"
+                      style={{ height: `${(m.recebido / maxFinanceiro) * 100}%` }}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="legenda">
-            <span>
-              <span className="quadrado" style={{ background: "var(--acao)" }} />
-              entradas
-            </span>
-            <span>
-              <span className="quadrado" style={{ background: "var(--barra-clara)" }} />
-              retiradas
-            </span>
-          </div>
+              {/* Os meses embaixo das colunas: sem eles o gráfico é bonito e
+                  não diz de quando é cada barra. */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  marginTop: 6,
+                  fontSize: 11.5,
+                  color: "var(--texto-3)",
+                }}
+              >
+                {serieFinanceira.map((m) => (
+                  <span key={m.competencia} style={{ flex: 1, textAlign: "center" }}>
+                    {mesCurto(m.competencia)}
+                  </span>
+                ))}
+              </div>
+              <div className="legenda">
+                <span>
+                  <span className="quadrado" style={{ background: "var(--acao)" }} />
+                  cobrado
+                </span>
+                <span>
+                  <span
+                    className="quadrado"
+                    style={{ background: "var(--barra-clara)" }}
+                  />
+                  recebido
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grafico-pareado">
+                {seriePacotes.map((d) => (
+                  <div
+                    className="dia"
+                    key={d.dia}
+                    title={`${dataCurta(d.dia)}: ${d.entradas} entradas, ${d.retiradas} retiradas`}
+                  >
+                    <div
+                      className="barra entradas"
+                      style={{ height: `${(d.entradas / maxPacotes) * 100}%` }}
+                    />
+                    <div
+                      className="barra retiradas"
+                      style={{ height: `${(d.retiradas / maxPacotes) * 100}%` }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="legenda">
+                <span>
+                  <span className="quadrado" style={{ background: "var(--acao)" }} />
+                  entradas
+                </span>
+                <span>
+                  <span
+                    className="quadrado"
+                    style={{ background: "var(--barra-clara)" }}
+                  />
+                  retiradas
+                </span>
+              </div>
+            </>
+          )}
         </section>
 
         <section className="card">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 10,
-            }}
-          >
-            <h2 style={{ margin: 0 }}>Paradas há 3+ dias</h2>
-            {/* A lista mostra 6. Sem esta saída, o síndico com 12 unidades
-                paradas via metade e não tinha para onde ir. */}
-            <button
-              type="button"
-              className="link"
-              onClick={() => aoNavegar("pacotes")}
+          <h2>Pendências</h2>
+          {pendencias.length === 0 ? (
+            /* O herói verde do app, aqui também: "nenhum" repetido em quatro
+               linhas não é a mesma informação que "está tudo em dia". */
+            <div
+              style={{
+                background: "var(--ok-bg)",
+                borderRadius: 14,
+                padding: "22px 18px",
+                textAlign: "center",
+                marginTop: 8,
+              }}
             >
-              ver todas
-            </button>
-          </div>
-          {pendencias.filter((p) => diasDesde(p.maisAntigoEm) >= 3).length === 0 ? (
-            <p className="aviso">Nenhuma encomenda parada há 3+ dias.</p>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "var(--ok)" }}>
+                Nada esperando você
+              </div>
+              <div className="aviso" style={{ marginTop: 4 }}>
+                Sem aprovações, relatos ou pendências no dinheiro.
+              </div>
+            </div>
           ) : (
-            pendencias
-              .filter((p) => diasDesde(p.maisAntigoEm) >= 3)
-              .slice(0, 6)
-              .map((p, i) => (
-                <div
-                  key={p.unidade?.id ?? i}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "9px 0",
-                    borderBottom: "1px solid var(--divisor)",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{rotuloUnidade(p.unidade)}</div>
-                    <div className="aviso">{p.pendentes} pacote(s)</div>
-                  </div>
-                  <span className="selo alerta">{diasDesde(p.maisAntigoEm)} dias</span>
+            pendencias.map((p) => (
+              <button
+                key={p.chave}
+                type="button"
+                onClick={() => aoNavegar(p.destino, p.aba)}
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "11px 0",
+                  borderBottom: "1px solid var(--divisor)",
+                  background: "none",
+                  border: "none",
+                  borderBottomWidth: 1,
+                  borderBottomStyle: "solid",
+                  borderBottomColor: "var(--divisor)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{p.titulo}</div>
+                  <div className="aviso">{p.sub}</div>
                 </div>
-              ))
+                <span className="selo alerta">abrir</span>
+              </button>
+            ))
           )}
-          <p className="aviso" style={{ marginTop: 12 }}>
-            Lembretes automáticos são enviados no 3º dia.
-          </p>
         </section>
       </div>
+
+      {gestor && (
+        <section className="card" style={{ marginTop: 16 }}>
+          <h2>Últimas atualizações</h2>
+          {!geral ? (
+            <p className="aviso">Carregando…</p>
+          ) : geral.atividade.length === 0 ? (
+            <p className="aviso">
+              Nada aconteceu ainda. Pagamentos, comunicados e visitas aparecem
+              aqui conforme forem acontecendo.
+            </p>
+          ) : (
+            geral.atividade.map((a, i) => (
+              // O índice entra na chave porque duas atividades podem ter o
+              // mesmo instante (um lote de cobranças pagas na conciliação),
+              // e `tipo+quando` sozinho duplicaria a key.
+              <div
+                key={`${a.tipo}-${a.quando}-${i}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "10px 0",
+                  borderBottom:
+                    i === geral.atividade.length - 1
+                      ? "none"
+                      : "1px solid var(--divisor)",
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    background: COR_ATIVIDADE[a.tipo],
+                    flexShrink: 0,
+                    marginLeft: 3,
+                  }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 14,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {a.titulo}
+                  </div>
+                  {a.detalhe && <div className="aviso">{a.detalhe}</div>}
+                </div>
+                <span className="aviso" style={{ flexShrink: 0 }}>
+                  {dataCurta(a.quando)}
+                </span>
+              </div>
+            ))
+          )}
+        </section>
+      )}
     </>
   );
 }

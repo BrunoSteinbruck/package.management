@@ -15,6 +15,7 @@ import {
   type TaxaLinha,
 } from "@pacotes/shared";
 import { apiFetch } from "@/lib/api";
+import type { AbaFinanceiro } from "./Dashboard";
 import { ConciliacaoView } from "./ConciliacaoView";
 
 /** Só cobra quem tem valor E pagador: o provedor exige nome e documento. */
@@ -51,15 +52,29 @@ function reais(v: number): string {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function FinanceiroView() {
+export function FinanceiroView({
+  abaInicial,
+  aoConsumirAba,
+}: {
+  /** Aba pedida pela Visão geral ao navegar para cá. */
+  abaInicial?: AbaFinanceiro | null;
+  aoConsumirAba?: () => void;
+} = {}) {
   const [competencia, setCompetencia] = useState(competenciaAtual());
   const [cobrancas, setCobrancas] = useState<CobrancaGestor[]>([]);
   const [resumo, setResumo] = useState<ResumoFinanceiro | null>(null);
   const [config, setConfig] = useState<ConfigFinanceiro | null>(null);
   const [taxas, setTaxas] = useState<TaxaLinha[]>([]);
-  const [aba, setAba] = useState<
-    "cobrancas" | "taxas" | "conciliacao" | "ajustes"
-  >("cobrancas");
+  // A aba pedida vale só na primeira montagem; o `aoConsumirAba` avisa o
+  // Dashboard para esquecê-la, senão voltar aqui pelo menu lateral reabriria
+  // a conciliação para sempre.
+  const [aba, setAba] = useState<AbaFinanceiro>(abaInicial ?? "cobrancas");
+  useEffect(() => {
+    if (abaInicial) aoConsumirAba?.();
+    // Só na montagem: reagir a `abaInicial` mudando para null devolveria a
+    // tela para "cobrancas" no instante em que o Dashboard a limpasse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
