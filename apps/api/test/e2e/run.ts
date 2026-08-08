@@ -1024,6 +1024,64 @@ async function main() {
       })).statusCode === 403,
     );
 
+    {
+      /**
+       * A Visão geral do painel, que deixou de ser um balcão de encomendas.
+       *
+       * As contagens vêm de tabelas diferentes das do panorama, então o teste
+       * as amarra ao que a suíte SABE existir: moradores nunca passa do total
+       * de unidades vinculadas, e funcionários conta pelo menos o síndico e o
+       * porteiro que a suíte usou para logar.
+       */
+      const vg = await req<{
+        moradores: number;
+        funcionarios: number;
+        conciliacaoPendente: number;
+        cobrancasVencidas: number;
+        atividade: Array<{ tipo: string; titulo: string; quando: string }>;
+      }>("GET", "/cadastro/visao-geral", { token: sindico });
+
+      /**
+       * Conta PESSOA, não vínculo.
+       *
+       * Comparar com o número de unidades não serve: uma unidade tem vários
+       * moradores, e a primeira versão deste teste falhou por isso (18
+       * pessoas em 16 unidades é o normal). O invariante que vale é o outro
+       * lado: quem mora em dois apartamentos tem dois vínculos e conta uma
+       * vez só, então moradores nunca passa do total de vínculos ativos.
+       */
+      const vinculosAtivos = await prisma.vinculo.count({
+        where: { condominioId: cid, status: "ATIVO" },
+      });
+      checa(
+        "visão geral conta moradores por PESSOA, não por vínculo",
+        vg.moradores > 0 && vg.moradores <= vinculosAtivos,
+        `moradores=${vg.moradores} vinculos=${vinculosAtivos}`,
+      );
+      checa(
+        "e conta a equipe ativa do condomínio",
+        vg.funcionarios >= 2,
+        `funcionarios=${vg.funcionarios}`,
+      );
+      checa(
+        "o feed de atividade vem do mais recente para o mais antigo",
+        vg.atividade.every(
+          (a, i) => i === 0 || vg.atividade[i - 1].quando >= a.quando,
+        ),
+      );
+      checa(
+        "e cabe no teto, com título em todo item",
+        vg.atividade.length <= 20 && vg.atividade.every((a) => a.titulo.length > 0),
+        `itens=${vg.atividade.length}`,
+      );
+      checa(
+        "porteiro não lê a visão geral do síndico",
+        (await req<{ statusCode?: number }>("GET", "/cadastro/visao-geral", {
+          token: porteiro,
+        })).statusCode === 403,
+      );
+    }
+
     // Vínculo pendente montado à mão: nenhum fluxo da suíte cria um, e o que
     // se quer exercitar é a recusa, não a origem do pedido.
     const unidadeAlvo = panorama[0].unidadeId;
@@ -1374,6 +1432,37 @@ async function main() {
         g3.criadas === 0 && g3.semBoleto === 0,
         `criadas=${g3.criadas} semBoleto=${g3.semBoleto}`,
       );
+    }
+
+    {
+      /** A série do gráfico da Visão geral. */
+      const serie = await req<
+        Array<{ competencia: string; cobrado: number; recebido: number }>
+      >("GET", "/cadastro/financeiro/serie?meses=6", { token: sindico });
+
+      checa("série devolve exatamente os meses pedidos", serie.length === 6);
+      checa(
+        "e os meses vêm em ordem, terminando no atual",
+        serie.every((m, i) => i === 0 || serie[i - 1].competencia < m.competencia) &&
+          serie[serie.length - 1].competencia === competencia,
+        serie.map((m) => m.competencia).join(","),
+      );
+      // O mês que a suíte acabou de gerar tem cobrado; recebido nunca passa
+      // dele, porque ninguém recebe mais do que cobrou.
+      const atual = serie[serie.length - 1];
+      checa(
+        "o mês corrente traz o que a suíte cobrou",
+        atual.cobrado > 0 && atual.recebido <= atual.cobrado,
+        `cobrado=${atual.cobrado} recebido=${atual.recebido}`,
+      );
+      // `meses` é texto livre do cliente: sem o clamp, isto montaria cem mil
+      // chaves de mês em memória antes de olhar o banco.
+      const exagero = await req<Array<unknown>>(
+        "GET",
+        "/cadastro/financeiro/serie?meses=99999",
+        { token: sindico },
+      );
+      checa("e a janela é limitada, mesmo pedindo demais", exagero.length === 24);
     }
 
     const integ = await req<{ webhookSegredo?: string }>(
