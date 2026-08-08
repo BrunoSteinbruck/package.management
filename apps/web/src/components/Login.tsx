@@ -103,20 +103,31 @@ export function Login({ aoEntrar }: { aoEntrar: (perfil: JwtPayload) => void }) 
     setFase(proxima);
   }
 
+  const legenda =
+    fase === "esqueci"
+      ? "Informe o e-mail cadastrado. Enviamos um link para você criar uma senha nova."
+      : fase === "enviado"
+        ? "Confira seu e-mail."
+        : fase === "sms-telefone"
+          ? "Acesso da portaria. Informe o celular cadastrado."
+          : fase === "sms-codigo"
+            ? `Código enviado por SMS para ${telefone}.`
+            : null;
+
   return (
     <div className="login-fundo">
       <div className="login-cartao">
         <div className="login-logo">convivar</div>
         <h1 style={{ marginTop: 12 }}>Painel do condomínio</h1>
-        <p className="aviso" style={{ marginTop: 4 }}>
-          {fase === "senha" && "Entre com seu e-mail ou celular e a senha."}
-          {fase === "esqueci" &&
-            "Informe o e-mail cadastrado. Enviamos um link para você criar uma senha nova."}
-          {fase === "enviado" && "Confira seu e-mail."}
-          {fase === "sms-telefone" &&
-            "Acesso da portaria. Informe o celular cadastrado."}
-          {fase === "sms-codigo" && `Código enviado por SMS para ${telefone}.`}
-        </p>
+        {/* A fase `senha` não tem legenda: os dois campos rotulados já dizem o
+            que fazer, e a frase só empurrava o formulário para baixo. O
+            parágrafo inteiro some quando não há texto, senão sobraria um
+            espaço vazio no lugar dele. */}
+        {legenda && (
+          <p className="aviso" style={{ marginTop: 4 }}>
+            {legenda}
+          </p>
+        )}
 
         <div style={{ marginTop: 20 }}>
           {fase === "senha" && (
@@ -156,7 +167,7 @@ export function Login({ aoEntrar }: { aoEntrar: (perfil: JwtPayload) => void }) 
                 style={{ marginTop: 12, width: "100%" }}
                 onClick={() => irPara("esqueci")}
               >
-                Esqueci a senha, ou é meu primeiro acesso
+                Esqueci minha senha / Primeiro acesso
               </button>
               <button
                 className="link"
