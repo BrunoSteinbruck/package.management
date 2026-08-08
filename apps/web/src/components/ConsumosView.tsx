@@ -194,6 +194,42 @@ export function ConsumosView() {
         </div>
       </div>
 
+      {/* Acima da tabela: o gráfico e a tarifa são o contexto do mês, e a
+          lista unidade a unidade é o detalhe. Embaixo, os dois só apareciam
+          depois de rolar dezesseis linhas, e o síndico ajustava a tarifa sem
+          ver o histórico que ela reajusta. Os dois sobem JUNTOS porque
+          dividem a mesma grade: separá-los deixaria a tarifa órfã embaixo da
+          tabela. */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 16 }}>
+        <section className="card">
+          <h2>Consumo de {NOMES[tipo].toLowerCase()}: 12 meses</h2>
+          <div className="grafico-horario">
+            {serie.map((m) => (
+              <div
+                className="faixa"
+                key={m.competencia}
+                title={`${mesAno(m.competencia)}: ${m.consumoTotal.toLocaleString("pt-BR")} m³ (${m.unidadesLidas} leituras)${m.valorTotal != null ? ` · ${reais(m.valorTotal)}` : ""}`}
+              >
+                <div
+                  className="coluna"
+                  style={{
+                    height: `${(m.consumoTotal / maxSerie) * 100}%`,
+                    opacity: m.competencia === competencia ? 1 : 0.55,
+                  }}
+                />
+                <div className="rotulo">{mesCurto(m.competencia)}</div>
+              </div>
+            ))}
+          </div>
+          <p className="aviso" style={{ marginTop: 10 }}>
+            Passe o mouse para ver o total do mês. A barra cheia é o mês
+            selecionado.
+          </p>
+        </section>
+
+        <TarifasSection aoSalvar={carregar} />
+      </div>
+
       <section className="card">
         <table>
           <thead>
@@ -282,36 +318,6 @@ export function ConsumosView() {
           )}
         </table>
       </section>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 16 }}>
-        <section className="card">
-          <h2>Consumo de {NOMES[tipo].toLowerCase()}: 12 meses</h2>
-          <div className="grafico-horario">
-            {serie.map((m) => (
-              <div
-                className="faixa"
-                key={m.competencia}
-                title={`${mesAno(m.competencia)}: ${m.consumoTotal.toLocaleString("pt-BR")} m³ (${m.unidadesLidas} leituras)${m.valorTotal != null ? ` · ${reais(m.valorTotal)}` : ""}`}
-              >
-                <div
-                  className="coluna"
-                  style={{
-                    height: `${(m.consumoTotal / maxSerie) * 100}%`,
-                    opacity: m.competencia === competencia ? 1 : 0.55,
-                  }}
-                />
-                <div className="rotulo">{mesCurto(m.competencia)}</div>
-              </div>
-            ))}
-          </div>
-          <p className="aviso" style={{ marginTop: 10 }}>
-            Passe o mouse para ver o total do mês. A barra cheia é o mês
-            selecionado.
-          </p>
-        </section>
-
-        <TarifasSection aoSalvar={carregar} />
-      </div>
 
       {fotoAberta?.atual?.fotoRef && (
         <div
