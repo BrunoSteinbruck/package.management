@@ -43,6 +43,27 @@ export const MODULOS_CONDOMINIO = [
 export type ModuloCondominio = (typeof MODULOS_CONDOMINIO)[number];
 
 /**
+ * Os que SÓ a Convivar liga, e não o síndico.
+ *
+ * `whatsapp` tem custo por mensagem e depende da conta verificada no Meta
+ * Business: ligar sozinho seria o condomínio contratando uma despesa nossa.
+ * `qr_retirada` muda o procedimento da portaria inteira, e ligá-lo sem
+ * combinar deixa o porteiro pedindo um QR que ninguém sabe que existe.
+ *
+ * O painel e o app escondem o botão destes, mas quem GARANTE é o servidor:
+ * `salvarModulos` preserva o estado atual deles, ignorando o que o cliente
+ * mandar. Esconder botão não é controle, é decoração.
+ */
+export const MODULOS_DA_CONVIVAR: readonly ModuloCondominio[] = [
+  "whatsapp",
+  "qr_retirada",
+];
+
+export function soAConvivarLiga(m: ModuloCondominio): boolean {
+  return MODULOS_DA_CONVIVAR.includes(m);
+}
+
+/**
  * Ciclo da visita pré-autorizada. CHEGADA é terminal como CANCELADA: quem
  * entrou, entrou; o registro vira histórico.
  */

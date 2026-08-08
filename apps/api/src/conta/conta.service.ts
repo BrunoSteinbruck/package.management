@@ -71,7 +71,9 @@ export class ContaService {
     // vínculo nenhum também precisa dele para convidar (e é justamente o
     // primeiro dia do condomínio).
     const appDownloadUrl = process.env.APP_DOWNLOAD_URL ?? null;
-    if (ids.length === 0) return { modulos: [], appDownloadUrl };
+    // Onde o síndico pede os módulos que só a Convivar liga.
+    const suporteUrl = process.env.SUPORTE_URL ?? null;
+    if (ids.length === 0) return { modulos: [], appDownloadUrl, suporteUrl };
 
     const condominios = await this.prisma.condominio.findMany({
       where: { id: { in: ids } },
@@ -83,6 +85,7 @@ export class ContaService {
         ligados.has(m),
       ) as ModuloCondominio[],
       appDownloadUrl,
+      suporteUrl,
     };
   }
 

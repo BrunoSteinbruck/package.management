@@ -1082,6 +1082,37 @@ async function main() {
       );
     }
 
+    {
+      /**
+       * O síndico NÃO liga os módulos da Convivar.
+       *
+       * WhatsApp tem custo por mensagem e QR muda o procedimento da portaria:
+       * os dois são combinados com a gente. Esconder o botão no painel não
+       * vale nada, então o teste vai pelo POST direto, que é o caminho de
+       * quem quiser burlar.
+       */
+      const pedido = await req<{ modulos?: string[] }>(
+        "POST",
+        "/cadastro/modulos",
+        {
+          token: sindico,
+          corpo: { modulos: ["comunicados", "whatsapp", "qr_retirada"] },
+        },
+      );
+      checa(
+        "POST direto não liga WhatsApp nem QR na retirada",
+        !pedido.modulos?.includes("whatsapp") &&
+          !pedido.modulos?.includes("qr_retirada"),
+        (pedido.modulos ?? []).join(","),
+      );
+      // E o pedido não é recusado por inteiro: o que o síndico PODE ligar
+      // continua sendo gravado, senão ele não conseguiria mexer em nada.
+      checa(
+        "e o resto do pedido é gravado normalmente",
+        pedido.modulos?.includes("comunicados") === true,
+      );
+    }
+
     // Vínculo pendente montado à mão: nenhum fluxo da suíte cria um, e o que
     // se quer exercitar é a recusa, não a origem do pedido.
     const unidadeAlvo = panorama[0].unidadeId;

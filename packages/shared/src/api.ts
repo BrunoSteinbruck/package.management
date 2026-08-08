@@ -76,6 +76,12 @@ export interface Capacidades {
    * "undefined" colado no fim da frase.
    */
   appDownloadUrl: string | null;
+  /**
+   * Onde o síndico fala com a gente para pedir os módulos que só nós ligamos
+   * (ver `MODULOS_DA_CONVIVAR`). Null sem o env: a tela diz que é com o
+   * suporte, sem oferecer um link quebrado.
+   */
+  suporteUrl: string | null;
 }
 
 // ----- Pacotes -----

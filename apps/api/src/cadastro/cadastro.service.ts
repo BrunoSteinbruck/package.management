@@ -17,7 +17,11 @@ import type {
   UnidadePanorama,
   VisaoGeralPainel,
 } from "@pacotes/shared";
-import { MODULOS_CONDOMINIO, rotuloUnidade } from "@pacotes/shared";
+import {
+  MODULOS_CONDOMINIO,
+  rotuloUnidade,
+  soAConvivarLiga,
+} from "@pacotes/shared";
 import { registrarAcao } from "../common/auditoria.util";
 import { nomeDaCompetencia } from "../financeiro/competencia.util";
 import { PrismaService } from "../prisma/prisma.service";
@@ -87,7 +91,32 @@ export class CadastroService {
     // Ordem e duplicatas normalizadas contra MODULOS_CONDOMINIO: o que fica
     // gravado não depende da ordem em que a tela mandou.
     const pedidos = new Set<ModuloCondominio>(dto.modulos);
-    const modulos = MODULOS_CONDOMINIO.filter((m) => pedidos.has(m));
+
+    /**
+     * Os módulos da Convivar ficam como estão, venha o que vier no corpo.
+     *
+     * WhatsApp tem custo por mensagem e depende da nossa conta no Meta
+     * Business; QR na retirada muda o procedimento da portaria. Os dois são
+     * combinados com a gente, não contratados por um clique.
+     *
+     * Preserva em vez de recusar o pedido inteiro: a tela manda a lista
+     * COMPLETA a cada salvamento, então um 400 aqui impediria o síndico de
+     * ligar Documentos só porque o WhatsApp estava no corpo. E esconder o
+     * botão no cliente não vale nada sem esta linha: um POST direto ligaria
+     * o módulo assim mesmo.
+     */
+    const atuais = new Set(
+      (
+        await this.prisma.condominio.findUniqueOrThrow({
+          where: { id: condominioId },
+          select: { modulos: true },
+        })
+      ).modulos as ModuloCondominio[],
+    );
+    const modulos = MODULOS_CONDOMINIO.filter((m) =>
+      soAConvivarLiga(m) ? atuais.has(m) : pedidos.has(m),
+    );
+
     await this.prisma.condominio.update({
       where: { id: condominioId },
       data: { modulos: [...modulos] },
